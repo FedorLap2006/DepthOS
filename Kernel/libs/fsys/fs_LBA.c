@@ -53,6 +53,21 @@
 //);
 //}
 // d.dap_off = __LINE__ - 1;
+/* ( set addr of DAP buffer )
+
+		////////////////////////////////////////////////////////////
+
+		// for stack variables
+
+		pgasm("movl %%ss,%%es"); // ss or ds ( segment of buffer ) ???
+		gasm(
+			"movl %0,%%bx" // set offset of buffer
+			:
+			: "o" (info.dap.buf) // o or m ???
+			:
+		);
+		////////////////////////////////////////////////////////////
+	*/
 
 
 
@@ -62,58 +77,56 @@
 // fat example ( 13h ) https://habrastorage.org/getpro/habr/post_images/0d6/275/777/0d627577730050dfa24baa9928b2a0d0.jpg
 int sys_write(LBA info){
 	byte func = FS_READ;
-	void* dap_ptr = (void*)&info.dap;
-	void* buf_ptr = (void*)info.dap.buf;
+	byte ssize = 0x10;
 	
+	info.dap.size = ssize;
+
+	gasm(
+		"movl $%0,%%ah" : : "M" (func) :
+	);
+	gasm(
+		"movl $%0,%%dl" : : "M" (info.hdrive) :
+
+	);
+
 	// push DAP struct fields to stack ( next commit )
 	
 
+	gasm(
+		"movl (%0),%%si\n"
+			:
+			: "o" (info.dap)
+			:
+	);
+
 	// set addr of buffer
 
-		// prepare es,bx ( addr of buffer )
-		pgasm("push %%es");
-		pgasm("push %%bx");
+	
+	pgasm(
+		"push %%es\n"
+		"push %%bx"
+	); // prepare es,bx ( addr of buffer )
 
 	
-		/* one variant ( set addr of buffer )
-
-			////////////////////////////////////////////////////////////
-
-			// for stack variables
-
-			pgasm("movl %%ss,%%es"); // ss or ds ( segment of buffer ) ???
-			gasm(
-				"movl %0,%%bx" // set offset of buffer
-				:
-				: "o" (info.dap.buf) // o or m ???
-				:
-			);
-			////////////////////////////////////////////////////////////
-		*/
-
-
-		/* two variant ( set addr of buffer )
-
-			////////////////////////////////////////////////////////////
-
-			// use buf_ptr ptr as segment based ptr and mov 0 offset to bx
 	
-			gasm(
-				"movl (%0),%%es" 
-					:
-					: "m" (buf_ptr)
-					:
-			);
-			gasm(
-				"movl $0,%%bx"
-			);
-
-			///////////////////////////////////////////////////////////
-		*/
-
-		// one or two -- question!
-
+	// use buf_ptr ptr as segment based ptr and mov 0 offset to bx
+	
+	gasm(
+		"movl (%0),%%es" 
+			:
+			: "m" (info.dap.buf)
+			:
+	);
+	gasm(
+		"movl $0,%%bx"
+	);
+	///////////////////////////////////////////////////////////
+	
+	// one or two -- question!
 	////////////////////////
+
+	/*gasm("int 0x13");*/
+	intr(0x13); // interrput ( LBA call )
 }
 int sys_read(LBA info){
 }
