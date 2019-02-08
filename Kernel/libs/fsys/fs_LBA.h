@@ -11,7 +11,7 @@
 #define FS_READ 0x02
 
 typedef struct DAP{
-    ubyte size;
+//    ubyte size;
     uint16 sector_count;
     uint8 *buf;
     uint64 sector;

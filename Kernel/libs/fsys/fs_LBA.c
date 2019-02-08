@@ -53,6 +53,12 @@
 //);
 //}
 // d.dap_off = __LINE__ - 1;
+//	asm(
+//		"movl (%0),%%si\n" 
+//		:
+//		: "o" (info.dap)
+//		:
+//	);
 /* ( set addr of DAP buffer )
 
 		////////////////////////////////////////////////////////////
@@ -75,34 +81,20 @@
 
 
 // fat example ( 13h ) https://habrastorage.org/getpro/habr/post_images/0d6/275/777/0d627577730050dfa24baa9928b2a0d0.jpg
+
 int sys_write(LBA info){
 	byte func = FS_READ;
-	byte ssize = 0x10;
+	int32 jsbits = info.dap.sector << (8*4);
+	int32 ssbits = info.dap.sector;
 	
-	info.dap.size = ssize;
+	asm volatile("pushal"); // push to stack all x32 regs
 
-	gasm(
-		"movl $%0,%%ah" : : "M" (func) :
-	);
-	gasm(
-		"movl $%0,%%dl" : : "M" (info.hdrive) :
+	///////////////////////////////////////////////////////////////////
 
-	);
 
-	// push DAP struct fields to stack ( next commit )
+	// prepare data to interrput ( LBA call )
 	
-
-	gasm(
-		"movl (%0),%%si\n"
-			:
-			: "o" (info.dap)
-			:
-	);
-
-	// set addr of buffer
-
-	
-	pgasm(
+	asm volatile(
 		"push %%es\n"
 		"push %%bx"
 	); // prepare es,bx ( addr of buffer )
@@ -111,22 +103,58 @@ int sys_write(LBA info){
 	
 	// use buf_ptr ptr as segment based ptr and mov 0 offset to bx
 	
-	gasm(
-		"movl (%0),%%es" 
+	asm(
+		"movl (%0),%%es" // corrected mov
 			:
 			: "m" (info.dap.buf)
 			:
 	);
-	gasm(
+	asm(
 		"movl $0,%%bx"
 	);
-	///////////////////////////////////////////////////////////
-	
-	// one or two -- question!
-	////////////////////////
 
-	/*gasm("int 0x13");*/
-	intr(0x13); // interrput ( LBA call )
+	///////////////////////////////////////////////////////////////////
+	
+	// general push to stack
+
+	
+	asm(
+		"push %0\n"
+			:
+			: "r" (ssbits)
+			:
+	); // push senior-bits of sector number
+
+	asm(
+		"push %0\n"
+			:
+			: "r" (jsbits)
+			:
+	); // push junior-bits of sector number	
+
+	asm("push %%es");
+	asm("push %%bx");
+	asm("push $%0": : "M" (info.dap.sector_count) :);
+	
+	asm("push $0x10");
+	
+	///////////////////////////////////////////////////////////////////	
+
+	// recovery used registers and clear stack
+
+	// ...
+
+	///////////////////////////////////////////////////////////////////
+	
+	asm("movl $%0,%%ah" : : "M" (func) : ); // prepare number of func 
+ 	asm("movl $%0,%%dl" : : "M" (info.hdrive) : ); // drive index ( from 0 )
+ 	asm("movl %%esp,%%esi"); // prepare DAP struct
+ 	
+	//////////////////////////////////////////////////////////////////
+	
+	asm("int $0x13"); // interrput ( LBA call )
+	asm volatile("popal"); // pop from stack all x32 regs
 }
 int sys_read(LBA info){
+	byte func = FS_WRITE;
 }
