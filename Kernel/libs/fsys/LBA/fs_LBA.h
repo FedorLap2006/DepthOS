@@ -3,12 +3,12 @@
 #include "../stdtypes.h"
 #include "../stdafx.h"
 
-#define FS_OK 0
-#define FS_FAIL 1
+#define LBA_FS_OK 0
+#define LBA_FS_FAIL 1
 
 
-#define FS_WRITE 0x03
-#define FS_READ 0x02
+#define LBA_FS_WRITE 0x03
+#define LBA_FS_READ 0x02
 
 typedef struct DAP{
 //    ubyte size;
@@ -32,5 +32,5 @@ typedef struct LBA{
     DAP dap; // dap info
 }LBA;
 
-int sys_write(LBA info);
-int sys_read(LBA info);
+int sys_writeLBA(LBA info);
+int sys_readLBA(LBA info);
