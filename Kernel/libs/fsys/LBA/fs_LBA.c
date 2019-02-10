@@ -83,7 +83,7 @@
 // fat example ( 13h ) https://habrastorage.org/getpro/habr/post_images/0d6/275/777/0d627577730050dfa24baa9928b2a0d0.jpg
 
 int sys_writeLBA(LBA info){
-	byte func = FS_WRITE;
+	byte func = LBA_FS_WRITE;
 	int32 jsbits = info.dap.sector << (8*4);
 	int32 ssbits = info.dap.sector;
 	
@@ -156,7 +156,7 @@ int sys_writeLBA(LBA info){
 	asm volatile("popal"); // pop from stack all x32 regs
 }
 int sys_readLBA(LBA info){
-	byte func = FS_READ;
+	byte func = LBA_FS_READ;
 	int32 jsbits = info.dap.sector << (8*4);
 	int32 ssbits = info.dap.sector;
 	
