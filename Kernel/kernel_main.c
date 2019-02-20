@@ -1,5 +1,6 @@
-#include "libs/stdafx.h"
-#include "libs/io/io.h"
+// #include "libs/stdafx.h"
+#include "libs/libs.h"
+
 int main(){
-	printf("hello kernel!",nil,0);
+
 }
