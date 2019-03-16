@@ -2,8 +2,15 @@
   "ExpandedNodes": [
     "",
     "\\libs",
-    "\\libs\\intr"
+    "\\libs\\fsys",
+    "\\libs\\fsys\\stdATA",
+    "\\libs\\fsys\\stdATA\\AHCI",
+    "\\libs\\fsys\\stdATA\\ATAPI",
+    "\\libs\\fsys\\stdATA\\PCI",
+    "\\libs\\fsys\\stdLBA",
+    "\\libs\\fsys\\VFS",
+    "\\libs\\stdlibs"
   ],
-  "SelectedNode": "\\libs\\intr",
+  "SelectedNode": "\\libs\\fsys\\stdATA\\AHCI\\ahci.c",
   "PreviewInSolutionExplorer": false
 }

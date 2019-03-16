@@ -2,5 +2,4 @@
 #include "libs/libs.h"
 
 int main(){
-
 }

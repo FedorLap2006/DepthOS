@@ -20,7 +20,7 @@ struct _gdt_entry_t {
 	uint8 granul; // granularity
 	uint8 hbase; // high bits of base
 }packed;
-
+// glibc
 typedef struct _gdt_entry gdt_entry_t;
 
 
@@ -45,6 +45,8 @@ static void gdt_sgate(int32, uint32, uint32, uint8, uint8);
 IDT
 
 */
+
+extern void idt_flush(uint32);
 
 struct _idt_entry_t {
 	uint16 laddr; // 
