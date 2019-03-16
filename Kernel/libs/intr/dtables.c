@@ -33,9 +33,13 @@ static void init_idt() {
 
 	memset(&idt_entries,0,sizeof(idt_entry_t)*256);
 	
+	idt_sgate(0, (uint32)isr0, 0x08, 0x8E);
+	idt_sgate(1, uint32(isr0), 0x08, 0x8E);
+
+
 }
 
-static void idt_set_gate(uint8 num, uint32 base, uint16 sel, uint8 flags) {
+static void idt_sgate(uint8 num, uint32 base, uint16 sel, uint8 flags) {
 	idt_entries[num].laddr = base & 0xFFFF;
 	idt_entries[num].haddr = (base >> 16) & 0xFFFF;
 
