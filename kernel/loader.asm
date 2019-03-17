@@ -1,4 +1,6 @@
- set STACK_SIZE, 64
+set STACK_SIZE, 64
+
+align 4
 
 section .bss
 
@@ -12,11 +14,13 @@ global _loadkernel
 
 _loadkernel:
   
-  extern loadGRUB ; loadGRUB in another file
-  call loadGRUB ; call loadGRUB function
+;  extern loadGRUB ; loadGRUB in another file
+;  call loadGRUB ; call loadGRUB function
   
+  push ebx
+  push eax
+
   finit ; init FPU ( math coprocessor )
-  
   mov esp, ss_begin ; use stack
   
   ; load kernel main function
@@ -28,3 +32,6 @@ _loadkernel:
   
   cli ; disable interrputs
   hlt ; CPU halt
+
+
+; section .end
