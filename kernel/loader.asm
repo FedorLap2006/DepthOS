@@ -1,4 +1,5 @@
-set STACK_SIZE, 64
+
+STACK_SIZE equ 64
 
 align 4
 
