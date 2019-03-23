@@ -1,4 +1,4 @@
-set STACK_SIZE, 64
+STACK_SIZE equ 64
 
 align 4
 
@@ -11,22 +11,22 @@ ss_begin:
 section .text
 
 global _loadkernel
+extern _kmain ; kmain in another file
 
 _loadkernel:
   
 ;  extern loadGRUB ; loadGRUB in another file
 ;  call loadGRUB ; call loadGRUB function
-  
-  push ebx
-  push eax
 
   finit ; init FPU ( math coprocessor )
   mov esp, ss_begin ; use stack
+
+  ; push ebx ; multiboot ptr
+  ; push eax ; magic number
   
   ; load kernel main function
-  
-  extern kmain ; kmain in another file
-  call kmain
+ 
+  call _kmain
   
   ; halt CPU and disable interrputs
   
