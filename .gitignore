@@ -1,3 +1,11 @@
-.vs/*
-vs/*
-kernel
+*/.vs/*
+*/vs/*
+*/kernel*.*
+
+kernel/.vs/*
+kernel/kernel*.*
+kernel/*.swp
+kernel/*.swo
+
+build/*
+
