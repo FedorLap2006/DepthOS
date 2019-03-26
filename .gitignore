@@ -8,4 +8,7 @@ kernel/*.swp
 kernel/*.swo
 
 build/*
-
+kernel/notes.*
+kernel/diary.*
+diary.*
+notes.*
