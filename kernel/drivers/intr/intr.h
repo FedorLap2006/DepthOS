@@ -56,7 +56,7 @@ typedef struct intr_regs_t {
     uint32_t eip,cs,eflags,useresp,ss;
 };
 
-typedef (*intrh_t)(intr_regs_t);
+typedef void (*intrh_t)(intr_regs_t);
 
 #define irq0 32
 #define irq1 33
@@ -75,8 +75,6 @@ typedef (*intrh_t)(intr_regs_t);
 #define irq14 46
 #define irq15 47
 
-// int 0x45 -- syscall
-// int 0x35 -- drivers
 void reg_intr_handler(uint8_t,intrh_t);
 
 
