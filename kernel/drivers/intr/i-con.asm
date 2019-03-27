@@ -69,4 +69,3 @@ intr_prepare:
 	add esp, 8
 	sti
 	iret
-;;;;;;;;;;;;;;; IRQ ;;;;;;;;;;;;;;;

@@ -6,9 +6,6 @@ kernel/.vs/*
 kernel/kernel*.*
 kernel/*.swp
 kernel/*.swo
-
+*/*.swp
+*/*.swo
 build/*
-kernel/notes.*
-kernel/diary.*
-diary.*
-notes.*
