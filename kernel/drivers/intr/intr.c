@@ -47,20 +47,42 @@ isr(31);
 
 #undef isr
 
+
+#define irq(num) extern void irq##num()
+
+irq(0); irq(1); irq(2); irq(3); isr(4);
+irq(5); irq(6); irq(7); irq(8); irq(9);
+irq(10); irq(11); irq(12); irq(13);
+irq(14); irq(15);
+
+#undef isr
+// #define ici(num) extern void ici##num()
+
+extern void cintr80(); // sys API / syscall
+extern void cintr79(); // custom
+extern void cintr78(); // custom
+#undef ici
+
+
 extern void idt_flush(uint32_t);
 static void idtsg(uint8_t,uint32_t,uint16_t,uint8_t,bool);
 static void init_idt();
 
-static void idtsg(uint8_t num,uint32_t base,uint16_t sel,uint8_t flags,bool usmode) {
+static void idtsg(uint8_t num,uint32_t base,uint16_t sel,uint8_t flags) {
 	if ( num >= 256 ) return;
 	idte[num].blow = ( base & 0xFFFF );
 	idte[num].sel = sel;
 	idte[num].zero = 0;
-	if ( usmode == true ) {
-		idte[num].flags = flags | 0x60;
-	} else {
-		idte[num].flags = flags;
-	}
+	idte[num].flags = flags;
+	idte[num].bhigh = ( ( base >> 16 ) & 0xFFFF );
+}
+
+static void idtsg_umode(uint8_t num,uint32_t base,uint16_t sel,uint8_t flags) {
+	if ( num >= 256 ) return;
+	idte[num].blow = ( base & 0xFFFF );
+	idte[num].sel = sel;
+	idte[num].zero = 0;
+	idte[num].flags = flags | 0x60;
 	idte[num].bhigh = ( ( base >> 16 ) & 0xFFFF );
 }
 
@@ -69,7 +91,7 @@ static void init_idt() {
 	idt_ptr.addr = (uint32_t)&idte;
 	memset(&idte, 0, sizeof(idte_t) * 256);
 
-#define isg(num) idtsg(num, (uint32_t)isr##num, 0x08, 0x8E);
+#define isg(num) idtsg(num, (uint32_t)isr##num, 0x08, 0x8E)
 
 	isg(0);	isg(1);	isg(2);	isg(3); isg(4); isg(5);
 	isg(6); isg(7); isg(8); isg(9); isg(10); isg(11);
@@ -78,6 +100,36 @@ static void init_idt() {
 	isg(24); isg(25); isg(26); isg(27); isg(28); isg(29);
 	isg(30); isg(31);
 
+	// IRQ
+	outb(0x20,0x11);
+    outb(0xA0,0x11);
+    
+	outb(0x21,0x20);
+    outb(0xA1,0x28);
+    
+	outb(0x21,0x04);
+    outb(0xA1,0x02);
+
+    outb(0x21,0x01);
+    outb(0x21,0x01);
+
+    outb(0x21,0x00);
+    outb(0xA1,0x00);
+#undef isg
+#define isg(num) idtsg(32+num, (uint32_t)irq##num,0x08, 0x8E)
+
+	isg(0); isg(1); isg(2); isg(3); 
+	isg(4); isg(5); isg(6); isg(7); 
+	isg(8); isg(9); isg(10); isg(11); 
+	isg(12); isg(13); isg(14);
+
+#undef isg
+
+#define isg(num) idtsg(num, (uint32_t)cintr##num,0x08, 0x8E)
+
+	// special interrputs
+	isg(78); isg(79); isg(80);
+
 #undef isg
 	idt_flush((uint32_t)&idt_ptr);
 }
@@ -85,12 +137,38 @@ static void init_idt() {
 // SPECIAL FUNCTIONS AND VARIABLES
 
 void init_intr() { init_gdt(); init_idt(); }
-typedef struct intr_regs_t {
-	uint32_t ds;        // Селектор сегмента данных
-    uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
-    uint32_t intr_it, err_code;
-    uint32_t eip,cs,eflags,useresp,ss;
-};
-void intr_handler(intr_regs_t r) {
+
+void isr_handler(intr_regs_t r) {
 	// ...
+}
+
+void irq_handler(intr_regs_t r) {
+	if ( r.intr_it > 40 && r.intr_it < 47 ) {
+		outb(0xA0,0x20);
+	}
+	outb(0x20,0x20);
+
+	if ( intr_handlers[r.intr_it] != 0 ) {
+		intrh_t handler = intr_handlers[r.intr_it];
+		handler(r);
+	}
+}
+
+void cintr_handler(intr_regs_t r) {
+	if ( r.intr_it <= 47 && r.intr_it > 80 ) {
+		return;
+	}
+
+	if ( intr_handlers[r.intr_it] != 0 ) {
+		intrh_t handler = intr_handlers[r.intr_it];
+		handler(r);
+	}
+}
+
+
+intrh_t intr_handlers[256];
+
+void reg_intr_handler(uint8_t n, intrh_t handler) {
+	if ( n >= 256 ) return;
+	intr_handlers[n] = handler;
 }
