@@ -143,7 +143,8 @@ void isr_handler(intr_regs_t r) {
 }
 
 void irq_handler(intr_regs_t r) {
-	if ( r.intr_it > 40 && r.intr_it < 47 ) {
+	if ( r.intr_it <= 31  && r.intr_it > 47 ) return;
+	if ( r.intr_it > 40) {
 		outb(0xA0,0x20);
 	}
 	outb(0x20,0x20);
@@ -155,9 +156,7 @@ void irq_handler(intr_regs_t r) {
 }
 
 void cintr_handler(intr_regs_t r) {
-	if ( r.intr_it <= 47 && r.intr_it > 80 ) {
-		return;
-	}
+	if ( r.intr_it <= 47 && r.intr_it > 80 ) return;
 
 	if ( intr_handlers[r.intr_it] != 0 ) {
 		intrh_t handler = intr_handlers[r.intr_it];
