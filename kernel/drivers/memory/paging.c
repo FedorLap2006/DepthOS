@@ -58,7 +58,7 @@ pEntry_t *get_page(u32int address, int make, pDir_t *dir) {
 	uint32_t table_idx = address / 1024;
 
 	if ( dir->tables[table_idx] ) {
-		return &dir->tables[table_idx]->pages[address%1024];
+	return &dir->tables[table_idx]->pages[address%1024];
 	}
 	else if(make) {
 		uint32_t tmp;
