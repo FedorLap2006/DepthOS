@@ -36,8 +36,35 @@ isr%1:
 	jmp isr_prepare
 %endmacro
 
-%assign isr_i 0
-%rep 31
+%macro isr_ec 1
+global isr%1
+
+isr%1:
+	cli
+	push byte %1
+	jmp isr_prepare
+%endmacro
+
+isr_nec 0
+isr_nec 1
+isr_nec 2
+isr_nec 3
+isr_nec 4
+isr_nec 5
+isr_nec 6
+isr_nec 7
+
+isr_ec 8
+isr_nec 9
+isr_ec 10
+isr_ec 11
+isr_ec 12
+isr_ec 13
+isr_ec 14
+
+
+%assign isr_i 15
+%rep 17
 isr_nec isr_i
 
 %assign isr_i isr_i+1

@@ -1,5 +1,12 @@
 #include "i-con.h"
 
+#define GDT_SIZE 5 + 8000
+
+gdte_t gdte[GDT_SIZE];
+gdtp_t gdt_ptr;
+idte_t idte[256];
+idtp_t idt_ptr;
+
 // GDT
 
 extern void gdt_flush(uint32_t);
@@ -9,7 +16,7 @@ static void init_gdt();
 
 
 static void gdtsg(uint32_t num, uint32_t base, uint32_t off, uint8_t acc, uint8_t gr) {
-	if ( num >= 5 ) return;
+	if ( num >= GDT_SIZE ) return;
 	gdte[num].offlow = ( off & 0xFFFF );
 	gdte[num].blow = ( base & 0xFFFF );
 	gdte[num].bmid = ( base >> 16 )  & 0xFF;
@@ -20,7 +27,7 @@ static void gdtsg(uint32_t num, uint32_t base, uint32_t off, uint8_t acc, uint8_
 }
 
 static void init_gdt() {
-	gdt_ptr.hoff = ( sizeof(gdte_t) * 5 ) - 1;
+	gdt_ptr.hoff = ( sizeof(gdte_t) * GDT_SIZE ) - 1;
 	gdt_ptr.limit = (uint32_t)&gdte;
 
 	gdtsg(0, 0, 0, 0, 0);

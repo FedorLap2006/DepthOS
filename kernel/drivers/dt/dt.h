@@ -39,10 +39,6 @@ typedef struct idtp_t {
 
 // SPECIAL FUNCTIONS AND VARIABLES
 
-gdte_t gdte[5];
-gdtp_t gdt_ptr;
-idte_t idte[256];
-idtp_t idt_ptr;
 
 void init_intr();
 void isr_handler(intr_regs_t);
