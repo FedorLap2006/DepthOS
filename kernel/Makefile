@@ -2,9 +2,9 @@ ARCH=i386
 
 QEMU=qemu-system-i386
 
-LDFLAGS = -T link.ld -o kernel.elf
+LDFLAGS = -T link.ld -m elf_i386 -o kernel.elf
 
-CC=/bin/x86_64-pc-cygwin-gcc -m32 -std=c11
+CC=gcc -m32 -std=c11
 
 ASM=nasm -f elf32
 
