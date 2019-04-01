@@ -30,7 +30,7 @@ _loadkernel:
   
   ; halt CPU and disable interrputs
   
-  cli ; disable interrputs
+  cli ; disable interrupts
   hlt ; CPU halt
 
 
