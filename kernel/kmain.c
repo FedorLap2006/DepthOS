@@ -1,5 +1,6 @@
-#include <std/types.h>
-
+#include <types.h>
+#include <heap.h>
+#include <task.h>
 #define MBOOT_ID 0x2BADB002
 
 void print_str(char* str) {
@@ -13,6 +14,15 @@ void print_str(char* str) {
 // unsigned int magic
 void kmain(void) {
 	// if ( magic != MBOOT_ID ) return;
-  print_str("hello world!");
-  while (true) {}
+	init_paging();
+	init_heap(KHEAP_SIZE);
+
+	addProcess(createProcess("hello!",NULL));
+	
+	
+
+	exec();
+
+	print_str("hello world!");
+	while (true) {}
 }

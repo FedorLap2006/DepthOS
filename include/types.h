@@ -1,8 +1,11 @@
 #pragma once
 
 #define nil ((void*)0)
+#define NULL nil
 #define apack __attribute__((packed))
 enum { false, true }bool;
+
+typedef unsigned int uint_t;
 
 typedef char byte_t;
 typedef char int8_t;

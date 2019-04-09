@@ -1,4 +1,5 @@
 #include "paging.h"
+#include "heap.h"
 
 extern placeAddr;
 
@@ -16,13 +17,13 @@ void init_paging() {
 	uint32_t mem_end = 0x1000000;
 	nframes = mem_end / 0x1000;
 
-	frames = (uint32_t*)kalloc(IBIT(nframes));
+	frames = (uint32_t*)sbrk(IBIT(nframes));
 	memset(frames, 0, IBIT(nframes));
 
-	kernel_dir=(pDir_t*)kalloc(sizeof(pDir_t),1);
+	kernel_dir=(pDir_t*)sbrk(sizeof(pDir_t),1);
 	memset(kernel_dir,0,sizeof(pDir_t));
 	cur_dir = kernel_dir;
-
+	
 	int i = 0;
 
 	while(i < placeAddr) {
@@ -62,7 +63,7 @@ pEntry_t *get_page(u32int address, int make, pDir_t *dir) {
 	}
 	else if(make) {
 		uint32_t tmp;
-		dir->tables[table_idx] = (pTable_t*)kalloc_ap(sizeof(pTable_t),1,&tmp);
+		dir->tables[table_idx] = (pTable_t*)sbrk_ap(sizeof(pTable_t),1,&tmp);
 		memset(dir->tables[table_idx],0,0x1000);
 		dir->tablesPhys[table_idx] = tmp | 0x7;
 		return &dir->tables[table_idx]->pages[address%1024];

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <std/types.h>
-#include "heap.h"
+
 
 #define IBIT(a) (a/(8*4))
 #define OFFBIT(a) (a%(8*4))
@@ -25,6 +25,8 @@ typedef struct _pTable_t {
 #define PAGE_ACC_USER 1
 #define PAGE_USED 1
 #define PAGE_PUSE 0
+
+#define PAGE_SIZE (0x1000)
 
 typedef struct _pEntry_t {
 	uint32_t pres : PAGE_PHYS;
