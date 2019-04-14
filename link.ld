@@ -1,12 +1,13 @@
-OUTPUT_FORMAT(pei-i386)
 ENTRY(_loadkernel)
 
 SECTIONS {
     . = 0x100000;
+	.boot : {
+		*(.multiboot)
 
+	}
     .text : {
-        *(.multiboot)
-        *(.text)
+    	*(.text)
     }
     .data : {
         *(.data)
