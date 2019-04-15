@@ -2,42 +2,60 @@
 MAGIC equ 0x1BADB002
 MEMINFO equ 1<<1
 MBALIGN equ 1<<0
-FLAGS equ MBALIGN | MEMINFO
+FLAGS equ 0 | MBALIGN | MEMINFO
 
 STACK_SIZE equ 600
-
-align 4
 
 bits 32
 
 section .bss
+
+align 4
+
 stack_end:
 	resb STACK_SIZE
 stack_top:
-section .multiboot
+
+section .boot
+
+align 4
 
 grubBoot:
 	dd MAGIC
 	dd FLAGS
+	dd 0
 	dd (end_grubBoot - grubBoot)
-	dd -(MAGIC+FLAGS+(end_grubBoot - grubBoot))
+	dd -(MAGIC + FLAGS + (end_grubBoot - grubBoot))
+;	dd -(MAGIC + 0 + (end_grubBoot - grubBoot))
+	
+	dw 0
+	dw 0
+	dd 8
 end_grubBoot:
+
 section .text
 
-global _loadkernel
+align 4
 
-extern _kmain
+global _loader
+; global _loadkernel
 
+extern kmain
 
 _loadkernel:
 	finit
+	sti
 	mov esp,stack_top
 	
 	push ebx
 	push eax
 
-	call _kmain
+	call kmain
 
+.stop:
 	cli
 	hlt
+	jmp .stop
 
+_loader:
+	jmp 08h:_loadkernel ; protected mode
