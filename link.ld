@@ -1,21 +1,21 @@
 ENTRY(_loader)
-OUTPUT_FORMAT(pei-i386)
-OUTPUT_ARCH(i386:i386)
+/*OUTPUT_FORMAT(pei-i386)
+OUTPUT_ARCH(i386:i386)*/
 
 SECTIONS {
-    . = 0x0100000;
+    . = 1M;
 
 	.boot : ALIGN(4) {
-		*( .boot )
+		*(.boot)
 	}
     .text : ALIGN(4) {
-    	*( .text )
+    	*(.text)
     }
 	.data : ALIGN(4) {
-        *( .data )
+        *(.data)
     }
     .bss : ALIGN(4) {
-        *( .bss )
+        *(.bss)
     } 
 
 }

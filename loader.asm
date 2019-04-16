@@ -1,8 +1,11 @@
 ; GRUB MULTIBOOT 2
-MAGIC equ 0x1BADB002
+MAGIC equ 0x1BADB002 ; 0xe85250d6 ; multiboot 1 - 0x1BADB002
+; ARCH equ 0 ; i386
 MEMINFO equ 1<<1
 MBALIGN equ 1<<0
 FLAGS equ 0 | MBALIGN | MEMINFO
+HLEN equ __boot_header_end - __boot_header
+CHECKSUM equ 0x100000000 - (MAGIC + FLAGS + HLEN)
 
 STACK_SIZE equ 600
 
@@ -20,18 +23,18 @@ section .boot
 
 align 4
 
-grubBoot:
+__boot_header:
 	dd MAGIC
+;	dd ARCH
 	dd FLAGS
-	dd 0
-	dd (end_grubBoot - grubBoot)
-	dd -(MAGIC + FLAGS + (end_grubBoot - grubBoot))
-;	dd -(MAGIC + 0 + (end_grubBoot - grubBoot))
+	dd -(MAGIC + FLAGS)
+	dd HLEN
+	dd CHECKSUM
 	
-	dw 0
-	dw 0
-	dd 8
-end_grubBoot:
+;	dw 0
+;	dw 0
+;	dd 8
+__boot_header_end:
 
 section .text
 

@@ -2,7 +2,7 @@
 ifeq ($(OS),Windows_NT)
 	BUILDOS ?= win
 else
-	BUILDOS ?= linux
+	BUILDOS ?= nix
 endif
 OSVER=1.0
 OSNAME=depthos
@@ -28,7 +28,7 @@ NASMSOURCES ?=
 CSOURCES += $(wildcard *.c)
 ASMSOURCES += $(wildcard *.s)
 NASMSOURCES += $(wildcard *.asm)
-OBJS=build/*.o
+# OBJS=build/*.o
 # .PHONY: all clean
 
 
@@ -49,13 +49,13 @@ clean:
 
 build: kernel img iso
 
-kernel:
+kernel: $(CSOURCES) $(NASMSOURCES) $(LDFILE)
 	@echo ---------- build kernel -----------
 	$(CC) $(CEMU) -std=c$(CSTD) -c $(CSOURCES) $(CCFLAGS)
 
 	$(ASM) $(NASMSOURCES)
 	@mv *.o build/
-	$(LD) $(LDEMU) --nmagic -T$(LDFILE) -o build/$(OUTBIN).bin $(OBJS)
+	$(LD) $(LDEMU) --nmagic -T$(LDFILE) -o build/$(OUTBIN).bin build/*.o
 ifeq ($(BUILDOS),win)	
 	objcopy -O elf32-i386 build/$(OUTBIN).bin $(OUTBIN)
 else
@@ -90,5 +90,5 @@ test:
 	@echo
 	@echo ----------- testing os ------------
 	@echo
-	qemu-system-i386 -nographic -kernel $(OUTBIN)
+	qemu-system-i386 -M pc-i440fx-3.0 -kernel $(OUTBIN) # -nographic
 
