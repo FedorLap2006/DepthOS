@@ -1,5 +1,5 @@
-; GRUB MULTIBOOT 2
-MAGIC equ 0x1BADB002 ; 0xe85250d6 ; multiboot 1 - 0x1BADB002
+; GRUB MULTIBOOT 1
+MAGIC equ 0x1BADB002 ; multiboot 2 - 0xe85250d6 ; multiboot 1 - 0x1BADB002
 ; ARCH equ 0 ; i386
 MEMINFO equ 1<<1
 MBALIGN equ 1<<0

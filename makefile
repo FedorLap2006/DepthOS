@@ -4,14 +4,15 @@ ifeq ($(OS),Windows_NT)
 else
 	BUILDOS ?= nix
 endif
-OSVER=1.0
-OSNAME=depthos
+DEBUG?=on
+OSVER?=1.0
+OSNAME?=depthos
 CC=gcc
 LD=ld
 ASM=nasm -f elf32
 CSTD=11
 CEMU=-m32
-CCFLAGS=-ffreestanding -nostdlib -nostdinc -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pic 
+CCFLAGS= -Iinclude -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pic 
 ifeq ($(BUILDOS),win)
 	LDEMU=-mi386pe
 else
@@ -22,12 +23,14 @@ OUTBIN=$(OSNAME)-$(OSVER)
 CSOURCES ?=
 ASMSOURCES ?= 
 NASMSOURCES ?= 
+CSOURCES += kmain.c
+NASMSOURCES += loader.asm
 #CSOURCES += $(shell find . -name "*.c" -type f -print )
 #ASMSOURCES += $(shell find . -name "*.s" -type f -print )
 #NASMSOURCES += $(shell find . -name "*.asm" -type f -print )
-CSOURCES += $(wildcard *.c)
-ASMSOURCES += $(wildcard *.s)
-NASMSOURCES += $(wildcard *.asm)
+CSOURCES += $(wildcard */*.c)
+ASMSOURCES += $(wildcard */*.s)
+NASMSOURCES += $(wildcard */*.asm)
 # OBJS=build/*.o
 # .PHONY: all clean
 
@@ -44,14 +47,21 @@ os_info:
 clean:
 	@rm -f build/*.o
 	@rm -f build/*.bin
-	@rm -f $(OUTBIN)
+	@rm -f $(OSNAME)-*
 
 
 build: kernel img iso
 
 kernel: $(CSOURCES) $(NASMSOURCES) $(LDFILE)
 	@echo ---------- build kernel -----------
-	$(CC) $(CEMU) -std=c$(CSTD) -c $(CSOURCES) $(CCFLAGS)
+ifeq ($(DEBUG),on)
+	$(CC) $(CEMU) -std=c$(CSTD) -g -c -DOSVER=\"$(OSVER)\" $(CSOURCES) $(CCFLAGS)
+ifeq ($(DEBUG),true)
+	$(CC) $(CEMU) -std=c$(CSTD) -g -c -DOSVER=\"$(OSVER)\" $(CSOURCES) $(CCFLAGS)
+endif
+else
+	$(CC) $(CEMU) -std=c$(CSTD) -c -DOSVER=\"$(OSVER)\" $(CSOURCES) $(CCFLAGS)
+endif
 
 	$(ASM) $(NASMSOURCES)
 	@mv *.o build/
