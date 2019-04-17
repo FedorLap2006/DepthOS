@@ -23,14 +23,14 @@ OUTBIN=$(OSNAME)-$(OSVER)
 CSOURCES ?=
 ASMSOURCES ?= 
 NASMSOURCES ?= 
-CSOURCES += kmain.c
-NASMSOURCES += loader.asm
+CSOURCES +=kmain.c
+NASMSOURCES +=loader.asm
 #CSOURCES += $(shell find . -name "*.c" -type f -print )
 #ASMSOURCES += $(shell find . -name "*.s" -type f -print )
 #NASMSOURCES += $(shell find . -name "*.asm" -type f -print )
-CSOURCES += $(wildcard */*.c)
-ASMSOURCES += $(wildcard */*.s)
-NASMSOURCES += $(wildcard */*.asm)
+CSOURCES +=$(wildcard */*.c)
+ASMSOURCES +=$(wildcard */*.s)
+NASMSOURCES +=$(wildcard */*.asm)
 # OBJS=build/*.o
 # .PHONY: all clean
 

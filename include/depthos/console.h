@@ -21,6 +21,13 @@
 #define WBROWN_COLOR 14
 #define WHITE_COLOR 15
 
+enum {
+	MOD_OK,
+	MOD_ERR
+};
+
+
+
 void console_init(int s,int l,int b,int f);
 void console_movec(int x,int y);
 void console_flushc();
@@ -28,13 +35,15 @@ void console_flushc();
 void console_clear();
 void console_flushs();
 
-void console_putchara(char c,uint8_t a);
-void console_putchar(char c);
+void console_putchara(unsigned char c,uint8_t a);
+void console_putchar(unsigned char c);
 
 
-void console_write(char* buf);
-void console_writea(char* buf,uint8_t a);
+void console_write(unsigned char* buf);
+void console_writea(unsigned char* buf,uint8_t a);
 void console_read();
 
-void console_write_color(char* buf,int8_t b,int8_t f);
-void console_putchar_color(char c,int8_t b,int8_t f);
+void console_write_color(unsigned char* buf,int8_t b,int8_t f);
+void console_putchar_color(unsigned char c,int8_t b,int8_t f);
+
+void print_mod(char* buf,int m);

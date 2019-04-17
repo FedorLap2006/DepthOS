@@ -10,6 +10,34 @@ int dfcolor = WHITE_COLOR;
 
 int cursorx = 0, cursory = 0;
 
+
+void print_mod(char* buf,int m) {
+	switch(m) {
+		case MOD_OK: {
+			console_putchar('[');
+			console_write_color("OK",-1,WGREEN_COLOR);
+//			console_putchar_color(0xFB,-1,WGREEN_COLOR);
+			console_putchar(']');
+			console_putchar(' ');
+			console_write_color(buf,-1,WBLUE_COLOR);
+			console_putchar('\n');
+		   break;
+		}
+		case MOD_ERR: {
+			console_putchar('[');
+			console_write_color("ERROR",-1,PINK_COLOR);
+//			console_putchar_color(0xFB,-1,WGREEN_COLOR);
+			console_putchar(']');
+			console_putchar(' ');
+			console_write_color(buf,-1,WBLUE_COLOR);
+			console_putchar('\n');
+		  break;
+		}
+		default:
+			break;
+	}
+}
+
 void console_init(int s,int l,int b, int f) {
 	if ( s > 0 )
 		strs_count = s;
@@ -20,6 +48,7 @@ void console_init(int s,int l,int b, int f) {
 	if ( f > 0 )
 		dfcolor = f;
 	console_clear();
+	print_mod("console initialized",MOD_OK);
 }
 
 void console_movec(int x,int y) {
@@ -46,10 +75,25 @@ void console_clear() {
 	console_flushc();
 }
 
+void console_flushs() {
+	uint8_t at = ( dbcolor << 4 ) | ( dfcolor & 0x0F );
+	uint16_t b = 0x20 | ( at << 8 );
 
-void console_putchara(char c,uint8_t a) {
+	if ( cursory >= strs_count ) {
+		for ( int i = 0; i < ( strs_count-1 ) * strs_len; i++ ) {
+			videoMemory[i] = videoMemory[i+strs_len];
+		}
+		for ( int i = ( strs_count - 1 ) * strs_len; i < strs_count * strs_len; i++ ) {
+		   videoMemory[i] = b;
+		}
+ 		cursory = strs_count - 1;		
+	}
+}
+
+void console_putchara(unsigned char c,uint8_t a) {
 	uint16_t attr = a << 8;
 	uint16_t *loc;
+
 
 	if ( c == 0x08 && cursorx ) {
 		--cursorx;
@@ -69,20 +113,21 @@ void console_putchara(char c,uint8_t a) {
 		*loc = c | attr;
 		++cursorx;
 	}
-	if ( cursorx >= strs_len ) {
-		cursorx = 0;
-		++cursory;
+	if ( cursorx >= strs_len || cursorx == strs_len - 1) { // 79 80
+		console_putchara('\n',( dbcolor << 4 ) | ( dfcolor & 0x0F));
+//		cursorx = 0;
+//		++cursory;
 	}
+	console_flushs();
 	console_flushc();
-
 }
 
 
-void console_putchar(char c) {
+void console_putchar(unsigned char c) {
 	console_putchara(c, ( dbcolor << 4 ) | ( dfcolor & 0x0F));
 }
 
-void console_write(char* buf) {
+void console_write(unsigned char* buf) {
 	int i=0;
 	while(buf[i]) {
 		console_putchar(buf[i]);
@@ -90,7 +135,7 @@ void console_write(char* buf) {
 	}
 }
 
-void console_writea(char* buf,uint8_t a) {
+void console_writea(unsigned char* buf,uint8_t a) {
 	int i = 0;
 	while(buf[i]) {
 		console_putchara(buf[i],a);
@@ -98,7 +143,7 @@ void console_writea(char* buf,uint8_t a) {
 	}
 }
 
-void console_write_color(char* buf,int8_t b,int8_t f) {
+void console_write_color(unsigned char* buf,int8_t b,int8_t f) {
 	if ( b < 0 ) {
 		b = dbcolor;
 	}
@@ -108,7 +153,7 @@ void console_write_color(char* buf,int8_t b,int8_t f) {
 	console_writea(buf,( b << 4 ) | (f & 0x0F ));
 }
 
-void console_putchar_color(char c,int8_t b,int8_t f) {
+void console_putchar_color(unsigned char c,int8_t b,int8_t f) {
 	if ( b < 0 ) {
 		b = dbcolor;
 	}
@@ -117,3 +162,5 @@ void console_putchar_color(char c,int8_t b,int8_t f) {
 	}
 	console_putchara(c, ( b << 4 ) | ( f & 0x0F ));
 }
+
+

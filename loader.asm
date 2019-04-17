@@ -7,7 +7,7 @@ FLAGS equ 0 | MBALIGN | MEMINFO
 HLEN equ __boot_header_end - __boot_header
 CHECKSUM equ 0x100000000 - (MAGIC + FLAGS + HLEN)
 
-STACK_SIZE equ 600
+STACK_SIZE equ 60000
 
 bits 32
 
