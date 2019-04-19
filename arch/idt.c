@@ -131,13 +131,13 @@ void irq_handler(regs_t r) {
 			outb(0xA0,0x20);
 	}
 	outb(0x20,0x20);
-	console_write("irq");
-	
+//	console_write("irq");
+	return;
 }
 
 
 void intr_handler(regs_t r) {
-	console_write("\n");
+/*	console_write("\n");
 	console_write("ds:");
 	console_write_dec(r.ds);
 	console_write("\n");
@@ -164,13 +164,13 @@ void intr_handler(regs_t r) {
 	console_write("\n");
 	console_write("eax:");
 	console_write_dec(r.eax);
-	console_write("\n");
+	console_write("\n"); */
 	console_write("intr num:");
 	console_write_dec(r.int_num);
 	console_write("\n");
 	console_write("err code:");
 	console_write_dec(r.err_code);
-	console_write("\n");
+/*	console_write("\n");
 	console_write("eip:");
 	console_write_dec(r.eip);
 	console_write("\n");
@@ -185,7 +185,7 @@ void intr_handler(regs_t r) {
 	console_write("\n");
 	console_write("ss:");
 	console_write_dec(r.ss);
-	console_write("\n");
+	console_write("\n"); */
 
 
 

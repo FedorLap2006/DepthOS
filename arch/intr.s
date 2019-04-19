@@ -167,25 +167,26 @@ INTR_NOERRCODE 128
 
 intr_cstub:
 	pusha
-	pushl %ds
-	pushl %es
-	pushl %fs
-	pushl %gs
+	mov %ds,%ax
+	pushl %eax
 	mov $0x10, %ax
 	mov %ax, %ds
 	mov %ax, %es
 	mov %ax, %fs
 	mov %ax, %gs
-	mov %esp, %eax
-	push %eax
-	// Call the C kernel hardware interrupt handler
+//	mov %esp, %eax
+//	pusha
+	// Call the kernel IRQ handler
 	call intr_handler
+
 	popl %eax
-	popl %gs
-	popl %fs
-	popl %es
-	popl %ds
+	mov %ax,%ds
+	mov %ax,%es
+	mov %ax,%fs
+	mov %ax,%gs
+	
 	popa
+//	popa
 	add $8, %esp
 	sti
 	iret
@@ -193,26 +194,28 @@ intr_cstub:
 
 irq_cstub:
 	pusha
-	pushl %ds
-	pushl %es
-	pushl %fs
-	pushl %gs
+	mov %ds,%ax
+	pushl %eax
 	mov $0x10, %ax
 	mov %ax, %ds
 	mov %ax, %es
 	mov %ax, %fs
 	mov %ax, %gs
-	mov %esp, %eax
-	push %eax
+//	mov %esp, %eax
+//	pusha
 	// Call the kernel IRQ handler
 	call irq_handler
+
 	popl %eax
-	popl %gs
-	popl %fs
-	popl %es
-	popl %ds
+	mov %ax,%ds
+	mov %ax,%es
+	mov %ax,%fs
+	mov %ax,%gs
+	
 	popa
+//	popa
 	add $8, %esp
+	sti
 	iret
 
 .extern idt_ptr

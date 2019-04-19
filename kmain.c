@@ -40,7 +40,7 @@ void kmain(int magic,void *boot_ptr) {
 //	print_mod_msg("console system initialized",MOD_OK);
 //	print_mod_msg("some error",MOD_ERROR);
 */
-	reg_intr(81,syscall_event);
+	reg_intr(0x80,syscall_event);
 	idt_init();
 
 	console_putchar('\n');
@@ -59,5 +59,6 @@ void kmain(int magic,void *boot_ptr) {
 	console_putchar_color('#',-1,GREEN_COLOR);
 	console_putchar(' ');
 
-	__asm ( "int $41" );
+	__asm ( "int $0x80" );
+	return;
 }
