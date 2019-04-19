@@ -11,9 +11,55 @@ void print_str(char* str) {
 
 }
 
+
 void syscall_event(regs_t r) {
-	console_write("syscall\n");
+	switch(r.eax) {
+	case 0:
+		console_write("hello!");
+		break;
+	case 1:
+		console_write("hello 2!");
+		break;
+	case 2:
+		break;
+	default:
+		break;
+	}	
+//	console_write_dec(r.eax);
 }
+
+void kb_event(regs_t r) {
+	console_write("new!");
+	unsigned char status;
+	char keycode;
+
+	status = inb(0x64);
+	if ( status & 0x01 ) {
+		keycode = inb(0x60);
+		if ( keycode < 0 ) {
+			return;
+		}
+		console_write_dec(keycode);
+	}
+	return;
+}
+static uint32_t tick = 0;
+void ticker(regs_t regs) {
+	tick++;
+	console_write("tick:");
+	console_write_dec(tick);
+	console_write("\n");
+}
+void init_timer(uint32_t freq) {
+	reg_intr(32,ticker);
+	uint32_t divisor = 1193180 / freq;
+	outb(0x43,0x36);
+	uint8_t l = (uint8_t)(divisor & 0xFF);
+	uint8_t h = (uint8_t)((divisor >> 8) & 0xFF);
+
+	outb(0x40,l);
+	outb(0x40,h);
+}	
 
 
 void kmain(int magic,void *boot_ptr) {
@@ -40,8 +86,10 @@ void kmain(int magic,void *boot_ptr) {
 //	print_mod_msg("console system initialized",MOD_OK);
 //	print_mod_msg("some error",MOD_ERROR);
 */
-	reg_intr(0x80,syscall_event);
 	idt_init();
+	reg_intr(33,kb_event);
+	reg_intr(0x80,syscall_event);
+//	init_timer(50);
 
 	console_putchar('\n');
 	char welcome[] = "Welcome to DepthOS v";
@@ -58,7 +106,9 @@ void kmain(int magic,void *boot_ptr) {
 	console_write_color("depthos",-1,BROWN_COLOR);
 	console_putchar_color('#',-1,GREEN_COLOR);
 	console_putchar(' ');
+	
 
+	__asm ( "movl $0x1,%%eax" : );
 	__asm ( "int $0x80" );
 	return;
 }

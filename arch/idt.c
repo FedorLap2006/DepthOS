@@ -13,6 +13,22 @@ void idt_init() {
 	__init_idt = 1;
 	idt_ptr.size = ( sizeof(struct __idt_entry) * idt_size ) - 1;
 	idt_ptr.addr = (uint32_t)&idt;
+    // Remap the IRQ table
+    // Send initialization signal
+    outb(0x20,0x11);
+    outb(0xA0,0x11);
+    // Set offset
+    outb(0x21,0x20);
+    outb(0xA1,0x28);
+    // Set master-slave relation
+    outb(0x21,0x04);
+    outb(0xA1,0x02);
+    // Set 8086 mode
+    outb(0x21,0x01);
+    outb(0x21,0x01);
+    // End of mess
+    outb(0x21,0x00);
+    outb(0xA1,0x00);
 
 #define idef(i) extern void intr##i(); idt_regh(i,(uint32_t)intr##i)
 	idef(0); idef(1); idef(2); idef(3); idef(4); idef(5);
@@ -131,6 +147,11 @@ void irq_handler(regs_t r) {
 			outb(0xA0,0x20);
 	}
 	outb(0x20,0x20);
+
+	if ( intrs[r.int_num] != 0 ) {
+		intr_ht h = intrs[r.int_num];
+		h(r);
+	}
 //	console_write("irq");
 	return;
 }
@@ -164,13 +185,13 @@ void intr_handler(regs_t r) {
 	console_write("\n");
 	console_write("eax:");
 	console_write_dec(r.eax);
-	console_write("\n"); */
+	console_write("\n");
 	console_write("intr num:");
 	console_write_dec(r.int_num);
 	console_write("\n");
 	console_write("err code:");
 	console_write_dec(r.err_code);
-/*	console_write("\n");
+	console_write("\n");
 	console_write("eip:");
 	console_write_dec(r.eip);
 	console_write("\n");
@@ -189,20 +210,10 @@ void intr_handler(regs_t r) {
 
 
 
-	if ( r.int_num >= count_uintr ) {
-		print_mod("out of range: call intr",MOD_ERR);
-		return;
-	}
-
 	if ( intrs[r.int_num] != 0 ) {
-		print_mod("calling interrupt handler",MOD_OK);
 		intr_ht h = intrs[r.int_num];
 		h(r);
 	}
-   	if ( intrs[r.int_num] == 0 ){
-		print_mod("null pointer: handler",MOD_ERR);
-	}
-
 }
 
 
@@ -211,16 +222,16 @@ void reg_intr(uint32_t i,intr_ht f) {
 		print_mod("out of range ( interrupt number )", MOD_ERR);
 		return;
 	}
-	if (intrs[i] != 0 ) {
+/*	if (intrs[i] != 0 ) {
 		console_write("WARN: not null: register interrupt\n");
-	}
+	}*/
 	intrs[i] = f;
-	if ( intrs[i] != f ) {
+	/*if ( intrs[i] != f ) {
 		print_mod("error -> reg interrupt handler",MOD_ERR);
 	}
 	else {
 		print_mod("new interrupt registred",MOD_OK);
-	}
+	}*/
 }
 
 void idt_regh(uint8_t i,uint32_t cb) {

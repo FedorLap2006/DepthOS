@@ -12,7 +12,7 @@ LD=ld
 ASM=nasm -f elf32
 CSTD=11
 CEMU=-m32
-CCFLAGS= -Iinclude -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pic 
+CCFLAGS= -Iinclude -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pic
 ifeq ($(BUILDOS),win)
 	LDEMU=-mi386pe
 else
