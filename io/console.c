@@ -143,6 +143,35 @@ void console_writea(unsigned char* buf,uint8_t a) {
 	}
 }
 
+void console_write_dec(uint32_t v) {
+
+	if(v==0)
+	{
+		console_putchar('0');
+		return;
+	}
+
+	int acc = v;
+	char c[32];
+	int i = 0;
+	while(acc > 0)
+	{
+		c[i] = '0' + acc%10;
+		acc /= 10;
+		++i;
+	}
+	c[i] = 0;
+
+	char c2[32];
+	c2[i--] = 0;
+	int j = 0;
+	while(i >= 0)
+		c2[i--] = c[j++];
+	
+	console_write(c2);
+
+}
+
 void console_write_color(unsigned char* buf,int8_t b,int8_t f) {
 	if ( b < 0 ) {
 		b = dbcolor;

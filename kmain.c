@@ -1,5 +1,6 @@
 
 #include <depthos/console.h>
+#include <depthos/idt.h>
 
 extern unsigned short *videoMemory;
 void print_str(char* str) {
@@ -8,6 +9,10 @@ void print_str(char* str) {
     videoMemory[i] = (videoMemory[i] & 0xFF00) | str[i];
   }
 
+}
+
+void syscall_event(regs_t r) {
+	console_write("syscall\n");
 }
 
 
@@ -35,6 +40,9 @@ void kmain(int magic,void *boot_ptr) {
 //	print_mod_msg("console system initialized",MOD_OK);
 //	print_mod_msg("some error",MOD_ERROR);
 */
+	reg_intr(81,syscall_event);
+	idt_init();
+
 	console_putchar('\n');
 	char welcome[] = "Welcome to DepthOS v";
 
@@ -50,5 +58,6 @@ void kmain(int magic,void *boot_ptr) {
 	console_write_color("depthos",-1,BROWN_COLOR);
 	console_putchar_color('#',-1,GREEN_COLOR);
 	console_putchar(' ');
-	int scancode;
+
+	__asm ( "int $41" );
 }

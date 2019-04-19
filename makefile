@@ -20,9 +20,9 @@ else
 endif
 LDFILE=link.ld
 OUTBIN=$(OSNAME)-$(OSVER)
-CSOURCES ?=
-ASMSOURCES ?= 
-NASMSOURCES ?= 
+# CSOURCES ?=
+# ASMSOURCES ?=
+# NASMSOURCES ?=
 CSOURCES +=kmain.c
 NASMSOURCES +=loader.asm
 #CSOURCES += $(shell find . -name "*.c" -type f -print )
@@ -52,6 +52,7 @@ clean:
 
 build: kernel img iso
 
+
 kernel: $(CSOURCES) $(NASMSOURCES) $(LDFILE)
 	@echo ---------- build kernel -----------
 ifeq ($(DEBUG),on)
@@ -62,8 +63,9 @@ endif
 else
 	$(CC) $(CEMU) -std=c$(CSTD) -c -DOSVER=\"$(OSVER)\" $(CSOURCES) $(CCFLAGS)
 endif
-
+	@mv *.o build/
 	$(ASM) $(NASMSOURCES)
+	gcc -m32 -c $(ASMSOURCES)
 	@mv *.o build/
 	$(LD) $(LDEMU) --nmagic -T$(LDFILE) -o build/$(OUTBIN).bin build/*.o
 ifeq ($(BUILDOS),win)	
@@ -100,5 +102,5 @@ test:
 	@echo
 	@echo ----------- testing os ------------
 	@echo
-	qemu-system-i386 -M pc-i440fx-3.0 -kernel $(OUTBIN) # -nographic
+	qemu-system-i386 -M pc-i440fx-3.0 -kernel $(OUTBIN) # -d cpu -D qemu_log.log # -d int,pcall,cpu,fpu # -nographic
 

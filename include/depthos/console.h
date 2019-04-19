@@ -41,6 +41,7 @@ void console_putchar(unsigned char c);
 
 void console_write(unsigned char* buf);
 void console_writea(unsigned char* buf,uint8_t a);
+void console_write_dec(uint32_t v);
 void console_read();
 
 void console_write_color(unsigned char* buf,int8_t b,int8_t f);

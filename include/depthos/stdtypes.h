@@ -3,6 +3,7 @@
 #define nil ((void*)0)
 #define NULL nil
 #define apack __attribute__((packed))
+//#define asm __asm
 enum { false, true }bool;
 
 typedef unsigned int uint_t;
