@@ -13,6 +13,7 @@ ASM=nasm -f elf32
 CSTD=11
 CEMU=-m32
 CCFLAGS= -Iinclude -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pic
+ASFLAGS = -m32
 ifeq ($(BUILDOS),win)
 	LDEMU=-mi386pe
 else
@@ -29,6 +30,7 @@ NASMSOURCES +=loader.asm
 #ASMSOURCES += $(shell find . -name "*.s" -type f -print )
 #NASMSOURCES += $(shell find . -name "*.asm" -type f -print )
 CSOURCES +=$(wildcard */*.c)
+ASMSOURCES +=$(wildcard */*.S)
 ASMSOURCES +=$(wildcard */*.s)
 NASMSOURCES +=$(wildcard */*.asm)
 # OBJS=build/*.o
@@ -53,7 +55,7 @@ clean:
 build: kernel img iso
 
 
-kernel: $(CSOURCES) $(NASMSOURCES) $(LDFILE)
+kernel: $(CSOURCES) $(ASMSOURCES) $(NASMSOURCES) $(LDFILE)
 	@echo ---------- build kernel -----------
 ifeq ($(DEBUG),on)
 	$(CC) $(CEMU) -std=c$(CSTD) -g -c -DOSVER=\"$(OSVER)\" $(CSOURCES) $(CCFLAGS)
