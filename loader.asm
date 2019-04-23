@@ -44,6 +44,7 @@ global _loader
 ; global _loadkernel
 
 extern kmain
+extern set_up_gdt
 
 _loadkernel:
 	finit
@@ -53,6 +54,7 @@ _loadkernel:
 	push ebx
 	push eax
 
+	call set_up_gdt
 	call kmain
 
 .stop:
