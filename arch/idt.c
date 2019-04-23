@@ -9,6 +9,38 @@ intr_ht intrs[count_uintr];
 
 struct __idt_ptr idt_ptr;
 
+#define IRQC0 (1 << 0)
+#define IRQC1 (1 << 1)
+#define IRQC2 (1 << 2)
+#define IRQC3 (1 << 3)
+#define IRQC4 (1 << 4)
+#define IRQC5 (1 << 5)
+#define IRQC6 (1 << 6)
+#define IRQC7 (1 << 7)
+#define IRQC8 (1 << 8)
+#define IRQC9 (1 << 9)
+#define IRQC10 (1 << 10)
+#define IRQC11 (1 << 11)
+#define IRQC12 (1 << 12)
+#define IRQC13 (1 << 13)
+#define IRQC14 (1 << 14)
+#define IRQC15 (1 << 15)
+#define IRQC16 (1 << 16)
+#define IRQCALL 0xFFFF
+#define IRQCDALL 0x0000
+
+
+
+
+
+
+
+
+static void mirq_intrs(uint16_t bm) {
+	bm = ~(bm);
+	outb(0x21, bm);
+}
+
 void idt_init() {
 	__init_idt = 1;
 	idt_ptr.size = ( sizeof(struct __idt_entry) * idt_size ) - 1;
@@ -29,6 +61,35 @@ void idt_init() {
     // End of mess
     outb(0x21,0x00);
     outb(0xA1,0x00);
+
+	/* ICW1 - begin initialization */
+	outb(0x20 , 0x11);
+	outb(0xA0 , 0x11);
+
+	/* ICW2 - remap offset address of IDT */
+	/*
+	* In x86 protected mode, we have to remap the PICs beyond 0x20 because
+	* Intel have designated the first 32 interrupts as "reserved" for cpu exceptions
+	*/
+	outb(0x21 , 0x20);
+	outb(0xA1 , 0x28);
+
+	/* ICW3 - setup cascading */
+	outb(0x21 , 0x00);  
+	outb(0xA1 , 0x00);  
+
+	/* ICW4 - environment info */
+	outb(0x21 , 0x01);
+	outb(0xA1 , 0x01);
+	/* Initialization finished */
+
+	/* mask interrupts */
+	outb(0x21 , 0xff);
+	outb(0xA1 , 0xff);
+
+	
+//	mirq_intrs(IRQC1 | IRQC2);
+	mirq_intrs(IRQC1 | IRQC2 | IRQC3); // 1111 1111 1111 111(1=0)
 
 #define idef(i) extern void intr##i(); idt_regh(i,(uint32_t)intr##i)
 	idef(0); idef(1); idef(2); idef(3); idef(4); idef(5);
@@ -222,16 +283,16 @@ void reg_intr(uint32_t i,intr_ht f) {
 		print_mod("out of range ( interrupt number )", MOD_ERR);
 		return;
 	}
-/*	if (intrs[i] != 0 ) {
+	if (intrs[i] != 0 ) {
 		console_write("WARN: not null: register interrupt\n");
-	}*/
+	}
 	intrs[i] = f;
-	/*if ( intrs[i] != f ) {
+	if ( intrs[i] != f ) {
 		print_mod("error -> reg interrupt handler",MOD_ERR);
 	}
 	else {
 		print_mod("new interrupt registred",MOD_OK);
-	}*/
+	}
 }
 
 void idt_regh(uint8_t i,uint32_t cb) {

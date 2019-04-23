@@ -6,7 +6,7 @@ else
 endif
 DEBUG?=on
 OSVER?=1.0
-OSNAME?=depthos
+OSNAME?=DepthOS
 CC=gcc
 LD=ld
 ASM=nasm -f elf32

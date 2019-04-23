@@ -31,24 +31,24 @@ set_up_gdt:
 
 	.data
 1:
-	.2byte	.Lgdt_end - .Lgdt
-	.4byte	.Lgdt
+	.short	.Lgdt_end - .Lgdt
+	.long	.Lgdt
 
 	.align	16
 .Lgdt:
-	.4byte	0
-	.4byte	0
+	.long	0
+	.long	0
 
-	.4byte	DESC_LIMIT_LOW(KERNEL_CODE_LIMIT) | \
+	.long	DESC_LIMIT_LOW(KERNEL_CODE_LIMIT) | \
 		DESC_BASE_LOW(KERNEL_CODE_BASE)
-	.4byte	DESC_G | DESC_D_B | \
+	.long	DESC_G | DESC_D_B | \
 		DESC_P | DESC_S | DESC_TYPE_X | DESC_TYPE_R | \
 		DESC_LIMIT_HIGH(KERNEL_CODE_LIMIT) | \
 		DESC_BASE_HIGH(KERNEL_CODE_BASE)
 
-	.4byte	DESC_LIMIT_LOW(KERNEL_DATA_LIMIT) | \
+	.long	DESC_LIMIT_LOW(KERNEL_DATA_LIMIT) | \
 		DESC_BASE_LOW(KERNEL_DATA_BASE)
-	.4byte	DESC_G | DESC_D_B | \
+	.long	DESC_G | DESC_D_B | \
 		DESC_P | DESC_S | DESC_TYPE_R | DESC_TYPE_W | \
 		DESC_LIMIT_HIGH(KERNEL_DATA_LIMIT) | \
 		DESC_BASE_HIGH(KERNEL_DATA_BASE)

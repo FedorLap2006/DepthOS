@@ -1,6 +1,7 @@
 
 #include <depthos/console.h>
 #include <depthos/idt.h>
+// #include <depthos/gdt.h>
 
 extern unsigned short *videoMemory;
 void print_str(char* str) {
@@ -43,6 +44,11 @@ void kb_event(regs_t r) {
 	}
 	return;
 }
+
+void init_kb() {
+	reg_intr(0x20 + 0x1,kb_event);
+}
+
 static uint32_t tick = 0;
 void ticker(regs_t regs) {
 	tick++;
@@ -51,7 +57,7 @@ void ticker(regs_t regs) {
 	console_write("\n");
 }
 void init_timer(uint32_t freq) {
-	reg_intr(32,ticker);
+	reg_intr(0x20 + 0x0,ticker);
 	uint32_t divisor = 1193180 / freq;
 	outb(0x43,0x36);
 	uint8_t l = (uint8_t)(divisor & 0xFF);
@@ -73,7 +79,7 @@ void kmain(int magic,void *boot_ptr) {
 //	console_write("[ II ] WWWW ");
 //	console_putchar_color('*',BLACK_COLOR,RED_COLOR);
 //	console_write_color("[ OK ] kernel loaded",BLACK_COLOR,RED_COLOR);
-	print_mod("kernel loaded",MOD_OK);
+	
 	/* byte_t m1[] = "kernel loaded \n";
 	console_write("[",1);
 	print_ok();
@@ -86,10 +92,15 @@ void kmain(int magic,void *boot_ptr) {
 //	print_mod_msg("console system initialized",MOD_OK);
 //	print_mod_msg("some error",MOD_ERROR);
 */
+//	gdt_init();
+	print_mod("GDT initialized",MOD_OK);
 	idt_init();
-	reg_intr(33,kb_event);
+//	reg_intr(0x20 + 0x1,kb_event);
 	reg_intr(0x80,syscall_event);
-//	init_timer(50);
+	init_timer(1);
+	init_kb();
+
+	print_mod("kernel loaded",MOD_OK);
 
 	console_putchar('\n');
 	char welcome[] = "Welcome to DepthOS v";
