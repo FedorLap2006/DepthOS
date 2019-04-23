@@ -1,5 +1,6 @@
 #include <depthos/idt.h>
 
+void idt_regh(uint8_t i,uint32_t cb);
 int __init_idt = 0;
 
 #define idt_size 256

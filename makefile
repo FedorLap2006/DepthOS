@@ -58,12 +58,12 @@ build: kernel img iso
 kernel: $(CSOURCES) $(ASMSOURCES) $(NASMSOURCES) $(LDFILE)
 	@echo ---------- build kernel -----------
 ifeq ($(DEBUG),on)
-	$(CC) $(CEMU) -std=c$(CSTD) -g -c -DOSVER=\"$(OSVER)\" $(CSOURCES) $(CCFLAGS)
+	$(CC) $(CEMU) -std=c$(CSTD) -W -Wall -g -c -DOSVER=\"$(OSVER)\" $(CSOURCES) $(CCFLAGS)
 ifeq ($(DEBUG),true)
-	$(CC) $(CEMU) -std=c$(CSTD) -g -c -DOSVER=\"$(OSVER)\" $(CSOURCES) $(CCFLAGS)
+	$(CC) $(CEMU) -std=c$(CSTD) -W -Wall -g -c -DOSVER=\"$(OSVER)\" $(CSOURCES) $(CCFLAGS)
 endif
 else
-	$(CC) $(CEMU) -std=c$(CSTD) -c -DOSVER=\"$(OSVER)\" $(CSOURCES) $(CCFLAGS)
+	$(CC) $(CEMU) -std=c$(CSTD) -W -Wall -c -DOSVER=\"$(OSVER)\" $(CSOURCES) $(CCFLAGS)
 endif
 	@mv *.o build/
 	$(ASM) $(NASMSOURCES)

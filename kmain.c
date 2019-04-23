@@ -6,7 +6,7 @@
 extern unsigned short *videoMemory;
 void print_str(char* str) {
 
-  for (int i = 0; i < str[i] != '\0'; i++) {
+  for (int i = 0; str[i] != '\0'; i++) {
     videoMemory[i] = (videoMemory[i] & 0xFF00) | str[i];
   }
 

@@ -127,7 +127,7 @@ void console_putchar(unsigned char c) {
 	console_putchara(c, ( dbcolor << 4 ) | ( dfcolor & 0x0F));
 }
 
-void console_write(unsigned char* buf) {
+void console_write(const char* buf) {
 	int i=0;
 	while(buf[i]) {
 		console_putchar(buf[i]);
@@ -135,7 +135,7 @@ void console_write(unsigned char* buf) {
 	}
 }
 
-void console_writea(unsigned char* buf,uint8_t a) {
+void console_writea(const char* buf,uint8_t a) {
 	int i = 0;
 	while(buf[i]) {
 		console_putchara(buf[i],a);
@@ -200,7 +200,7 @@ void console_write_dec(uint32_t v) {
 
 }
 
-void console_write_color(unsigned char* buf,int8_t b,int8_t f) {
+void console_write_color(const char* buf,int8_t b,int8_t f) {
 	if ( b < 0 ) {
 		b = dbcolor;
 	}
