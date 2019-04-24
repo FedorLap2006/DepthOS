@@ -170,34 +170,34 @@ char* dec_tostr(uint32_t v) {
 	return c2;
 }
 
-void console_write_dec(uint32_t v) {
-//	console_write(dec_tostr(v));
-// /*
-	if(v==0)
+void console_write_int(uint32_t v, unsigned base)
+{
+	int acc = v;
+	char c[33], c2[33];
+	int i = 0, j = 0;
+
+	if (v == 0 || base > 16)
 	{
 		console_putchar('0');
 		return;
 	}
 
-	int acc = v;
-	char c[32];
-	int i = 0;
-	while(acc > 0)
+	while (acc > 0)
 	{
-		c[i] = '0' + acc%10;
-		acc /= 10;
+		c[i] = "0123456789abcdef"[acc % base];
+		acc /= base;
 		++i;
 	}
 	c[i] = 0;
-
-	char c2[32];
 	c2[i--] = 0;
-	int j = 0;
 	while(i >= 0)
 		c2[i--] = c[j++];
-//	*/
-	console_write(c2);
 
+	console_write(c2);
+}
+
+void console_write_dec(uint32_t v) {
+	console_write_int(v, 10);
 }
 
 void console_write_color(const char* buf,int8_t b,int8_t f) {
