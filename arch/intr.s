@@ -26,9 +26,10 @@
 .macro IRQ_NOERRCODE num
 	.global intr\num
 	intr\num:
-		cli
-		pushl $\num
-		jmp irq_cstub
+		// push 0 in place of the error code
+		pushl	$0
+		pushl	$\num
+		jmp	irq_cstub
 .endm
 
 
@@ -194,28 +195,25 @@ intr_cstub:
 
 irq_cstub:
 	pusha
-	mov %ds,%ax
-	pushl %eax
-	mov $0x10, %ax
-	mov %ax, %ds
-	mov %ax, %es
-	mov %ax, %fs
-	mov %ax, %gs
-//	mov %esp, %eax
-//	pusha
+	push	%ds
+	push	%es
+	push	%gs
+	push	%fs
+	mov	$0x10, %ax
+	mov	%ax, %ds
+	mov	%ax, %es
+	mov	%ax, %fs
+	mov	%ax, %gs
 	// Call the kernel IRQ handler
-	call irq_handler
+	call	irq_handler
 
-	popl %eax
-	mov %ax,%ds
-	mov %ax,%es
-	mov %ax,%fs
-	mov %ax,%gs
-	
+	pop	%fs
+	pop	%gs
+	pop	%es
+	pop	%ds
 	popa
-//	popa
-	add $8, %esp
-	sti
+	// pop error code and IRQ number
+	add	$8, %esp
 	iret
 
 .extern idt_ptr

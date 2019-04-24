@@ -6,9 +6,9 @@
 #include <depthos/console.h>
 
 typedef struct __regs {
-    uint32_t ds;
+    uint32_t fs, gs, es, ds;
     uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
-	uint32_t int_num, err_code;
+    uint32_t int_num, err_code;
     uint32_t eip,cs,eflags,useresp,ss;
 } regs_t;
 

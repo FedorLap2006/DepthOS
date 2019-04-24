@@ -121,5 +121,7 @@ void kmain(int magic,void *boot_ptr) {
 
 	__asm ( "movl $0x1,%%eax" : );
 	__asm ( "int $0x80" );
+	for (;;)
+		__asm __volatile ("hlt");
 	return;
 }
