@@ -127,7 +127,7 @@ void console_putchar(unsigned char c) {
 	console_putchara(c, ( dbcolor << 4 ) | ( dfcolor & 0x0F));
 }
 
-void console_write(unsigned char* buf) {
+void console_write(const char* buf) {
 	int i=0;
 	while(buf[i]) {
 		console_putchar(buf[i]);
@@ -135,7 +135,7 @@ void console_write(unsigned char* buf) {
 	}
 }
 
-void console_writea(unsigned char* buf,uint8_t a) {
+void console_writea(const char* buf,uint8_t a) {
 	int i = 0;
 	while(buf[i]) {
 		console_putchara(buf[i],a);
@@ -143,64 +143,37 @@ void console_writea(unsigned char* buf,uint8_t a) {
 	}
 }
 
-char* dec_tostr(uint32_t v) {
-	char c[32];
-	if(v==0)
-	{
-		c[0] = '0';
-		return c;
-	}
-
+void console_write_int(uint32_t v, unsigned base)
+{
 	int acc = v;
+	char c[33], c2[33];
+	int i = 0, j = 0;
 
-	int i = 0;
-	while(acc > 0)
-	{
-		c[i] = '0' + acc%10;
-		acc /= 10;
-		++i;
-	}
-	c[i] = 0;
-
-	char c2[32];
-	c2[i--] = 0;
-	int j = 0;
-	while(i >= 0)
-		c2[i--] = c[j++];
-	return c2;
-}
-
-void console_write_dec(uint32_t v) {
-//	console_write(dec_tostr(v));
-// /*
-	if(v==0)
+	if (v == 0 || base > 16)
 	{
 		console_putchar('0');
 		return;
 	}
 
-	int acc = v;
-	char c[32];
-	int i = 0;
-	while(acc > 0)
+	while (acc > 0)
 	{
-		c[i] = '0' + acc%10;
-		acc /= 10;
+		c[i] = "0123456789abcdef"[acc % base];
+		acc /= base;
 		++i;
 	}
 	c[i] = 0;
-
-	char c2[32];
 	c2[i--] = 0;
-	int j = 0;
 	while(i >= 0)
 		c2[i--] = c[j++];
-//	*/
-	console_write(c2);
 
+	console_write(c2);
 }
 
-void console_write_color(unsigned char* buf,int8_t b,int8_t f) {
+void console_write_dec(uint32_t v) {
+	console_write_int(v, 10);
+}
+
+void console_write_color(const char* buf,int8_t b,int8_t f) {
 	if ( b < 0 ) {
 		b = dbcolor;
 	}

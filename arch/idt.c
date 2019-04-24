@@ -1,5 +1,6 @@
 #include <depthos/idt.h>
 
+void idt_regh(uint8_t i,uint32_t cb);
 int __init_idt = 0;
 
 #define idt_size 256
@@ -124,32 +125,6 @@ void idt_init() {
 
 void __idt_default_handler() {
 	console_write("hello!");
-}
-
-
-char num_tochar(int i) {
-	if ( i == 0 )
-	  return '0';
-	if ( i == 1 )
-	  return '1';	
-	if ( i == 2 )
-	  return '2';
-	if ( i == 3 )
-	  return '3';	
-	if ( i == 4 )
-	  return '4';	
-	if ( i == 5 )
-	  return '5';	
-	if ( i == 6 )
-	  return '6';
-	if ( i == 7 )
-	  return '7';	
-	if ( i == 8 )
-	  return '8';
-	if ( i == 9 )
-	  return '9';
-	return -1;	
-//	for( int i = sizeof(i) / 8; i > 0; i-- ) {
 }
 
 void irq_handler(regs_t r) {

@@ -39,12 +39,13 @@ void console_putchara(unsigned char c,uint8_t a);
 void console_putchar(unsigned char c);
 
 
-void console_write(unsigned char* buf);
-void console_writea(unsigned char* buf,uint8_t a);
+void console_write(const char* buf);
+void console_writea(const char* buf,uint8_t a);
 void console_write_dec(uint32_t v);
+void console_write_int(uint32_t v, unsigned base);
 void console_read();
 
-void console_write_color(unsigned char* buf,int8_t b,int8_t f);
+void console_write_color(const char* buf,int8_t b,int8_t f);
 void console_putchar_color(unsigned char c,int8_t b,int8_t f);
 
 void print_mod(char* buf,int m);
