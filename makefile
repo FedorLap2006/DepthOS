@@ -4,6 +4,7 @@ ifeq ($(OS),Windows_NT)
 else
 	BUILDOS ?= nix
 endif
+ARCH?=x86
 DEBUG?=on
 OSVER?=1.0
 OSNAME?=DepthOS
@@ -20,6 +21,7 @@ else
 	LDEMU=-melf_i386
 endif
 LDFILE=link.ld
+
 OUTBIN=$(OSNAME)-$(OSVER)
 # CSOURCES ?=
 # ASMSOURCES ?=
@@ -36,6 +38,10 @@ NASMSOURCES +=$(wildcard */*.asm)
 # OBJS=build/*.o
 # .PHONY: all clean
 
+CSOURCES+=$(wildcard */$(ARCH)/*.c)
+ASMSOURCES+=$(wildcard */$(ARCH)/*.S)
+ASMSOURCES+=$(wildcard */$(ARCH)/*.s)
+NASMSOURCES+=$(wildcard */$(ARCH)/*.asm)
 
 all: os_info clean build test
 	
@@ -104,5 +110,5 @@ test:
 	@echo
 	@echo ----------- testing os ------------
 	@echo
-	qemu-system-i386 -M pc-i440fx-3.0 -kernel $(OUTBIN) # -d cpu -D qemu_log.log # -d int,pcall,cpu,fpu # -nographic
+	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN) # -d cpu -D qemu_log.log # -d int,pcall,cpu,fpu # -nographic
 

@@ -17,5 +17,7 @@ SECTIONS {
     .bss : ALIGN(4) {
         *(.bss)
     } 
+	
 
+	end = .; _end = .; __end = .;
 }
