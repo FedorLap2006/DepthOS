@@ -124,7 +124,7 @@ void idt_init() {
 }
 
 void __idt_default_handler() {
-	console_write("hello!");
+	Console_PrintText("hello!");
 }
 
 void irq_handler(regs_t r) {
@@ -259,7 +259,7 @@ void reg_intr(uint32_t i,intr_ht f) {
 		return;
 	}
 	if (intrs[i] != 0 ) {
-		console_write("WARN: not null: register interrupt\n");
+		Console_PrintText("WARN: not null: register interrupt\n");
 	}
 	intrs[i] = f;
 	if ( intrs[i] != f ) {

@@ -2,7 +2,7 @@
 #include <depthos/console.h>
 #include <depthos/idt.h>
 // #include <depthos/gdt.h>
-
+/*
 extern unsigned short *videoMemory;
 void print_str(char* str) {
 
@@ -10,16 +10,16 @@ void print_str(char* str) {
     videoMemory[i] = (videoMemory[i] & 0xFF00) | str[i];
   }
 
-}
+}*/
 
 
 void syscall_event(regs_t r) {
 	switch(r.eax) {
 	case 0:
-		console_write("hello!");
+		Console_PrintText("hello!");
 		break;
 	case 1:
-		console_write("hello 2!");
+		Console_PrintText("hello 2!");
 		break;
 	case 2:
 		break;
@@ -30,7 +30,7 @@ void syscall_event(regs_t r) {
 }
 
 void kb_event(regs_t r) {
-	console_write("new!");
+	Console_PrintText("new!");
 	unsigned char status;
 	char keycode;
 
@@ -40,7 +40,7 @@ void kb_event(regs_t r) {
 		if ( keycode < 0 ) {
 			return;
 		}
-		console_write_dec(keycode);
+		Console_PrintInteger(keycode);
 	}
 	return;
 }
@@ -52,9 +52,9 @@ void init_kb() {
 static uint32_t tick = 0;
 void ticker(regs_t regs) {
 	tick++;
-	console_write("tick:");
-	console_write_dec(tick);
-	console_write("\n");
+	Console_PrintText("tick:");
+	Console_PrintInteger(tick);
+	Console_PrintText("\n");
 }
 void init_timer(uint32_t freq) {
 	reg_intr(0x20 + 0x0,ticker);
@@ -70,12 +70,15 @@ void init_timer(uint32_t freq) {
 
 void kmain(int magic,void *boot_ptr) {
 //	print_str("hello world! ");
-	console_init(
+	Console_SetColor(BLACK_COLOR, BGRAY_COLOR);
+	Console_Clear();
+	print_mod("console initialized",MOD_OK);
+/*	console_init(
 		25,
 		80,
 		0,
 		BGRAY_COLOR
-	);
+	);*/
 //	console_write("[ II ] WWWW ");
 //	console_putchar_color('*',BLACK_COLOR,RED_COLOR);
 //	console_write_color("[ OK ] kernel loaded",BLACK_COLOR,RED_COLOR);
@@ -102,21 +105,21 @@ void kmain(int magic,void *boot_ptr) {
 
 	print_mod("kernel loaded",MOD_OK);
 
-	console_putchar('\n');
+	Console_PrintText("\n");
 	char welcome[] = "Welcome to DepthOS v";
 
-	console_write_color(welcome,-1,WGREEN_COLOR);
+	Console_PrintColoredText(welcome, -1, WGREEN_COLOR);
 	
-	console_write_color(OSVER,-1,WGREEN_COLOR);
-	console_putchar('\n');
+	Console_PrintColoredText(OSVER, -1, WGREEN_COLOR);
+	Console_PrintText("\n");
 
 /*	*/
 	char user[] = "root";
-	console_write_color(user,-1,PINK_COLOR);
-	console_putchar_color('@',-1,GREEN_COLOR);
-	console_write_color("depthos",-1,BROWN_COLOR);
-	console_putchar_color('#',-1,GREEN_COLOR);
-	console_putchar(' ');
+	Console_PrintColoredText(user, -1, PINK_COLOR);
+	Console_PrintColoredText("@", -1, GREEN_COLOR);
+	Console_PrintColoredText("depthos", -1, BROWN_COLOR);
+	Console_PrintColoredText("#", -1, GREEN_COLOR);
+	Console_PrintColoredText(" ");
 	
 
 	__asm ( "movl $0x1,%%eax" : );

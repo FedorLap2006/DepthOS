@@ -1,7 +1,187 @@
 #include <depthos/console.h>
 
-unsigned short* videoMemory = (unsigned short*)0xb8000;
+#define CONSOLE_WIDTH 80 // Ширина экрана в символах
+#define CONSOLE_HEIGHT 25 // Высота экрана в символах
+#define VIDEO_MEMORY_SIZE (CONSOLE_WIDTH * CONSOLE_HEIGHT) // Сколько символов может поместиться на экране
+#define CONSOLE_MAX_OUTPUT_SIZE 500 // Для предотвращения бесконечной печати текста
 
+unsigned short* videoMemory = (unsigned short*)0xB8000;
+short consoleCursorX = 0, consoleCursorY = 0; // Позиция курсора на экране
+short consoleColor = 0x0F00; // Цвет фона и символа при выводе текста на экран
+
+// Прокрутка текста на одну строку
+void Console_MoveUp(){
+	short i;
+	short a = 0;
+	short b = CONSOLE_WIDTH;
+	i = CONSOLE_WIDTH * (CONSOLE_HEIGHT - 1);
+	i++;
+	// Сначала текст перемещается на одну строку вверх, удаляя первую строку
+	while(i){
+		i--;
+		videoMemory[a] = videoMemory[b];
+		a++;
+		b++;
+	}
+	i = CONSOLE_WIDTH;
+	// А затем последняя строка заполняется пробелами
+	while(i){
+		i--;
+		videoMemory[a] = consoleColor | ' ';
+		a++;
+	}
+	// Примечание: "for(; i; i--)", "while(i)i--;", "while(i--)".
+}
+
+// Печатает текст "s" на экране
+void Console_PrintText(const char *s){
+    short i = consoleCursorY * CONSOLE_WIDTH + consoleCursorX; // Текущая позиция курсора
+    short lastLine = CONSOLE_WIDTH * CONSOLE_HEIGHT; // Позиция, определяющая необходимость прокрутки текста
+    short errStop = CONSOLE_MAX_OUTPUT_SIZE; // На случай, если будет подана строка без нуль-терминатора
+
+    while(errStop){
+		errStop--;
+        if(*s == '\0'){
+		// Напечатав всю строку нужно запомнить новую позицию курсора
+			Console_SetCursorPos(i % CONSOLE_WIDTH, i / CONSOLE_WIDTH);
+            return;
+        }else if(*s == '\n'){
+		// Переход на новую строку
+            i = i / CONSOLE_WIDTH + 1;
+            i = i * CONSOLE_WIDTH;
+            s++;
+        }else{
+		// Печать текста на экран
+            videoMemory[i] = consoleColor | *s;
+            i++;
+            s++;
+        }
+		// Если следующий символ не поместится на экране, то прокрутить текст на экране
+        if(i > lastLine){
+            Console_MoveUp();
+            i = i - CONSOLE_WIDTH;
+        }
+    }
+}
+
+// Печатает текст на экране, временно изменив цвет
+void Console_PrintColoredText(const char *s, char backgroundColor, char textColor){
+	short bufferColor = consoleColor;
+	if(backgroundColor == COLOR_WITH_CURRENT)
+		backgroundColor = consoleColor >> 12;
+	if(textColor == COLOR_WITH_CURRENT)
+		textColor = consoleColor >> 8;
+	Console_SetColor(backgroundColor, textColor);
+	Console_PrintText(s);
+	consoleColor = bufferColor;
+}
+
+// Печатает целое знаковое число на экране
+void Console_PrintInteger(int n){
+	if(n < 0){
+		Console_PrintText("-");
+		n = -n;	
+	}
+	char buffer[11];
+	short i = 10;
+	buffer[i] = 0;
+	do{
+		i--;
+		buffer[i] = n % 10 + 48;
+		n = n / 10;
+	}while(n && i);
+	Console_PrintText(&buffer[i]);
+}
+
+// Устанавливает цвет печатаемых символов и цвет их фона
+void Console_SetColor(char backgroundColor, char textColor){
+	backgroundColor &= 0x0F;
+	consoleColor = backgroundColor;
+	consoleColor <<= 4;
+	textColor &= 0x0F;
+	consoleColor |= textColor;
+	consoleColor <<= 8;
+}
+
+// Очищает консоль
+void Console_Clear(){
+	short i = CONSOLE_HEIGHT;
+	while(i){
+		i--;
+		Console_MoveUp();
+	}
+	Console_SetCursorPos(0, 0);
+}
+
+// Устанавливает новую позицию курсора
+void Console_SetCursorPos(short X, short Y){
+	consoleCursorX = X;
+	consoleCursorY = Y;
+	uint16_t pos = (consoleCursorY * CONSOLE_WIDTH) + consoleCursorX;
+	outb(0x3D4, 14);
+	outb(0x3D5, pos >> 8);
+	outb(0x3D4, 15);
+	outb(0x3D5, pos);
+}
+
+
+
+
+
+
+/*
+void console_flushc() {
+	//uint16_t pos = ( cursory * strs_len ) + cursorx;
+	uint16_t pos = ( consoleCursorY * CONSOLE_WIDTH ) + consoleCursorX;
+	outb(0x3D4, 14);
+	outb(0x3D5, pos >> 8);
+	outb(0x3D4, 15);
+	outb(0x3D5, pos);
+}*/
+
+//void console_flushs() {
+/*	uint8_t at = ( dbcolor << 4 ) | ( dfcolor & 0x0F );
+	uint16_t b = 0x20 | ( at << 8 );
+
+	if ( cursory >= strs_count ) {
+		for ( int i = 0; i < ( strs_count-1 ) * strs_len; i++ ) {
+			videoMemory[i] = videoMemory[i+strs_len];
+		}
+		for ( int i = ( strs_count - 1 ) * strs_len; i < strs_count * strs_len; i++ ) {
+		   videoMemory[i] = b;
+		}
+ 		cursory = strs_count - 1;		
+	}*/
+//}
+
+void print_mod(char* buf,int m) {
+	switch(m) {
+		case MOD_OK: {
+			Console_PrintText("[");
+			Console_PrintColoredText("OK", -1, WGREEN_COLOR);
+//			console_putchar_color(0xFB,-1,WGREEN_COLOR);
+			Console_PrintText("]");
+			Console_PrintText(" ");
+			Console_PrintColoredText(buf, -1, WBLUE_COLOR);
+			Console_PrintText("\n");
+		   break;
+		}
+		case MOD_ERR: {
+			Console_PrintText("[");
+			Console_PrintColoredText("ERROR", -1, PINK_COLOR);
+//			console_putchar_color(0xFB,-1,WGREEN_COLOR);
+			Console_PrintText("]");
+			Console_PrintText(" ");
+			Console_PrintColoredText(buf, -1, WBLUE_COLOR);
+			Console_PrintText("\n");
+		  break;
+		}
+		default:
+			break;
+	}
+}
+
+/*
 int strs_count = 25;
 int strs_len = 80;
 
@@ -192,5 +372,5 @@ void console_putchar_color(unsigned char c,int8_t b,int8_t f) {
 	}
 	console_putchara(c, ( b << 4 ) | ( f & 0x0F ));
 }
-
+*/
 
