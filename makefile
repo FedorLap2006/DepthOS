@@ -4,7 +4,7 @@ ifeq ($(OS),Windows_NT)
 else
 	BUILDOS ?= nix
 endif
-ARCH?=x86
+ARCH?=i386
 DEBUG?=on
 OSVER?=1.0
 OSNAME?=DepthOS
