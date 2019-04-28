@@ -2,6 +2,7 @@
 #include <depthos/console.h>
 #include <depthos/idt.h>
 #include <depthos/heap.h>
+#include <depthos/paging.h>
 // #include <depthos/gdt.h>
 
 extern unsigned short *videoMemory;
@@ -338,9 +339,14 @@ void kmain(int magic,void *boot_ptr) {
 	print_mod("GDT initialized",MOD_OK);
 	idt_init();
 //	reg_intr(0x20 + 0x1,kb_event);
+
+	paging_init();
+
+//
 	reg_intr(0x80,syscall_event);
 	init_timer(1000);
 	init_kb();
+	
 
 	print_mod("kernel loaded",MOD_OK);
 
@@ -360,16 +366,8 @@ void kmain(int magic,void *boot_ptr) {
 	console_putchar_color('#',-1,GREEN_COLOR);
 	console_putchar(' ');
 	
+	console_write_hex(0xD0F);
 
-
-	for (int i = 0; i < 50; i++) {
-		mem[i] = (char)i;
-	}
-	mem[0] = 'H';	
-	console_write(mem);
-	
-
-	
 	for (;;)
 		__asm __volatile ("hlt");
 	return;

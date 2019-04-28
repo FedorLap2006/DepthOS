@@ -18,7 +18,7 @@ typedef struct __ptable_t {
 }ptable_t;
 
 typedef struct __pdir_t {
-	ptable_t tabs[1024];
+	ptable_t *tabs[1024];
 	uint32_t tabsPhys[1024];
 
 	uint32_t physAddr;

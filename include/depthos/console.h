@@ -41,6 +41,7 @@ void console_putchar(unsigned char c);
 
 void console_write(const char* buf);
 void console_writea(const char* buf,uint8_t a);
+void console_write_hex(uint32_t v);
 void console_write_dec(uint32_t v);
 void console_write_int(uint32_t v, unsigned base);
 void console_read();

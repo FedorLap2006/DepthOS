@@ -143,6 +143,11 @@ void console_writea(const char* buf,uint8_t a) {
 	}
 }
 
+void console_write_hex(uint32_t v) {
+	console_write("0x");
+	console_write_int(v,16);
+}
+
 void console_write_int(uint32_t v, unsigned base)
 {
 	int acc = v;
