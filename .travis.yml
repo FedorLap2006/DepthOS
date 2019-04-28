@@ -1,0 +1,12 @@
+sudo: false
+dist: trusty
+
+language: c
+
+addons:
+  apt:
+    packages:
+      - nasm
+
+script:
+  - make kernel
