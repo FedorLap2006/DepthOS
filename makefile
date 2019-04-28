@@ -71,6 +71,7 @@ endif
 else
 	$(CC) $(CEMU) -std=c$(CSTD) -W -Wall -c -DOSVER=\"$(OSVER)\" $(CSOURCES) $(CCFLAGS)
 endif
+	@mkdir -p build
 	@mv *.o build/
 	$(ASM) $(NASMSOURCES)
 	gcc -m32 -c $(ASMSOURCES)
