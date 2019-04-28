@@ -340,8 +340,6 @@ void kmain(int magic,void *boot_ptr) {
 	idt_init();
 //	reg_intr(0x20 + 0x1,kb_event);
 
-	paging_init();
-
 //
 	reg_intr(0x80,syscall_event);
 	init_timer(1000);
