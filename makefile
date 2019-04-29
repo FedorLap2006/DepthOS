@@ -14,6 +14,7 @@ ASM=nasm -f elf32
 CSTD=11
 CEMU=-m32
 CCFLAGS= -Iinclude -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pic
+CCFLAGS += -W -Wall -Wno-unused-parameter -Wno-type-limits -Werror
 ASFLAGS = -m32
 ifeq ($(BUILDOS),win)
 	LDEMU=-mi386pe
@@ -64,12 +65,12 @@ build: kernel img iso
 kernel: $(CSOURCES) $(ASMSOURCES) $(NASMSOURCES) $(LDFILE)
 	@echo ---------- build kernel -----------
 ifeq ($(DEBUG),on)
-	$(CC) $(CEMU) -std=c$(CSTD) -W -Wall -g -c -DOSVER=\"$(OSVER)\" $(CSOURCES) $(CCFLAGS)
+	$(CC) $(CEMU) -std=c$(CSTD) -g -c -DOSVER=\"$(OSVER)\" $(CSOURCES) $(CCFLAGS)
 ifeq ($(DEBUG),true)
-	$(CC) $(CEMU) -std=c$(CSTD) -W -Wall -g -c -DOSVER=\"$(OSVER)\" $(CSOURCES) $(CCFLAGS)
+	$(CC) $(CEMU) -std=c$(CSTD) -g -c -DOSVER=\"$(OSVER)\" $(CSOURCES) $(CCFLAGS)
 endif
 else
-	$(CC) $(CEMU) -std=c$(CSTD) -W -Wall -c -DOSVER=\"$(OSVER)\" $(CSOURCES) $(CCFLAGS)
+	$(CC) $(CEMU) -std=c$(CSTD) -c -DOSVER=\"$(OSVER)\" $(CSOURCES) $(CCFLAGS)
 endif
 	@mkdir -p build
 	@mv *.o build/

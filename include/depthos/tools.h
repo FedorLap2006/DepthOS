@@ -2,9 +2,4 @@
 
 #include <depthos/stdtypes.h>
 
-void pop(void *dst) {
-	__asm ( "pop %0" : "=r"(*dst) : );
-}
-void push(void *data) {
-   __asm ( "push %0" : : "r" (*data));
-}
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(*(a)))

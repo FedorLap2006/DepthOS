@@ -3,6 +3,7 @@
 #include <depthos/idt.h>
 #include <depthos/heap.h>
 #include <depthos/paging.h>
+#include <depthos/tools.h>
 // #include <depthos/gdt.h>
 
 extern unsigned short *videoMemory;
@@ -273,12 +274,12 @@ static int scancode_std [] = {
 
 void kb_event(regs_t r) {
 	unsigned char status;
-	char keycode;
+	unsigned char keycode;
 
 	status = inb(0x64);
 	if ( status & 0x01 ) {
 		keycode = inb(0x60);
-		if ( keycode < 0 ) {
+		if (keycode >= ARRAY_SIZE(scancode_std)) {
 			return;
 		}
 		console_putchar(scancode_std[keycode]);

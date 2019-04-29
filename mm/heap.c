@@ -28,6 +28,7 @@ uint32_t sbrk_a(uint32_t sz,int align) {
 		placeAddr += 0x1000;
 	}
 	uint32_t tmp = placeAddr;
+	return tmp;
 }
 
 uint32_t sbrk_p(uint32_t sz,uint32_t *phys) {
