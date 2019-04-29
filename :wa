@@ -15,7 +15,7 @@ void* virt_to_phys(pg_dir_t *dir,void *v_addr) {
 	}
 	pg_table_t *tab = dir->tabs[PG_TABLE_INDEX(v_addr)];
 	if (!tab->pages[PG_PAGE_INDEX(v_addr)].pres) {
-		print_mod("virt mem: page is not present",MOD_ERR);
+		print_mod("virt mem: page does present",MOD_ERR);
 		return NULL;
 	}
 	
@@ -23,4 +23,5 @@ void* virt_to_phys(pg_dir_t *dir,void *v_addr) {
 	t = (t << 12) + PG_PAGE_OFFSET;
 	return (void*)t;
 }
+
 	
