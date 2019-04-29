@@ -12,7 +12,7 @@ typedef struct __regs {
     uint32_t eip,cs,eflags,useresp,ss;
 } regs_t;
 
-typedef struct __idt_entry{
+struct __idt_entry{
 	uint16_t addr_low;
 	uint16_t sel;
 	uint8_t zero;
@@ -20,7 +20,7 @@ typedef struct __idt_entry{
 	uint16_t addr_high;
 }apack;
 
-typedef struct __idt_ptr {
+struct __idt_ptr {
 	uint16_t size;
 	uint32_t addr;
 }apack;
