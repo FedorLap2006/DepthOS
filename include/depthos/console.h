@@ -1,5 +1,6 @@
 #pragma once
 
+#include <depthos/stdarg.h>
 #include <depthos/stdtypes.h>
 #include <depthos/ports.h>
 
@@ -50,3 +51,6 @@ void console_write_color(const char* buf,int8_t b,int8_t f);
 void console_putchar_color(unsigned char c,int8_t b,int8_t f);
 
 void print_mod(char* buf,int m);
+
+void printk(const char *fmt, ...);
+void vprintk(const char *fmt, va_list ap);

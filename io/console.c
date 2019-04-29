@@ -1,4 +1,6 @@
 #include <depthos/console.h>
+#include <depthos/stdarg.h>
+#include <depthos/vformat.h>
 
 unsigned short* videoMemory = (unsigned short*)0xb8000;
 
@@ -198,4 +200,26 @@ void console_putchar_color(unsigned char c,int8_t b,int8_t f) {
 	console_putchara(c, ( b << 4 ) | ( f & 0x0F ));
 }
 
+static void console_output(void *context, const char *data, size_t sz)
+{
+	while (sz --> 0)
+		console_putchar(*data++);
+}
 
+static void (*output_console)(void *context, const char *data, size_t sz) =
+console_output;
+static void *console_context;
+
+void vprintk(const char *fmt, va_list ap)
+{
+	vformat(output_console, console_context, fmt, ap);
+}
+
+void printk(const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	vprintk(fmt, ap);
+	va_end(ap);
+}
