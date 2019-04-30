@@ -8,7 +8,7 @@
 
 #define LOAD_MEMORY_ADDRESS 0xC0000000
 
-#define fn_t uint16_t
+#define fn_t unsigned int
 
 typedef struct __pg_page_t {
 	fn_t pres   		: 1;
@@ -51,7 +51,6 @@ typedef struct __pg_dir_t {
 
 void* virt_to_phys(pg_dir_t *dir,void *v_addr);
 
-page_t* get_page(void* v_addr,int make,pg_dir_t *dir)
 
 
 

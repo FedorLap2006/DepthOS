@@ -19,8 +19,8 @@ void* virt_to_phys(pg_dir_t *dir,void *v_addr) {
 		return NULL;
 	}
 	
-	uint32_t t = table->pages[PG_PAGE_INDEX(v_addr)].frame;
-	t = (t << 12) + PG_PAGE_OFFSET;
+	uint32_t t = tab->pages[PG_PAGE_INDEX(v_addr)].frame;
+	t = (t << 12) + PG_PAGE_OFFSET(v_addr);
 	return (void*)t;
 }
 	
