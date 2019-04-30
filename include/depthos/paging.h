@@ -24,7 +24,7 @@ typedef struct __pg_page_t {
 
 typedef struct __pg_table_t {
 	struct __pg_page_t pages[1024];
-};
+}pg_table_t;
 
 typedef struct __pg_tbref_t {
 	fn_t pres	    : 1;
@@ -38,13 +38,13 @@ typedef struct __pg_tbref_t {
     fn_t global     : 1;
     fn_t available  : 3;
     fn_t frame      : 20;
-};
+}pg_tbref_t;
 
 
 typedef struct __pg_dir_t {
 	struct __pg_table_t    *tabs[1024];
 	struct __pg_tbref_t tabs_ref[1024];
-};
+}pg_dir_t;
 
 
 #undef f_t
