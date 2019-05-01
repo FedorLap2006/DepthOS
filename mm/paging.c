@@ -157,11 +157,10 @@ void pg_switch_dir(pg_dir_t *pdir, uint32_t phys) {
 
 
 void pmm_init(uint32_t mm_sz) {
-	tot_blocks = mm_sz / BL
+	tot_blocks = 0;
 }
 
 void paging_init() {
-	tot_blocks = 
 }
 
 
