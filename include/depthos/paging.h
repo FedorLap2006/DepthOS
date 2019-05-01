@@ -2,6 +2,10 @@
 
 #include <depthos/stdtypes.h>
 
+#define IS_ALIGN(addr) ((((uint32_t)(addr)) | 0xFFFFF000) == 0)
+#define PAGE_ALIGN(addr) ((((uint32_t)(addr)) & 0xFFFFF000) + 0x1000)
+
+
 #define PG_TABLE_INDEX(vaddr) (((uint32_t)vaddr) >> 22)
 #define PG_PAGE_INDEX(vaddr) ((((uint32_t)vaddr) >>12) & 0x3ff)
 #define PG_PAGE_OFFSET(vaddr) (((uint32_t)vaddr) & 0xfff)
@@ -42,15 +46,24 @@ typedef struct __pg_tbref_t {
 
 
 typedef struct __pg_dir_t {
-	struct __pg_table_t    *tabs[1024];
 	struct __pg_tbref_t tabs_ref[1024];
+	struct __pg_table_t    *tabs[1024];
 }pg_dir_t;
 
 
 #undef f_t
 
-void* virt_to_phys(pg_dir_t *dir,void *v_addr);
+void* get_paddr(pg_dir_t *dir,void *v_addr);
 
+pg_page_t* get_page(pg_dir_t *dir,int make,void* v_addr);
+
+void alloc_region(page_directory_t * dir, uint32_t start_va, uint32_t end_va, int iden_map, int is_kernel, int is_writable);
+void alloc_page(pg_dir_t *dir,uint32_t vaddr,uint32_t frame,int is_kern,int is_rw);
+
+void free_region(page_directory_t * dir, uint32_t start_va, uint32_t end_va, int free);
+void free_page(pg_dir_t *dir,uint32_t vaddr,int free);
+
+/*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
 
 
 
