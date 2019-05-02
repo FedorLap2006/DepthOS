@@ -314,6 +314,8 @@ void init_timer(uint32_t freq) {
 
 
 void kmain(int magic,void *boot_ptr) {
+
+
 //	print_str("hello world! ");
 	console_init(
 		25,
@@ -337,7 +339,6 @@ void kmain(int magic,void *boot_ptr) {
 //	print_mod_msg("console system initialized",MOD_OK);
 //	print_mod_msg("some error",MOD_ERROR);
 */
-	va_list vlist;
 //	gdt_init();
 	print_mod("GDT initialized",MOD_OK);
 	idt_init();

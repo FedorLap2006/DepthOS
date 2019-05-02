@@ -2,6 +2,8 @@
 
 #include <depthos/stdtypes.h>
 
+#define PAGE_SIZE 4096
+
 #define IS_ALIGN(addr) ((((uint32_t)(addr)) | 0xFFFFF000) == 0)
 #define PAGE_ALIGN(addr) ((((uint32_t)(addr)) & 0xFFFFF000) + 0x1000)
 
@@ -57,10 +59,10 @@ void* get_paddr(pg_dir_t *dir,void *v_addr);
 
 pg_page_t* get_page(pg_dir_t *dir,int make,void* v_addr);
 
-void alloc_region(page_directory_t * dir, uint32_t start_va, uint32_t end_va, int iden_map, int is_kernel, int is_writable);
+void alloc_region(pg_dir_t * dir, uint32_t start_va, uint32_t end_va, int iden_map, int is_kernel, int is_writable);
 void alloc_page(pg_dir_t *dir,uint32_t vaddr,uint32_t frame,int is_kern,int is_rw);
 
-void free_region(page_directory_t * dir, uint32_t start_va, uint32_t end_va, int free);
+void free_region(pg_dir_t * dir, uint32_t start_va, uint32_t end_va, int free);
 void free_page(pg_dir_t *dir,uint32_t vaddr,int free);
 
 /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
