@@ -3,6 +3,8 @@
 #include <depthos/idt.h>
 #include <depthos/heap.h>
 #include <depthos/paging.h>
+#include <depthos/serial.h>
+#include <depthos/string.h>
 #include <depthos/tools.h>
 // #include <depthos/gdt.h>
 
@@ -311,8 +313,15 @@ void init_timer(uint32_t freq) {
 	outb(0x40,h);
 }	
 
+struct multiboot_information {
+	uint32_t flags;
+	uint32_t mem_lower;
+	uint32_t mem_upper;
+	uint32_t boot_device;
+	const char *cmdline;
+};
 
-void kmain(int magic,void *boot_ptr) {
+void kmain(int magic, struct multiboot_information *boot_ptr) {
 //	print_str("hello world! ");
 	console_init(
 		25,
@@ -320,6 +329,9 @@ void kmain(int magic,void *boot_ptr) {
 		0,
 		BGRAY_COLOR
 	);
+	if (strstr(boot_ptr->cmdline, "console=ttyS0")) {
+	    serial_console_init(0);
+	}
 //	console_write("[ II ] WWWW ");
 //	console_putchar_color('*',BLACK_COLOR,RED_COLOR);
 //	console_write_color("[ OK ] kernel loaded",BLACK_COLOR,RED_COLOR);
