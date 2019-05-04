@@ -51,7 +51,8 @@ section .data
 
 global TEMP_PG_DIR
 
-TEMP_PG_DIR:    
+align 4096
+TEMP_PG_DIR:
 	; Map the first 4mb physical memory to first 4mb virtual memory. Otherwise, when paging is enabled, eip points to, 0x100004 for example, and MMU is not gonna know how to translate 
     ; this address into phsyical mem address, because our PDE doesn't tell MMU how to find it.
     dd 0x00000083
@@ -70,9 +71,10 @@ global _loader
 extern kmain
 extern set_up_gdt
 
+_loadkernel:
 set_up_mem:
     ; update page directory address, since eax and ebx is in use, have to use ecx or other register
-    mov ecx, (TEMP_PG_DIR - VM_BASE)
+    mov ecx, TEMP_PG_DIR
     mov cr3, ecx
 
     ; Enable 4mb pages
@@ -86,11 +88,6 @@ set_up_mem:
     mov cr0, ecx
 
 
-_loadkernel:
-	call set_up_mem
-
-	mov dword[TEMP_PG_DIR], 0
-    invlpg[0]	
 
 	finit
 	sti
