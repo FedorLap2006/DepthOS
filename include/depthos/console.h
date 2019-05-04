@@ -52,5 +52,8 @@ void console_putchar_color(unsigned char c,int8_t b,int8_t f);
 
 void print_mod(char* buf,int m);
 
+void register_console(void (*output)(void *context, const char *data, size_t sz),
+		      void *context);
+
 void printk(const char *fmt, ...);
 void vprintk(const char *fmt, va_list ap);

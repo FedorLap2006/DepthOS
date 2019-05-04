@@ -367,6 +367,8 @@ void kmain(int magic,void *boot_ptr) {
 	
 	console_write_hex(0xD0F);
 
+	printk("Hello %s\n", "world");
+
 	for (;;)
 		__asm __volatile ("hlt");
 	return;

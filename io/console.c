@@ -210,6 +210,13 @@ static void (*output_console)(void *context, const char *data, size_t sz) =
 console_output;
 static void *console_context;
 
+void register_console(void (*output)(void *context, const char *data, size_t sz),
+		      void *context)
+{
+	output_console = output;
+	console_context = context;
+}
+
 void vprintk(const char *fmt, va_list ap)
 {
 	vformat(output_console, console_context, fmt, ap);
