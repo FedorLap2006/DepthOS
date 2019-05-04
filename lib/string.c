@@ -1,4 +1,4 @@
-#include <depthos/string.h>
+#include "depthos/string.h"
 
 void *memchr(const void *p, int c, size_t n)
 {

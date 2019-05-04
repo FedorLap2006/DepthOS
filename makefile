@@ -4,7 +4,7 @@ ifeq ($(OS),Windows_NT)
 else
 	BUILDOS ?= nix
 endif
-ARCH?=i386
+ARCH?=x86
 DEBUG?=on
 OSVER?=1.0
 OSNAME?=DepthOS
@@ -14,7 +14,7 @@ ASM=nasm -f elf32
 CSTD=11
 CEMU=-m32
 CCFLAGS= -Iinclude -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pic
-CCFLAGS += -W -Wall -Wno-unused-parameter -Wno-type-limits -Werror
+CCFLAGS += -W -Wall -Wno-unused-parameter -Wno-type-limits # -Werror
 ASFLAGS = -m32
 ifeq ($(BUILDOS),win)
 	LDEMU=-mi386pe

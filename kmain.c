@@ -6,6 +6,7 @@
 #include <depthos/serial.h>
 #include <depthos/string.h>
 #include <depthos/tools.h>
+#include <depthos/stdarg.h>
 // #include <depthos/gdt.h>
 
 extern unsigned short *videoMemory;
@@ -322,6 +323,7 @@ struct multiboot_information {
 };
 
 void kmain(int magic, struct multiboot_information *boot_ptr) {
+
 //	print_str("hello world! ");
 	console_init(
 		25,
@@ -377,7 +379,7 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
 	console_putchar_color('#',-1,GREEN_COLOR);
 	console_putchar(' ');
 	
-	console_write_hex(0xD0F);
+	printk("%s\thello",user);
 
 	printk("Hello %s\n", "world");
 

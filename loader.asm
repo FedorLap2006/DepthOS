@@ -9,6 +9,16 @@ CHECKSUM equ 0x100000000 - (MAGIC + FLAGS + HLEN)
 
 STACK_SIZE equ 60000
 
+; mem
+
+VM_BASE equ 0xC0000000
+PDE_INDEX   equ (VM_BASE >> 22)
+PSE_BIT     equ 0x00000010
+PG_BIT      equ 0x80000000
+
+
+
+
 bits 32
 
 section .bss
@@ -36,6 +46,20 @@ __boot_header:
 ;	dd 8
 __boot_header_end:
 
+
+section .data
+
+global TEMP_PG_DIR
+
+TEMP_PG_DIR:    
+	; Map the first 4mb physical memory to first 4mb virtual memory. Otherwise, when paging is enabled, eip points to, 0x100004 for example, and MMU is not gonna know how to translate 
+    ; this address into phsyical mem address, because our PDE doesn't tell MMU how to find it.
+    dd 0x00000083
+    times(PDE_INDEX - 1) dd 0
+    dd 0x00000083
+    times(1024 - PDE_INDEX - 1) dd 0 
+
+
 section .text
 
 align 4
@@ -46,7 +70,28 @@ global _loader
 extern kmain
 extern set_up_gdt
 
+set_up_mem:
+    ; update page directory address, since eax and ebx is in use, have to use ecx or other register
+    mov ecx, (TEMP_PG_DIR - VM_BASE)
+    mov cr3, ecx
+
+    ; Enable 4mb pages
+    mov ecx, cr4;
+    or ecx, PSE_BIT
+    mov cr4, ecx
+
+    ; Set PG bit, enable paging
+    mov ecx, cr0
+    or ecx, PG_BIT
+    mov cr0, ecx
+
+
 _loadkernel:
+	call set_up_mem
+
+	mov dword[TEMP_PG_DIR], 0
+    invlpg[0]	
+
 	finit
 	sti
 	mov esp,stack_top
