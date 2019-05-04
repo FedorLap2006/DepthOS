@@ -23,8 +23,8 @@ uint32_t bitmap_size;
 
 extern pg_dir_t* TEMP_PG_DIR;
 
-pg_dir_t *kern_dir;
-pg_dir_t *cur_dir;
+pg_dir_t __attribute__((aligned(4096))) *kern_dir;
+pg_dir_t __attribute__((aligned(4096))) *cur_dir;
 
 static uint8_t *temp_mem;
 
@@ -147,10 +147,13 @@ void free_page(pg_dir_t *dir,uint32_t vaddr,int free) {
 
 void pg_switch_dir(pg_dir_t *pdir, uint32_t phys) {
 	uint32_t t;
-	if (!phys) 
+	if (!phys) {
 		t = (uint32_t)get_paddr(TEMP_PG_DIR,pdir);
-	else
+		printk("%p",t);
+	}
+	else {
 		t = (uint32_t)pdir;
+	}
 	cur_dir = pdir;
 	__asm volatile ("mov %0,%%cr3" :: "r"(t) : );
 
@@ -187,17 +190,21 @@ void paging_init() {
 
 	uint32_t i = 0xC0000000;
 
+
 	while( i < 0xC0000000 + 4 * 1024 * 1024 ) {
 		alloc_page(kern_dir,i,0,1,1);
 		i += PAGE_SIZE;
 	}
-	
-//	i = 0xC0000000 + 4 * ;
+	printk("1 part start paging -- ended");
+
+	i = 0xC0000000 + 4 * 1024 * 1024 ;
 
 	while( i < 0xC0000000 + 8 * 1024 * 1024 + kheap_sz) {
 		alloc_page(kern_dir,i,0,1,1);
 		i += PAGE_SIZE;
 	}
+
+	printk("2 part start paging -- ended");
 
 	reg_intr(14,do_page_fault);
 	
