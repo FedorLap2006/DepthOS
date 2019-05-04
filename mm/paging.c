@@ -187,14 +187,14 @@ void paging_init() {
 
 	uint32_t i = 0xC0000000;
 
-	while( i < 0xC0000000 + 4 * 1073741824 ) {
+	while( i < 0xC0000000 + 4 * 1024 * 1024 ) {
 		alloc_page(kern_dir,i,0,1,1);
 		i += PAGE_SIZE;
 	}
+	
+//	i = 0xC0000000 + 4 * ;
 
-	i = 0xC0000000 + 4 * 1073741824;
-
-	while( i < 0xC0000000 + 4 * 1073741824 + kheap_sz) {
+	while( i < 0xC0000000 + 8 * 1024 * 1024 + kheap_sz) {
 		alloc_page(kern_dir,i,0,1,1);
 		i += PAGE_SIZE;
 	}
@@ -206,7 +206,7 @@ void paging_init() {
 	enable_paging();
 
 	alloc_region(kern_dir,0x0,0x10000,1,1,1);	
-
+	print_mod("paging initialized",MOD_OK);
 }
 
 

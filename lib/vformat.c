@@ -401,6 +401,7 @@ void vformat(void (*output)(void *context, const char *data, size_t sz),
 				break;
 			case 0:
 				--fmt;
+				break;
 			default:
 				output(context, percent_start - 1, fmt - percent_start + 2);
 				break;

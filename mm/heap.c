@@ -74,14 +74,14 @@ uint32_t kmalloc_p(size_t sz,uint32_t *phys) {
 
 
 void* sbrk(size_t sz) {
-	
+	return NULL;
 }
 
 void* __stdkmalloc(size_t sz,heap_t *heap) {
-
+	return NULL;
 }
 
 
 void __stdkfree(void* p,heap_t *heap) {
-
+	return;
 }

@@ -1,6 +1,7 @@
 
 #include <depthos/console.h>
 #include <depthos/idt.h>
+#include <depthos/pmm.h>
 #include <depthos/heap.h>
 #include <depthos/paging.h>
 #include <depthos/serial.h>
@@ -334,6 +335,7 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
 	if (strstr(boot_ptr->cmdline, "console=ttyS0")) {
 	    serial_console_init(0);
 	}
+
 //	console_write("[ II ] WWWW ");
 //	console_putchar_color('*',BLACK_COLOR,RED_COLOR);
 //	console_write_color("[ OK ] kernel loaded",BLACK_COLOR,RED_COLOR);
@@ -360,6 +362,9 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
 	init_timer(1000);
 	init_kb();
 	
+	pmm_init(1096 * (1024 * 1024));
+
+	paging_init();
 
 	print_mod("kernel loaded",MOD_OK);
 

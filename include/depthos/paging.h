@@ -1,5 +1,6 @@
 #pragma once
 
+#include <depthos/idt.h>
 #include <depthos/stdtypes.h>
 
 #define PAGE_SIZE 4096
@@ -68,4 +69,8 @@ void free_page(pg_dir_t *dir,uint32_t vaddr,int free);
 /*|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
 
 
+void do_page_fault(regs_t regs);
+void pg_switch_dir(pg_dir_t *pdir, uint32_t phys);
+void enable_paging();
 
+void paging_init();
