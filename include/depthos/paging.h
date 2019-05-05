@@ -49,10 +49,9 @@ typedef struct __pg_tbref_t {
 
 
 typedef struct __pg_dir_t {
+	struct __pg_table_t *tabs[1024];
 	struct __pg_tbref_t tabs_ref[1024];
-	struct __pg_table_t    *tabs[1024];
 }pg_dir_t;
-
 
 #undef f_t
 

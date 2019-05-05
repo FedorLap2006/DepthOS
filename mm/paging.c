@@ -185,26 +185,26 @@ void paging_init() {
 	cur_dir = TEMP_PG_DIR;
 	temp_mem = bitmap + bitmap_sz;
 
-	kern_dir = dumb_pgmalloc(sizeof(pg_dir_t),1);
+	kern_dir /*__attribute__((aligned(4096)))*/ = dumb_pgmalloc(sizeof(pg_dir_t),1);
 	memset(kern_dir,0,sizeof(pg_dir_t));
 
 	uint32_t i = 0xC0000000;
 
 
-	while( i < 0xC0000000 + 4 * 1024 * 1024 ) {
+	while( i < 0xC0000000 + 4 * (1024 * 1024) ) {
 		alloc_page(kern_dir,i,0,1,1);
 		i += PAGE_SIZE;
 	}
-	printk("1 part start paging -- ended");
+	print_mod("1 part start paging -- ended",MOD_OK);
 
-	i = 0xC0000000 + 4 * 1024 * 1024 ;
+	i = 0xC0000000 + 4 * (1024 * 1024);
 
-	while( i < 0xC0000000 + 8 * 1024 * 1024 + kheap_sz) {
+	while( i < 0xC0000000 + 8 * (1024 * 1024) + kheap_sz) {
 		alloc_page(kern_dir,i,0,1,1);
 		i += PAGE_SIZE;
 	}
 
-	printk("2 part start paging -- ended");
+	print_mod("2 part start paging -- ended",MOD_OK);
 
 	reg_intr(14,do_page_fault);
 	
