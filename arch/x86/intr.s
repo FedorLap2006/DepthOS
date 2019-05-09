@@ -168,30 +168,26 @@ INTR_NOERRCODE 128
 
 intr_cstub:
 	pusha
-	mov %ds,%ax
-	pushl %eax
-	mov $0x10, %ax
-	mov %ax, %ds
-	mov %ax, %es
-	mov %ax, %fs
-	mov %ax, %gs
-//	mov %esp, %eax
-//	pusha
+	push	%ds
+	push	%es
+	push	%gs
+	push	%fs
+	mov	$0x10, %ax
+	mov	%ax, %ds
+	mov	%ax, %es
+	mov	%ax, %fs
+	mov	%ax, %gs
 	// Call the kernel IRQ handler
-	call intr_handler
+	call	intr_handler
 
-	popl %eax
-	mov %ax,%ds
-	mov %ax,%es
-	mov %ax,%fs
-	mov %ax,%gs
-	
+	pop	%fs
+	pop	%gs
+	pop	%es
+	pop	%ds
 	popa
-//	popa
-	add $8, %esp
+	add	$8, %esp
 	sti
 	iret
-
 
 irq_cstub:
 	pusha
