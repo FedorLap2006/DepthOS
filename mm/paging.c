@@ -158,7 +158,7 @@ void enable_paging() {
 }
 
 void __do_pf(regs_t r) {
-	printk("page fault: [%x]",cr
+//	printk("page fault: [%x]");
 }
 
 void paging_init() {

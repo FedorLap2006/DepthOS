@@ -363,9 +363,11 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
 	init_timer(1000);
 	init_kb();
 	
+	__asm __volatile ("int $0x80");
+
 //	pmm_init(1096 * (1024 * 1024));
 
-	paging_init();
+//	paging_init();
 
 	print_mod("kernel loaded",MOD_OK);
 
