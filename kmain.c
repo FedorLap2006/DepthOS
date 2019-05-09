@@ -357,20 +357,19 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
 	print_mod("GDT initialized",MOD_OK);
 	idt_init();
 //	reg_intr(0x20 + 0x1,kb_event);
-//
+//	pmm_init(1096 * (1024 * 1024));
+
+	paging_init();
+
 	reg_intr(0x80,syscall_event);
 	
 	init_timer(1000);
 	init_kb();
 	
-	__asm __volatile ("int $0x80");
 
-//	pmm_init(1096 * (1024 * 1024));
-
-//	paging_init();
 
 	print_mod("kernel loaded",MOD_OK);
-
+	
 	console_putchar('\n');
 	char welcome[] = "Welcome to DepthOS v";
 

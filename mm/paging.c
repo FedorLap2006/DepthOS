@@ -157,8 +157,10 @@ void enable_paging() {
 #undef CLEAR_PSEBIT
 }
 
-void __do_pf(regs_t r) {
-//	printk("page fault: [%x]");
+void __noreturn __do_pf(regs_t r) 
+{
+	printk("page fault: [%x]");
+	while(1);
 }
 
 void paging_init() {
@@ -171,7 +173,7 @@ void paging_init() {
 		kernel_pgt[pte_index(i)] = pg;
 	}
 
-	kernel_pgd[pde_index(VIRT_BASE)] = make_pde((uint32_t)((int)kernel_pgt - (int)VIRT_BASE),0,1);
+	kernel_pgd[pde_index(VIRT_BASE)] = make_pde((uint32_t)get_paddr(0,kernel_pgt)/*((int)kernel_pgt - (int)VIRT_BASE)*/,0,1);
 	
 
 	activate_pgd(kernel_pgd);
@@ -179,6 +181,8 @@ void paging_init() {
 	reg_intr(14,__do_pf);
 
 	enable_paging();
+
+	print_mod("vmem initialized",MOD_OK);
 
 	__asm __volatile ("sti");
 }
