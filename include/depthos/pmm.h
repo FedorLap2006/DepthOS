@@ -1,6 +1,5 @@
 #pragma once
 
-
 #define PMM_BLOCK_SIZE 4096
 #define PMM_BLOCKS_PER_BUCKET 8
 // Define some bit manipulating operations

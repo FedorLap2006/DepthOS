@@ -2,8 +2,6 @@
 #include "depthos/heap.h"
 
 extern uint32_t end;
-extern pg_dir_t *cur_dir;
-extern int _pg_enabled;
 int _heap_enabled = 0;
 
 heap_t* kern_heap = 0;
@@ -45,10 +43,9 @@ uint32_t kmalloc_uni(uint32_t sz,int align,uint32_t *phys) {
 		uint32_t aaddr =  ((uint32_t)addr & 0xFFFFF000) + 0x1000;
 
 		if (phys != 0) {
-			uint32_t t = (uint32_t)addr;
+/*			uint32_t t = (uint32_t)addr;
 			if ( align )
-				t = aaddr;
-			*phys = (uint32_t)get_paddr(cur_dir,(void*)t);
+				t = aaddr;*/
 		}
 
 		if ( align )

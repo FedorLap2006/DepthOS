@@ -21,9 +21,10 @@ void print_str(char* str) {
 
 
 void syscall_event(regs_t r) {
+	printk("syscall -- (%d)",r.eax);
 	switch(r.eax) {
 	case 0:
-		console_write("hello!");
+		console_write("i m syscall");
 		break;
 	case 1:
 		console_write("hello 2!");
@@ -356,13 +357,13 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
 	print_mod("GDT initialized",MOD_OK);
 	idt_init();
 //	reg_intr(0x20 + 0x1,kb_event);
-
 //
 	reg_intr(0x80,syscall_event);
+	
 	init_timer(1000);
 	init_kb();
 	
-	pmm_init(1096 * (1024 * 1024));
+//	pmm_init(1096 * (1024 * 1024));
 
 	paging_init();
 
@@ -384,9 +385,6 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
 	console_putchar_color('#',-1,GREEN_COLOR);
 	console_putchar(' ');
 	
-	printk("%s\thello",user);
-
-	printk("Hello %s\n", "world");
 
 	for (;;)
 		__asm __volatile ("hlt");

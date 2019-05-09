@@ -3,7 +3,7 @@
 #include <depthos/stddef.h>
 
 #define nil ((void*)0)
-#define apack __attribute__((packed))
+// #define apack __attribute__((packed))
 //#define asm __asm
 enum { false, true }bool;
 
@@ -21,3 +21,6 @@ typedef unsigned char uint8_t;
 typedef unsigned short int uint16_t;
 typedef unsigned long int uint32_t;
 typedef unsigned long long int uint64_t;
+
+
+typedef unsigned int uintptr_t;
