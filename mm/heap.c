@@ -2,6 +2,7 @@
 #include "depthos/heap.h"
 
 extern uint32_t end;
+extern pde_t *cur_pgd[1024] __align(4096);
 int _heap_enabled = 0;
 
 heap_t* kern_heap = 0;

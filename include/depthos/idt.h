@@ -13,6 +13,8 @@ typedef struct __regs {
     uint32_t eip,cs,eflags,useresp,ss;
 } regs_t;
 
+
+
 struct __idt_entry{
 	uint16_t addr_low;
 	uint16_t sel;

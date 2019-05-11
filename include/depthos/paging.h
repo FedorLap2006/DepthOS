@@ -60,6 +60,8 @@ pagedir_t activate_pgd_save(pagedir_t pgd);
 
 void* get_paddr(pagedir_t dir,void *vaddr); // get physical addr from virtual
 
+void turn_page(page_t *p);
+
 page_t* get_page(pagedir_t dir, uint32_t vaddr);
 
 extern pde_t kernel_pgd[1024] __align(4096);

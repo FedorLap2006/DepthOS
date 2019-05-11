@@ -3,18 +3,20 @@ ENTRY(_loader)
 OUTPUT_ARCH(i386:i386)*/
 
 SECTIONS {
-    . = 1M;
+	. = 0xC0100000;
 
-	.boot : ALIGN(4) {
+	/*.boot ALIGN(4K) : AT(ADDR(.boot) - 0xC0000000 ) {
 		*(.boot)
 	}
-    .text : ALIGN(4) {
+	*/
+    .text : ALIGN(4K), AT(0x12345000) {
+		*(.boot)
     	*(.text)
     }
-	.data : ALIGN(4) {
+	.data : ALIGN(4K), AT(ADDR(.data) - 0xC0000000 ) {
         *(.data)
     }
-    .bss : ALIGN(4) {
+    .bss : ALIGN(4K), AT(ADDR(.bss) - 0xC0000000 ) {
         *(.bss)
     } 
 	

@@ -77,7 +77,7 @@ endif
 	$(ASM) $(NASMSOURCES)
 	gcc -m32 -c $(ASMSOURCES)
 	@mv *.o build/
-	$(LD) $(LDEMU) --nmagic -T$(LDFILE) -o build/$(OUTBIN).bin build/*.o
+	$(LD) $(LDEMU) -T$(LDFILE) -o build/$(OUTBIN).bin build/*.o
 ifeq ($(BUILDOS),win)	
 	objcopy -O elf32-i386 build/$(OUTBIN).bin $(OUTBIN)
 else

@@ -6,6 +6,8 @@ int paging_enabled = 0;
 
 pde_t kernel_pgd[1024] __align(4096);
 
+pde_t *cur_pgd[1024] __align(4096);
+
 static page_t kernel_pgt[1024] __align(4096); /* 768 */
 static page_t heap_1_pgt[1024] __align(4096); /* 769 */
 
@@ -21,6 +23,7 @@ uintptr_t pte_index(uint32_t addr){
 }
 
 void activate_pgd(pagedir_t pgd){
+//	cur_pgd = &pgd;
     __asm __volatile ("mov %0, %%cr3"::"r"((int)pgd - (int)VIRT_BASE));
 }
 
@@ -31,6 +34,7 @@ pagedir_t __save_pgd(void){
 }
 
 pagedir_t activate_pgd_save(pagedir_t pgd){
+//	cur_pgd = &pgd;	
     pagedir_t ret = __save_pgd();
     __asm __volatile ("mov %0, %%cr3"::"r"((int)pgd - (int)VIRT_BASE));
     return ret;
@@ -66,18 +70,17 @@ void* get_paddr(pagedir_t dir,void *vaddr) {
 	addr += page_offset(vaddr);
 
 
-	
-
-
-
-	
-
 	return (void*)addr;
 }
 
 #undef page_offset
 #undef page_index
 #undef table_index
+
+
+void turn_page(page_t* p) {
+	*p &= ((!(*p << PTE_PRESENT_SHIFT)) << PTE_PRESENT_SHIFT);
+}
 
 page_t* get_page(pagedir_t pgd,uint32_t vaddr) {
 	int ipde, ipte;
@@ -171,6 +174,7 @@ void paging_init() {
 	for(i = 0 * 1024 * 1024; i < 4 * 1024 * 1024; i += 4096){
 		page_t pg = make_pte(i,0,1);
 		kernel_pgt[pte_index(i)] = pg;
+		turn_page(&pg);
 	}
 
 	kernel_pgd[pde_index(VIRT_BASE)] = make_pde((uint32_t)get_paddr(0,kernel_pgt)/*((int)kernel_pgt - (int)VIRT_BASE)*/,0,1);
