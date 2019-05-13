@@ -14,7 +14,7 @@ ASM=nasm -f elf32
 CSTD=11
 CEMU=-m32
 CCFLAGS= -Iinclude -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pic
-CCFLAGS += -W -Wall -Wno-unused-parameter -Wno-type-limits -Werror -Wno-parentheses -Wno-unused-variable
+CCFLAGS += -W -Wall -Wno-unused-parameter -Wno-type-limits -Werror -Wno-parentheses -Wno-unused-variable -Wno-maybe-uninitialized
 ASFLAGS = -m32
 ifeq ($(BUILDOS),win)
 	LDEMU=-mi386pe
@@ -77,7 +77,7 @@ endif
 	$(ASM) $(NASMSOURCES)
 	gcc -m32 -c $(ASMSOURCES)
 	@mv *.o build/
-	$(LD) $(LDEMU) -T$(LDFILE) -o build/$(OUTBIN).bin build/*.o
+	$(LD) $(LDEMU) -T$(LDFILE) -o build/$(OUTBIN).bin build/*.o --build-id=none 
 ifeq ($(BUILDOS),win)	
 	objcopy -O elf32-i386 build/$(OUTBIN).bin $(OUTBIN)
 else
@@ -94,6 +94,9 @@ hex_info:
 	hexdump -x build/loader.o
 	@echo kernel hex info
 	hexdump -x $(OUTBIN)
+elf_info:
+	@echo ---------- ELF INFO ----------
+	readelf -l $(OUTBIN)
 #dis_asm:
 #	@echo ---------- DIS ASM ----------
 #	@echo loader disasm
@@ -106,11 +109,11 @@ obj_info:
 	objdump -f -h build/loader.o
 	@echo kernel obj info
 	objdump -f -h $(OUTBIN)
-info: hex_info obj_info # dis_asm
+info: hex_info obj_info elf_info # dis_asm
 
 test:
 	@echo
 	@echo ----------- testing os ------------
 	@echo
-	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN) # -d cpu -D qemu_log.log # -d int,pcall,cpu,fpu # -nographic
+	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN)  -d int,pcall,cpu,fpu -D qemu_log.log # -S -s # -nographic
 
