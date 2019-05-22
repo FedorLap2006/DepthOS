@@ -176,16 +176,16 @@ void paging_init() {
 		kernel_pgt[pte_index(i)] = pg;
 //		turn_page(&pg);
 	}
-	printk("%x || %x - %x = %x\n", (int)kernel_pgt,(int)kernel_pgt,(int)VIRT_BASE,(uint32_t)((int)kernel_pgt - (int)VIRT_BASE));
-	kernel_pgd[pde_index(VIRT_BASE)] = make_pde((uint32_t)(((int)kernel_pgt - (int)VIRT_BASE) + KERNEL_PHYS_BASE),0,1);
+//	printk("%x || %x - %x = %x\n", (int)kernel_pgt,(int)kernel_pgt,(int)VIRT_BASE,(uint32_t)((int)kernel_pgt - (int)VIRT_BASE));
+	kernel_pgd[pde_index(VIRT_BASE)] = make_pde((uint32_t)(((int)kernel_pgt - (int)VIRT_BASE)),0,1);
 	
 	
 
-//	activate_pgd(kernel_pgd);
+	activate_pgd(kernel_pgd);
 	
 	reg_intr(14,__do_pf);
 
-//	enable_paging();
+	enable_paging();
 
 	print_mod("vmem initialized",MOD_OK);
 
