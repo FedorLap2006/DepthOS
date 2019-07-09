@@ -2,39 +2,42 @@
 
 #include <depthos/stdtypes.h>
 
+#define HEAP_MAGIC 0x7971D91F // 2037504287
 
-typedef uint32_t lptr_t;
 
-typedef struct __stdheap {
-	lptr_t startAddr;
-	lptr_t endAddr;
+
+
+typedef struct __heap_page{
+	bool pres;
+	bool rw;
+	bool us;
+	bool used;
+	bool dirty;
+	uint32_t frame;
+}heap_page_t;
+
+typedef struct __heap_ptable {
+	bool pres;
+	bool rw;
+	bool us;
+	bool used;
+	uint32_t ptaddr;
+	size_t ptsize;
+}heap_ptable_t;
+
+typedef heap_ptable_t* heap_pdir_t;
+typedef heap_pdir_t __heap_pdir_t;
+
+
+typedef struct __heap {
+	heap_pdir_t pdir;
+	int total_used;
+	heap_page_t* heap_begin;
+	heap_page_t* heap_cur;
+	heap_page_t* heap_end;
 }heap_t;
 
-typedef struct __stdheap_chunk {
-	size_t size;
-	short int used;
-}heap_chunk_t;
+void init_heapsys();
 
-
-uint32_t pl_sbrk(uint32_t sz);
-uint32_t pl_sbrk_uni(uint32_t sz,int aling,uint32_t *phys);
-uint32_t pl_sbrk_a(uint32_t sz,int aling);
-uint32_t pl_sbrk_p(uint32_t sz,uint32_t *phys);
-
-uint32_t kmalloc_uni(uint32_t sz,int align,uint32_t *phys);
-uint32_t kmalloc(uint32_t sz);
-uint32_t kmalloc_a(uint32_t sz,int align);
-uint32_t kmalloc_p(uint32_t sz,uint32_t *phys);
-
-
-void* sbrk(size_t sz);
-
-
-
-heap_t* init_heap(size_t sz);
-
-void* __stdkmalloc(size_t sz,heap_t *heap);
-void __stdkfree(void* p,heap_t *heap);
-
-void* __stdmalloc(size_t sz);
-void* __stdfree(void* p);
+void* heap_alloc(size_t bytes);
+void heap_free(void* addr);

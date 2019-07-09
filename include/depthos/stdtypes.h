@@ -5,7 +5,10 @@
 #define nil ((void*)0)
 // #define apack __attribute__((packed))
 //#define asm __asm
-enum { false, true }bool;
+typedef int bool;
+
+#define true 1
+#define false 0
 
 typedef unsigned int uint_t;
 

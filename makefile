@@ -14,7 +14,7 @@ ASM=nasm -f elf32
 CSTD=11
 CEMU=-m32
 CCFLAGS= -Iinclude -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pic
-CCFLAGS += -W -Wall -Wno-unused-parameter -Wno-type-limits -Werror -Wno-parentheses -Wno-unused-variable -Wno-maybe-uninitialized
+CCFLAGS += -W -Wall -Wno-unused-parameter -Wno-type-limits -Wno-parentheses -Wno-unused-variable -Wno-maybe-uninitialized -Wno-return-local-addr -Wno-return-type
 ASFLAGS = -m32
 ifeq ($(BUILDOS),win)
 	LDEMU=-mi386pe

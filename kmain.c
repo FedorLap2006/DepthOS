@@ -6,9 +6,11 @@
 #include <depthos/paging.h>
 #include <depthos/serial.h>
 #include <depthos/string.h>
+//#include <depthos/stdio.h>
 #include <depthos/tools.h>
 #include <depthos/stdarg.h>
 #include <depthos/keyboard.h>
+#include <depthos/stdbits.h>
 // #include <depthos/gdt.h>
 
 extern unsigned short *videoMemory;
@@ -20,6 +22,7 @@ void print_str(char* str) {
 
 }
 
+extern page_t kernel_pgt[1024] __align(4096);
 
 void syscall_event(regs_t r) {
 	printk("syscall -- (%d)",r.eax);
@@ -66,6 +69,8 @@ struct multiboot_information {
 	const char *cmdline;
 };
 
+// extern heap_t *kern_heap;
+extern uint32_t end;
 void kmain(int magic, struct multiboot_information *boot_ptr) {
 
 //	print_str("hello world! ");
@@ -100,15 +105,17 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
 	idt_init();
 //	reg_intr(0x20 + 0x1,kb_event);
 //	pmm_init(1096 * (1024 * 1024));
+	
+
 
 	paging_init();
 
 	reg_intr(0x80,syscall_event);
 	
 	init_timer(1000);
+
 	__kb_driver_init();
 	
-
 
 	print_mod("kernel loaded",MOD_OK);
 	
@@ -121,13 +128,54 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
 	console_putchar('\n');
 
 /*	*/
-	char user[] = "root";
+	/*char user[] = "root";
 	console_write_color(user,-1,PINK_COLOR);
 	console_putchar_color('@',-1,GREEN_COLOR);
 	console_write_color("depthos",-1,BROWN_COLOR);
 	console_putchar_color('#',-1,GREEN_COLOR);
-	console_putchar(' ');
+	console_putchar(' ');**/
 	
+/*	struct __mmh heap;
+
+	init_heap(&heap,100);
+
+	char* one = (char*)malloc(sizeof(char) * 5,&heap);
+	one[0] = 'h';
+	one[1] = 'e';
+	one[2] = 'l';
+	one[3] = 'l';
+	one[4] = 'o';
+	
+	printk("0x%x - %s\n",one,one);
+	
+	free(one,&heap);
+
+ 	char* two = (char*)malloc(sizeof(char) * 5,&heap);
+	two[0] = 'n';
+	two[1] = 'e';
+	two[2] = 'w';
+	two[3] = '!';
+	two[4] = '!';
+	
+	printk("0x%x - %s\n",two,two);
+	
+	printk("0x%x - %s\n",one,one);
+
+	
+	free(two,&heap);
+*/
+	int *ptr = (int*)(4 * 1024 * 1024 + 4097);
+	
+	pageinfo_t pgi;
+
+	pgi = parse_page(&kernel_pgt[1]);
+	
+	printk("%d,%d: %d\n",pgi.pres,pgi.us,pgi.frame);
+	printk("%d,%d: %d\n",getbit(*pgi.pg,PTE_PRESENT_SHIFT),getbit(*pgi.pg,PTE_RW_SHIFT),getbit(*pgi.pg,PTE_USER_SHIFT));
+
+
+	printk("%d",*ptr);
+
 
 	for (;;)
 		__asm __volatile ("hlt");

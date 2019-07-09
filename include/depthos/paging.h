@@ -10,6 +10,21 @@ typedef uint32_t pde_t;
 typedef page_t *pagetb_t;
 typedef pde_t  *pagedir_t;
 
+typedef struct __pageinfo {
+	page_t* pg;
+	
+	uint32_t pres 		: 1;
+	uint32_t rw 		: 1;
+	uint32_t us			: 1;
+	uint32_t pwt		: 1;
+	uint32_t pcd		: 1;
+	uint32_t accessed 	: 1;
+	uint32_t dirty 		: 1;
+	uint32_t pat 		: 1;
+	uint32_t glob		: 1;
+	uint32_t frame 		: 20;
+
+}pageinfo_t;
 
 #define PTE_PRESENT_SHIFT   0
 #define PTE_RW_SHIFT        1
@@ -47,6 +62,10 @@ typedef pde_t  *pagedir_t;
 
 #define PG_RND_DOWN(a) ROUND_DOWN(a, 0x1000)
 #define PG_RND_UP(a) ROUND_UP(a, 0x1000)
+
+pageinfo_t parse_page(page_t* pg);
+
+void build_page(pageinfo_t pgi);
 
 int pde_index(uint32_t addr);
 
