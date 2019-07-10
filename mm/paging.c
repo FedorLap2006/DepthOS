@@ -238,7 +238,7 @@ pageinfo_t parse_page(page_t* pg) {
 
 	pgi.pg = pg;
 
-	printk("0x%x,0x%x\n",pgi.pg,pg);
+//	printk("0x%x,0x%x\n",pgi.pg,pg);
 	
 	
 	
@@ -259,19 +259,18 @@ pageinfo_t parse_page(page_t* pg) {
 	return pgi;	
 }
 
-void build_page(pageinfo_t pgi) {
-	printk("vals - %d,%d,%d\n",pgi.pres,pgi.rw,pgi.us);
-	printk("old - %d - %d - %d\n",getbit(*pgi.pg,PTE_PRESENT_SHIFT),getbit(*pgi.pg,PTE_RW_SHIFT),getbit(*pgi.pg,PTE_USER_SHIFT));
-	setbit(pgi.pg,PTE_PRESENT_SHIFT,pgi.pres);
-	setbit(pgi.pg,PTE_RW_SHIFT,pgi.rw);
-	setbit(pgi.pg,PTE_USER_SHIFT,pgi.us);
+void change_page(page_t* pg,int pres,int rw,int us) {
+//	printk("vals - %d,%d,%d\n",pgi.pres,pgi.rw,pgi.us);
+//	printk("old - %d - %d - %d\n",getbit(*pgi.pg,PTE_PRESENT_SHIFT),getbit(*pgi.pg,PTE_RW_SHIFT),getbit(*pgi.pg,PTE_USER_SHIFT));
+	setbit(pg,PTE_PRESENT_SHIFT,pres);
+	setbit(pg,PTE_RW_SHIFT,rw);
+	setbit(pg,PTE_USER_SHIFT,us);
 
 
 //	*pgi.pg = (pgi.pres	 << PTE_PRESENT_SHIFT)	| (*pgi.pg & (~(1 << PTE_PRESENT_SHIFT)));
 // 	*pgi.pg = (pgi.rw	 << PTE_RW_SHIFT)		| (*pgi.pg & (~(1 << PTE_RW_SHIFT)));
 //	*pgi.pg = (pgi.us	 << PTE_USER_SHIFT)		| (*pgi.pg & (~(1 << PTE_USER_SHIFT)));
 
-	printk("new - %d - %d - %d\n",getbit(*pgi.pg,PTE_PRESENT_SHIFT),getbit(*pgi.pg,PTE_RW_SHIFT),getbit(*pgi.pg,PTE_USER_SHIFT));
+//	printk("new - %d - %d - %d\n",getbit(*pgi.pg,PTE_PRESENT_SHIFT),getbit(*pgi.pg,PTE_RW_SHIFT),getbit(*pgi.pg,PTE_USER_SHIFT));
 //	printk("%d",pg);
-#undef pg
 }

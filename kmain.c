@@ -170,11 +170,11 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
 
 	pgi = parse_page(&kernel_pgt[1]);
 	
-	printk("%d,%d: %d\n",pgi.pres,pgi.us,pgi.frame);
-	printk("%d,%d: %d\n",getbit(*pgi.pg,PTE_PRESENT_SHIFT),getbit(*pgi.pg,PTE_RW_SHIFT),getbit(*pgi.pg,PTE_USER_SHIFT));
+//	printk("%d,%d: %d\n",pgi.pres,pgi.us,pgi.frame);
+//	printk("%d,%d: %d\n",getbit(*pgi.pg,PTE_PRESENT_SHIFT),getbit(*pgi.pg,PTE_RW_SHIFT),getbit(*pgi.pg,PTE_USER_SHIFT));
 
 
-	printk("%d",*ptr);
+//	printk("%d",*ptr);
 
 
 	for (;;)

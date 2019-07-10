@@ -65,7 +65,7 @@ typedef struct __pageinfo {
 
 pageinfo_t parse_page(page_t* pg);
 
-void build_page(pageinfo_t pgi);
+void change_page(page_t *pg,int pres,int rw,int us);
 
 int pde_index(uint32_t addr);
 
