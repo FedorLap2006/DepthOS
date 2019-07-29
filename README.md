@@ -14,6 +14,7 @@ ___dependencies___
 _runtime_ - grub
 
 _build on linux/mac_ - gnu binutils, gcc/g++, nasm, make 
+
 _build on windows_ - __CROSS*__ gnu binutils, __CROSS*__ gcc/g++, nasm, make 
 
 ___
