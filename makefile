@@ -8,8 +8,13 @@ ARCH?=x86
 DEBUG?=on
 OSVER?=1.0
 OSNAME?=DepthOS
-CC=i686-elf-gcc
-LD=i686-elf-ld
+ifeq ($(BUILDOS),win)
+	CC=i686-elf-gcc
+	LD=i686-elf-ld
+else
+	CC=gcc
+	LD=ld
+endif
 ASM=nasm -f elf32
 CSTD=11
 CEMU=-m32
@@ -60,9 +65,9 @@ clean:
 	@rm -f $(OSNAME)-*
 
 
-build: kernel img iso
+build: checks kernel img iso
 
-
+checks:
 kernel: $(CSOURCES) $(ASMSOURCES) $(NASMSOURCES) $(LDFILE)
 	@echo ---------- build kernel -----------
 ifeq ($(DEBUG),on)
