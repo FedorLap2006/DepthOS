@@ -17,5 +17,5 @@ _build on linux/mac_ - gnu binutils, gcc/g++, nasm, make
 _build on windows_ - __CROSS*__ gnu binutils, __CROSS*__ gcc/g++, nasm, make 
 
 ___
-* - if you don't know what this, read this - https://wiki.osdev.org/GCC_Cross-Compiler
+\* if you don't know what this, read this - https://wiki.osdev.org/GCC_Cross-Compiler
 
