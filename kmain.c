@@ -1,7 +1,7 @@
 
 #include <depthos/console.h>
 #include <depthos/idt.h>
-#include <depthos/pmm.h>
+//#include <depthos/pgm.h>
 #include <depthos/heap.h>
 #include <depthos/paging.h>
 #include <depthos/serial.h>
@@ -109,6 +109,7 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
 
 
 	paging_init();
+	__pgm_init(10 * 4096); // | 0 0 0 0 0 0 0 0 |
 
 	reg_intr(0x80,syscall_event);
 	
@@ -126,6 +127,16 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
 	
 	console_write_color(OSVER,-1,WGREEN_COLOR);
 	console_putchar('\n');
+	
+	/*printk("													\
+██████╗ ███████╗██████╗ ████████╗██╗  ██╗ ██████╗ ███████╗\n	\
+██╔══██╗██╔════╝██╔══██╗╚══██╔══╝██║  ██║██╔═══██╗██╔════╝\n	\
+██║  ██║█████╗  ██████╔╝   ██║   ███████║██║   ██║███████╗\n	\
+██║  ██║██╔══╝  ██╔═══╝    ██║   ██╔══██║██║   ██║╚════██║\n	\
+██████╔╝███████╗██║        ██║   ██║  ██║╚██████╔╝███████║\n	\
+╚═════╝ ╚══════╝╚═╝        ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚══════╝\n	\
+                                                          		\
+			");*/
 
 /*	*/
 	/*char user[] = "root";
@@ -164,18 +175,46 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
 	
 	free(two,&heap);
 */
-	int *ptr = (int*)(4 * 1024 * 1024 + 4097);
+	//int *ptr = (int*)(4 * 1024 * 1024 + 4097);
 	
 	pageinfo_t pgi;
+	pageinfo_t pgi2;
+	page_t *pg;
+	page_t *pg2;
 
-	pgi = parse_page(&kernel_pgt[1]);
+	//pgi = parse_page(get_page(kernel_pgd,0));
 	
-//	printk("%d,%d: %d\n",pgi.pres,pgi.us,pgi.frame);
+	pg = __pgm_alloc(1);
+
+	pgi = parse_page(pg);
+
+	printk("%d,%d,%d: %d\n",pgi.pres,pgi.rw,pgi.us,pgi.frame);
+
+
+	pg2 = __pgm_alloc(1);
+
+	pgi2 = parse_page(pg);
+
+
+	printk("%d,%d,%d: %d\n",pgi2.pres,pgi2.rw,pgi2.us,pgi2.frame);
+
+	//__pgm_free(pg2,1);
+
+	pg2 = __pgm_alloc(1);
+
+	pgi2 = parse_page(pg);
+
+
+	printk("%d,%d,%d: %d\n",pgi2.pres,pgi2.rw,pgi2.us,pgi2.frame);
+
+	
+
 //	printk("%d,%d: %d\n",getbit(*pgi.pg,PTE_PRESENT_SHIFT),getbit(*pgi.pg,PTE_RW_SHIFT),getbit(*pgi.pg,PTE_USER_SHIFT));
 
 
 //	printk("%d",*ptr);
-
+	
+	printk("mem size: %d", boot_ptr->mem_upper - boot_ptr->mem_lower);
 
 	for (;;)
 		__asm __volatile ("hlt");

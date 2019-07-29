@@ -26,20 +26,20 @@ uintptr_t pte_index(uint32_t addr){
 
 void activate_pgd(pagedir_t pgd){
 	cur_pgd = pgd;
-    __asm __volatile ("mov %0, %%cr3"::"r"((int)pgd - (int)VIRT_BASE));
+  __asm __volatile ("mov %0, %%cr3"::"r"((int)pgd - (int)VIRT_BASE));
 }
 
 pagedir_t __save_pgd(void){
-    uint32_t ret;
-    __asm __volatile ("mov %%cr3, %0":"=r"(ret));
-    return (pagedir_t) (ret + VIRT_BASE);
+  uint32_t ret;
+  __asm __volatile ("mov %%cr3, %0":"=r"(ret));
+  return (pagedir_t) (ret + VIRT_BASE);
 }
 
 pagedir_t activate_pgd_save(pagedir_t pgd){
 	cur_pgd = pgd;	
-    pagedir_t ret = __save_pgd();
-    __asm __volatile ("mov %0, %%cr3"::"r"((int)pgd - (int)VIRT_BASE));
-    return ret;
+  pagedir_t ret = __save_pgd();
+  __asm __volatile ("mov %0, %%cr3"::"r"((int)pgd - (int)VIRT_BASE));
+	return ret;
 }
 
 
@@ -215,10 +215,13 @@ void paging_init() {
 
 //		turn_page(&pg);
 	}
+	
+	//change_page(&kernel_pgt[0],0,0,1);
+
 //	printk("%x || %x - %x = %x\n", (int)kernel_pgt,(int)kernel_pgt,(int)VIRT_BASE,(uint32_t)((int)kernel_pgt - (int)VIRT_BASE));
 	kernel_pgd[pde_index(VIRT_BASE)] = make_pde((uint32_t)(((int)kernel_pgt - (int)VIRT_BASE)),0,1);
 	
-	
+//	change_page	
 
 	activate_pgd(kernel_pgd);
 	

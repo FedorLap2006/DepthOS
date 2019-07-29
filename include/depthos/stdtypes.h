@@ -5,10 +5,6 @@
 #define nil ((void*)0)
 // #define apack __attribute__((packed))
 //#define asm __asm
-typedef int bool;
-
-#define true 1
-#define false 0
 
 typedef unsigned int uint_t;
 
@@ -27,3 +23,11 @@ typedef unsigned long long int uint64_t;
 
 
 typedef unsigned int uintptr_t;
+
+
+typedef uint8_t bool;
+
+#define true 1
+#define false 0
+
+

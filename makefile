@@ -8,8 +8,8 @@ ARCH?=x86
 DEBUG?=on
 OSVER?=1.0
 OSNAME?=DepthOS
-CC=gcc
-LD=ld
+CC=i686-elf-gcc
+LD=i686-elf-ld
 ASM=nasm -f elf32
 CSTD=11
 CEMU=-m32
@@ -17,7 +17,8 @@ CCFLAGS= -Iinclude -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-exceptio
 CCFLAGS += -W -Wall -Wno-unused-parameter -Wno-type-limits -Wno-parentheses -Wno-unused-variable -Wno-maybe-uninitialized -Wno-return-local-addr -Wno-return-type
 ASFLAGS = -m32
 ifeq ($(BUILDOS),win)
-	LDEMU=-mi386pe
+#	LDEMU=-mi386pe
+	LDEMU=-melf_i386
 else
 	LDEMU=-melf_i386
 endif
@@ -75,7 +76,7 @@ endif
 	@mkdir -p build
 	@mv *.o build/
 	$(ASM) $(NASMSOURCES)
-	gcc -m32 -c $(ASMSOURCES)
+	$(CC) $(CEMU) -c $(ASMSOURCES)
 	@mv *.o build/
 	$(LD) $(LDEMU) -T$(LDFILE) -o build/$(OUTBIN).bin build/*.o --build-id=none 
 ifeq ($(BUILDOS),win)	
@@ -115,5 +116,5 @@ test:
 	@echo
 	@echo ----------- testing os ------------
 	@echo
-	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN)  -d int,pcall,cpu,fpu -D qemu_log.log # -S -s # -nographic
+	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN) # -d int,pcall,cpu,fpu -D qemu_log.log # -S -s # -nographic
 

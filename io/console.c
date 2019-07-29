@@ -12,6 +12,14 @@ int dfcolor = WHITE_COLOR;
 
 int cursorx = 0, cursory = 0;
 
+void mod_loga(char *file,int line,char *mod,char *msg,...) {
+	static char mlog_s[sizeof(msg)];                         
+	va_list args;
+	va_start(args,msg);
+  vsprintf(mlog_s,msg,args); 
+  va_end(args);
+  printk("(%s:%d) [%s]: %s\n",file,line,mod,mlog_s);
+}
 
 void print_mod(char* buf,int m) {
 	switch(m) {
@@ -39,6 +47,8 @@ void print_mod(char* buf,int m) {
 			break;
 	}
 }
+
+
 
 void console_init(int s,int l,int b, int f) {
 	if ( s > 0 )
