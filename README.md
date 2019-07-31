@@ -2,6 +2,7 @@
 
 ### stable, protected and very simple in usable OS, which don't restrict you
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/0ff61708c7e248d19909e0d09337b62b)](https://app.codacy.com/app/fe.lap.prog/DepthOS?utm_source=github.com&utm_medium=referral&utm_content=FedorLap2006/DepthOS&utm_campaign=Badge_Grade_Dashboard)
 [![Build Status](https://travis-ci.org/FedorLap2006/DepthOS.svg?branch=master)](https://travis-ci.org/FedorLap2006/DepthOS)
 [![Join the chat at https://gitter.im/depthos-dev/community](https://badges.gitter.im/depthos-dev/community.svg)](https://gitter.im/depthos-dev/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
