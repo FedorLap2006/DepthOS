@@ -10,9 +10,20 @@ typedef uint32_t pde_t;
 typedef page_t *pagetb_t;
 typedef pde_t  *pagedir_t;
 
+#define _PAGEINFO_pres(page) ((page >> PTE_PRESENT_SHIFT) & 1U)
+#define _PAGEINFO_rw(page) ((page >> PTE_RW_SHIFT) & 1U)
+#define _PAGEINFO_us(page) ((page >> PTE_USER_SHIFT) & 1U)
+#define _PAGEINFO_pwt(page) ((page >> PTE_WRITETHRU_SHIFT) & 1U)
+#define _PAGEINFO_pcd(page) ((page >> PTE_CACHE_SHIFT) & 1U)
+#define _PAGEINFO_accessed(page) ((page >> PTE_ACCESS_SHIFT) & 1U)
+#define _PAGEINFO_dirty(page) ((page >> PTE_DIRTY_SHIFT) & 1U)
+#define _PAGEINFO_pat(page) ((page >> PTE_ZERO_SHIFT) & 1U)
+#define _PAGEINFO_pat(page) ((page >> PTE_GLOB_SHIFT) & 1U)
+#define _PAGEINFO_frame(page) (page & 0xFFFFF000)
+#define PAGEINFO(page,attr) _PAGEINFO_##attr(page)
+
 typedef struct __pageinfo {
 	page_t* pg;
-	
 	uint32_t pres 		: 1;
 	uint32_t rw 		: 1;
 	uint32_t us			: 1;

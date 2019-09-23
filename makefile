@@ -8,12 +8,13 @@ ARCH?=x86
 DEBUG?=on
 OSVER?=1.0
 OSNAME?=DepthOS
+BINCPATH?=/bin
 ifeq ($(BUILDOS),win)
-	CC=i686-elf-gcc
-	LD=i686-elf-ld
+	CC=$(BINCPATH)/i686-elf-gcc
+	LD=$(BINCPATH)/i686-elf-ld
 else
-	CC=gcc
-	LD=ld
+	CC=$(BINCPATH)/gcc
+	LD=$(BINCPATH)/ld
 endif
 ASM=nasm -f elf32
 CSTD=11
@@ -121,5 +122,10 @@ test:
 	@echo
 	@echo ----------- testing os ------------
 	@echo
+ifeq ($(DEBUG), on)
+	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN) # -S -s # -nographic
+else ifeq ($(DEBUG), true)
+	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN) # -S -s # -nographic
+else
 	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN) # -d int,pcall,cpu,fpu -D qemu_log.log # -S -s # -nographic
-
+endif
