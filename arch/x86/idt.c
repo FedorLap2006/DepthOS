@@ -124,7 +124,7 @@ void idt_init() {
 }
 
 void __idt_default_handler() {
-	console_write("null intr");
+	console_write("hello!");
 }
 
 void irq_handler(regs_t r) {

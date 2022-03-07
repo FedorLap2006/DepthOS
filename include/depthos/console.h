@@ -2,7 +2,6 @@
 
 #include <depthos/stdarg.h>
 #include <depthos/stdio.h>
-#include <depthos/serial.h>
 #include <depthos/stdtypes.h>
 #include <depthos/ports.h>
 
@@ -57,14 +56,8 @@ void print_mod(char* buf,int m);
 
 
 void mod_loga(char* file, int line, char *mod,char *msg,...);
-#define mod_log(mod,msg,...) mod_loga(__FILE__,__LINE__,mod,msg, ##__VA_ARGS__)
-#define mod_loge(mod,msg,...) mod_loga(__FILE__,__LINE__,mod,msg)
-#define panic(msg,...)     \
-  mod_log(__func__,msg, ##__VA_ARGS__); \
-  while(1) {}
-#define panice(msg)     \
-  mod_loga(__FILE__,__LINE__,__func__,msg);\
-  while(1) {}
+#define mod_log(mod,msg,...) mod_loga(__FILE__,__LINE__,mod,msg, ##__VA_ARGS__);
+
 
 void register_console(void (*output)(void *context, const char *data, size_t sz),
 		      void *context);

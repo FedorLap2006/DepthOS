@@ -1,47 +1,45 @@
 #pragma once
 
-#include <depthos/string.h>
 #include <depthos/stdtypes.h>
 
-// mru - memory reuse (algorithm)
+#define HEAP_MAGIC 0x7971D91F // 2037504287
 
-struct __heap_cacheblock;
-struct __heap_localblock;
+struct __heap_minblock;
 
-typedef struct __heap_resblock {
-	size_t pages;
-	struct __heap_cacheblock *root_cacheblock;
-	struct __heap_cacheblock *top_cacheblock;
-	bool busy_mru;
-	uint32_t resid;
-	uint32_t beginpf;
-	uint32_t lastpf;
-	//uint32_t lastlba;
-}heap_resblock_t;
-
-typedef struct __heap_localblock {
-	struct __heap_cacheblock *cacheblock;
-}heap_localblock_t;
-
-typedef struct __heap_cacheblock {
-	size_t size;
-	bool busy;
-	bool busy_mru;
-
-	heap_localblock_t *localblock;
-
-	struct __heap_resblock *resource;
-
-	struct __heap_cacheblock *next;
-	struct __heap_cacheblock *prev;
-}heap_cacheblock_t;
+typedef struct __heap_majblock {
+	struct __heap_majblock *next;
+	struct __heap_majblock *prev;
 	
+	short int pages;
+	short int size;
+	uint16_t usage;
+	uint32_t start_frame;
 
-heap_resblock_t* __heap_alloc_resblock();
-heap_resblock_t* __heap_find_resblock();
-void __heap_free_resblock(heap_resblock_t* rb);
+	struct __heap_minblock *firstblock;
+	struct __heap_minblock *endblock;
+}hmajblock_t;
 
-void __heap_free(void* ptr);
-void* __heap_alloc(heap_resblock_t* resb, size_t size);
+typedef struct __heap_minblock {
+	unsigned int magic;
+	struct __heap_minblock *next;
+	struct __heap_minblock *prev;
+	struct __heap_majblock *majblock;
+	bool used;
 
-void __gheap_init();
+	size_t size;
+	uint32_t frame;
+}hminblock_t;
+
+typedef struct __heap_t {
+	bool us;
+	size_t tsize;
+	struct __heap_majblock *root;
+	struct __heap_majblock *top;
+}heap_t;
+
+
+void init_heapsys();
+
+void* heap_alloc(size_t bytes);
+void heap_free(void* addr);
+void switch_heap(heap_t* new_heap);

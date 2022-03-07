@@ -1,7 +1,7 @@
 
 #include <depthos/console.h>
 #include <depthos/idt.h>
-#include <depthos/pgm.h>
+//#include <depthos/pgm.h>
 #include <depthos/heap.h>
 #include <depthos/paging.h>
 #include <depthos/serial.h>
@@ -34,7 +34,7 @@ void syscall_event(regs_t r) {
 		console_write("hello 2!");
 		break;
 	case 2:
-		break;//Участник	
+		break;
 	default:
 		break;
 	}	
@@ -71,12 +71,6 @@ struct multiboot_information {
 
 // extern heap_t *kern_heap;
 extern uint32_t end;
-//extern heap_t kheap;
-extern uint32_t _memory_start;
-
-// dheap_major_blk_t __kheap_allocmaj(dheap_t h);
-// dheap_minor_blk_t __kheap_allocmin(dheap_t h);
-
 void kmain(int magic, struct multiboot_information *boot_ptr) {
 
 //	print_str("hello world! ");
@@ -115,15 +109,14 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
 
 
 	paging_init();
-	//__pgm_init(10 * 4096); // | 0 0 0 0 0 0 0 0 |
+	__pgm_init(10 * 4096); // | 0 0 0 0 0 0 0 0 |
 
+	reg_intr(0x80,syscall_event);
+	
+	init_timer(1000);
 
-	// reg_intr(0x80,syscall_event);
+	__kb_driver_init();
 	
-	// init_timer(1000);
-	//__kb_driver_init();
-	
-	__gheap_init();
 
 	print_mod("kernel loaded",MOD_OK);
 	
@@ -184,90 +177,45 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
 */
 	//int *ptr = (int*)(4 * 1024 * 1024 + 4097);
 	
-	// pageinfo_t pgi;
-	// pageinfo_t pgi2;
-	// page_t *pg;
-	// page_t *pg2;
+	pageinfo_t pgi;
+	pageinfo_t pgi2;
+	page_t *pg;
+	page_t *pg2;
 
 	//pgi = parse_page(get_page(kernel_pgd,0));
 	
-	// pg = __pgm_kalloc(1);
+	pg = __pgm_alloc(1);
 
-	// pgi = parse_page(pg);
+	pgi = parse_page(pg);
 
-	// printk("%d,%d,%d: %d\n",pgi.pres,pgi.rw,pgi.us,pgi.frame);
-
-
-	// pg2 = __pgm_kalloc(1);
-
-	// pgi2 = parse_page(pg2);
+	printk("%d,%d,%d: %d\n",pgi.pres,pgi.rw,pgi.us,pgi.frame);
 
 
-	// printk("%d,%d,%d: %d\n",pgi2.pres,pgi2.rw,pgi2.us,pgi2.frame);
+	pg2 = __pgm_alloc(1);
 
-	// //__pgm_free(pg2,1);
-
-	// pg2 = __pgm_kalloc(1);
-
-	// pgi2 = parse_page(pg2);
+	pgi2 = parse_page(pg);
 
 
-	// printk("%d,%d,%d: %d\n",pgi2.pres,pgi2.rw,pgi2.us,pgi2.frame);
+	printk("%d,%d,%d: %d\n",pgi2.pres,pgi2.rw,pgi2.us,pgi2.frame);
 
-	// pg2 = __pgm_kalloc(1); // 
+	//__pgm_free(pg2,1);
 
-	// pgi2 = parse_page(pg2);
+	pg2 = __pgm_alloc(1);
+
+	pgi2 = parse_page(pg);
 
 
-	// printk("mt: %d,%d,%d: %d\n",pgi2.pres,pgi2.rw,pgi2.us,pgi2.frame);
+	printk("%d,%d,%d: %d\n",pgi2.pres,pgi2.rw,pgi2.us,pgi2.frame);
 
+	
 
-	// __kheap_allocmaj(&kheap);
-	// __kheap_allocmaj(&kheap);
-
-	// void *test = __heap_alloc(&kheap,10);	
-	// printk("addr - 0x%x\n",test);
-	// void *test2 = __heap_alloc(&kheap,10);	
-	// printk("addr - 0x%x",test2);
 //	printk("%d,%d: %d\n",getbit(*pgi.pg,PTE_PRESENT_SHIFT),getbit(*pgi.pg,PTE_RW_SHIFT),getbit(*pgi.pg,PTE_USER_SHIFT));
 
 
 //	printk("%d",*ptr);
 	
-	//printk("mem size: %d", boot_ptr->mem_upper - boot_ptr->mem_lower);
+	printk("mem size: %d", boot_ptr->mem_upper - boot_ptr->mem_lower);
 
-	//__gheap_init();
-
-	// __gheap_init();
-
-	// heap_resblock_t* resb = __heap_alloc_resblock();
-	// if(resb == NULL) { printk("WHY ???");}
-
-	// resb->pages;
-	// resb->beginpf = parse_page(&kernel_pgt[511]).frame;
-	// resb->beginpf = parse_page(&kernel_pgt[512]).frame;
-
-	// int* ha = (int*)__heap_alloc(resb,sizeof(int));
-
-
-//	printk("addr: 0x%x; page align addr: 0x%x ",_memory_start,4096 + 4096 % 4096);
-
-	heap_resblock_t *resb = __heap_alloc_resblock();
-	if(resb == NULL) { printk("WHY ???"); }
-	resb->beginpf = PAGEINFO(kernel_pgt[100],frame);
-	resb->lastpf = PAGEINFO(kernel_pgt[102],frame);
-
-#define lbtomem(lb) ((void*)lb + sizeof(heap_localblock_t))
-	printk("localblock size = %d",sizeof(heap_localblock_t));
-	int* ha = (int*)__heap_alloc(resb,sizeof(int));
-	printk("testx: 0x%x\n",ha);
-	int* ha2 = (int*)__heap_alloc(resb,sizeof(int));
-	printk("testx2: 0x%x,%d",ha2,ha2 - ha);
-	*ha2 = 243;
-	printk("\ntest: %d",*ha2);
-	__heap_free(ha2);
-	int* ha3 = (int*)__heap_alloc(resb,sizeof(int));
-	printk("testx3: 0x%x,%d",ha3,ha3 - ha2);
 	for (;;)
 		__asm __volatile ("hlt");
 	return;

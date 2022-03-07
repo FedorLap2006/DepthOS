@@ -11,13 +11,7 @@ pde_t kernel_pgd[1024] __align(4096);
 pde_t *cur_pgd __align(4096);
 
 page_t kernel_pgt[1024] __align(4096); /* 768 */
-//page_t heap_mem_pgt[1024] __align(4096);
-page_t heap_blks_pgt1[1024] __align(4096);
-// page_t heap_blks_pgt2[1024] __align(4096);
-// page_t heap_blks_pgt3[1024] __align(4096);
-page_t proc_dirs_pgt[1024] __align(4096); /* 769 */ // for processes
-page_t proc_tbs_pgt[1024] __align(4096); /* 769 */ // for processes
-pagetb_t end_pgt __align(4096);
+page_t heap_1_pgt[1024] __align(4096); /* 769 */
 
 #define page_offset(a) (((uint32_t)a) & 0xfff)
 #define page_index(a) ((((uint32_t)a) >>12) & 0x3ff)
@@ -116,7 +110,6 @@ page_t* get_page(pagedir_t pgd,uint32_t vaddr) {
 // i >>= 2;
 
 page_t make_pte(uint32_t paddr,int user,int rw) {
-	//printk("<%d>",paddr);	
 	paddr = paddr >> 12;
 
 		return (0x0                      |
@@ -134,9 +127,9 @@ page_t make_pte(uint32_t paddr,int user,int rw) {
 	
 }
 
-pde_t make_pde(uint32_t paddr,int user,int rw) {	
+pde_t make_pde(uint32_t paddr,int user,int rw) {
+	
 	paddr = paddr >> 12;
-
 
 	return 0x0                           |
 		   (1    << PDE_PRESENT_SHIFT)   |
@@ -216,35 +209,20 @@ void paging_init() {
 	
 	__asm __volatile ("cli");
 	
-	for(i = 0 * 1024 * 1024; i < 1 * 4 * 1024 * 1024; i += 4096){
+	for(i = 0 * 1024 * 1024; i < 4 * 1024 * 1024; i += 4096){
 		page_t pg = make_pte(i,0,1);
-		//mod_log(__func__,"alloc pages ( kernel ) - [%d](%d)",pte_index(i),i);
 		kernel_pgt[pte_index(i)] = pg;
-		//mod_log(__func__,"alloc pages ( kernel space ) - [%d](%d) <%d> { .rw = %d, .us = %d .frame = %d }\n",
-      //pte_index(i),j,i,parse_page(&pg).rw,parse_page(&pg).us,parse_page(&pg).frame);
-//		turn_page(&pg);
-	}
-	//printk("<%d>",i);	
-	for(j = 0; i < 3 * 4 * 1024 * 1024, j < 1 * 4 * 1024 * 1024; i += 4096, j += 4096){
-		//printk("<%d>",i);	
-		page_t pg = make_pte(i,0,1);
-		//mod_log(__func__,"alloc pages ( heap blks ) - [%d](%d) <%d> { .rw = %d, .us = %d .frame = %d }\n",
-//      pte_index(j),j,i,parse_page(&pg).rw,parse_page(&pg).us,parse_page(&pg).frame);
-		heap_blks_pgt1[pte_index(j)] = pg;
 
 //		turn_page(&pg);
 	}
-
 	
-
-
 	//change_page(&kernel_pgt[0],0,0,1);
 
 //	printk("%x || %x - %x = %x\n", (int)kernel_pgt,(int)kernel_pgt,(int)VIRT_BASE,(uint32_t)((int)kernel_pgt - (int)VIRT_BASE));
-	kernel_pgd[pde_index(VIRT_BASE + 0 * 4 * 1024 * 1024)] = make_pde((uint32_t)(((int)kernel_pgt 		- (int)VIRT_BASE)),0,1);
-	kernel_pgd[pde_index(VIRT_BASE + 1 * 4 * 1024 * 1024)] = make_pde((uint32_t)(((int)heap_blks_pgt1	- (int)VIRT_BASE)),0,1);
+	kernel_pgd[pde_index(VIRT_BASE)] = make_pde((uint32_t)(((int)kernel_pgt - (int)VIRT_BASE)),0,1);
+	
 //	change_page	
-//	end_pgt = heap_blks_pgt;
+
 	activate_pgd(kernel_pgd);
 	
 	reg_intr(14,__do_pf);
@@ -279,9 +257,8 @@ pageinfo_t parse_page(page_t* pg) {
 	pgi.dirty	 = getbit(*pg,PTE_DIRTY_SHIFT);//& 0x40;
 	pgi.pat 	 = getbit(*pg,PTE_ZERO_SHIFT); //& 80;
 	pgi.glob	 = getbit(*pg,PTE_GLOB_SHIFT); //& 0x100;
-	uint32_t temp = *pg & 0xFFFFF000;
-	pgi.frame = *pg & 0xFFFFF000;
-	printk(" :: 0x%x(0x%x) => 0x%x, 0x%x :: ", &pgi, ((char*)&pgi + 13), pgi.frame, temp);
+	pgi.frame	 = *pg & 0xFFFFF000;
+	
 	return pgi;	
 }
 
