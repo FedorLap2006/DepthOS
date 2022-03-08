@@ -10,3 +10,5 @@ char *strchr(const char *s, int c);
 int strcmp(const char *a, const char *b);
 size_t strlen(const char *s);
 char *strstr(const char *haystack, const char *needle);
+int strsplt(const char *src, char *dest, size_t buf_str_size, size_t n,
+            char delim);

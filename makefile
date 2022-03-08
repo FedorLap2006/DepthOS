@@ -35,6 +35,7 @@ OUTBIN=$(OSNAME)-$(OSVER)
 # ASMSOURCES ?=
 # NASMSOURCES ?=
 CSOURCES +=kmain.c
+CSOURCES +=shell.c
 NASMSOURCES +=loader.asm
 #CSOURCES += $(shell find . -name "*.c" -type f -print )
 #ASMSOURCES += $(shell find . -name "*.s" -type f -print )
