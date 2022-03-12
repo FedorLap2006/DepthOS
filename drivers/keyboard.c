@@ -4,7 +4,7 @@
 
 // TODO: release scancodes
 // TODO: ctrl, shift and alt handling
-static int scancode_set_1[] = {
+static uint32_t scancode_set_1[] = {
     // key scancode
     KEY_UNKNOWN,      // 0
     KEY_ESCAPE,       // 1
@@ -94,7 +94,7 @@ static int scancode_set_1[] = {
 };
 
 unsigned char keycodes_buf[1024 * 5];
-void (*keyboard_event_handler)(unsigned char keycode);
+void (*keyboard_event_handler)(uint32_t keycode);
 
 static int keycodes_pos = 0;
 
@@ -111,7 +111,6 @@ void kb_event(regs_t r) {
     scancode = inb(0x60);
     if (scancode >= ARRAY_SIZE(scancode_set_1))
       return;
-
     keyboard_event_handler(scancode_set_1[scancode]);
     //		keycodes_buf[keycodes_pos++] = keycode;
     //		console_write_dec(keycode);
@@ -119,8 +118,14 @@ void kb_event(regs_t r) {
   return;
 }
 
-void standard_keycode_handler(int keycode) {
+void standard_keycode_handler(uint32_t keycode) {
   switch (keycode) {
+  case KEY_RALT:
+  case KEY_LCTRL:
+  case KEY_RCTRL:
+  case KEY_LSHIFT:
+  case KEY_RSHIFT:
+    break;
   case KEY_BACKSPACE:
     console_putchar(0x08);
     console_putchar_color(' ', -1, WHITE_COLOR);
@@ -146,7 +151,7 @@ int __kb_driver_readkc() {
 }
 
 void __kb_driver_init() {
-  reg_intr(0x20 + 0x1, kb_event);
+  idt_register_interrupt(0x20 + 0x1, kb_event);
   __kb_driver_set_handler(standard_keycode_handler);
 }
 void __kb_driver_set_handler(void (*handler)(int)) {

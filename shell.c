@@ -53,7 +53,8 @@ void execute_command() {
                       ");*/
 
     const char *text = command_argc > 1 && !strcmp(command_argv[1], "-a")
-                           ? "DepthOS depthos 1.0.0 2019"
+                           // "DepthOS depthos 1.0.0 2019"
+                           ? "DEPTHOS_ARCTIC depthos 0.0.1 2019 i686 DepthOS"
                            : "DepthOS";
     console_write_color(text, BLACK_COLOR, GREEN_COLOR);
     console_putchar('\n');
@@ -76,13 +77,19 @@ void execute_command() {
     else
       strcpy(hostname, command_argv[1]);
 
+  } else if (!strcmp(command_argv[0], "time")) {
+    extern uint32_t tick;
+
+    printk("%dh %dm %ds %dms have passed since OS started\n",
+           tick / 1000 / 60 / 60, tick / 1000 / 60, tick / 1000, tick % 1000);
   } else if (!strcmp(command_argv[0], "help")) {
 #define COMMAND(c, desc) printk("%-10s - %s\n", #c, desc);
-    COMMAND(uname, "Output OS version and username")
+    COMMAND(uname, "Output OS version and hostname")
     COMMAND(setuser, "Change username")
+    COMMAND(hostname, "Change hostname")
     COMMAND(clear, "Clear console")
+    COMMAND(time, "Output elapsed time from the boot")
     COMMAND(shutdown, "Shutdown the OS")
-    COMMAND(clear, "Clear the screen")
 #undef COMMAND
   }
 
@@ -103,12 +110,17 @@ void shell_keyhandler(int keycode) {
   }
 
   switch (keycode) {
+  case KEY_RALT:
+  case KEY_LCTRL:
+  case KEY_RCTRL:
+  case KEY_LSHIFT:
+  case KEY_RSHIFT:
+    break;
   case KEY_RETURN:
     shell_buffer[shell_buffer_idx] = 0;
     shell_buffer_idx = 0;
     console_putchar('\n');
     execute_command();
-    console_putchar('\n');
     command_prompt();
     break;
   case KEY_BACKSPACE:

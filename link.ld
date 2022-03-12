@@ -1,3 +1,4 @@
+OUTPUT_FORMAT("elf32-i386")
 ENTRY(_loader)
 /*OUTPUT_FORMAT(pei-i386)
 OUTPUT_ARCH(i386:i386)*/
@@ -6,30 +7,32 @@ OUTPUT_ARCH(i386:i386)*/
 SECTIONS {
    /* The multiboot data and code will exist in low memory
       starting at 0x100000 */
- 
-   . = 1M;
- 
+   . = 0xC0100000;
+    
    /* The kernel will live at 3GB + 1MB in the virtual
       address space, which will be mapped to 1MB in the
       physical address space. */
  
-   .text ALIGN(4096) : {
-	   *(.boot)
+   .text ALIGN(4096) : AT(ADDR(.text) - 0xC0000000) {
+       *(.multiboot)
        *(.text*)
    }
- 
-   .data ALIGN (4096) : {
-       *(.data)
+   .rodata ALIGN(4K) : AT(ADDR(.rodata) - 0xC0000000) {
        *(.rdata*)
-       *(.rodata*)
+        *(.rodata)
    }
- 
-   .bss ALIGN (4096) : {
+
+   .bss ALIGN (4096) : AT(ADDR(.bss) - 0xC0000000) {
        _sbss = .;
        *(COMMON)
        *(.bss)
        _ebss = .;
    }
+
+   .data ALIGN (4096) : AT(ADDR(.data) - 0xC0000000) {
+       *(.data)
+   }
+
    end = .; _end = .; __end = .;
  
    /DISCARD/ : {

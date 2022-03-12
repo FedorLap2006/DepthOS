@@ -22,30 +22,31 @@ void mod_loga(char *file, int line, char *mod, char *msg, ...) {
 }
 
 void print_mod(char *buf, int m) {
+  const char *mod;
+  uint8_t color;
+
   switch (m) {
-  case MOD_OK: {
-    console_putchar('[');
-    console_write_color("OK", -1, WGREEN_COLOR);
-    //			console_putchar_color(0xFB,-1,WGREEN_COLOR);
-    console_putchar(']');
-    console_putchar(' ');
-    console_write_color(buf, -1, WBLUE_COLOR);
-    console_putchar('\n');
+  case MOD_OK:
+    mod = "OK";
+    color = WGREEN_COLOR;
     break;
-  }
-  case MOD_ERR: {
-    console_putchar('[');
-    console_write_color("ERROR", -1, PINK_COLOR);
-    //			console_putchar_color(0xFB,-1,WGREEN_COLOR);
-    console_putchar(']');
-    console_putchar(' ');
-    console_write_color(buf, -1, WBLUE_COLOR);
-    console_putchar('\n');
+  case MOD_ERR:
+    mod = "ERROR";
+    color = PINK_COLOR;
     break;
-  }
+  case MOD_WARNING:
+    mod = "WARN";
+    color = YELLOW_COLOR;
+    break;
   default:
-    break;
+    return;
   }
+
+  console_write("[");
+  console_write_color(mod, -1, color);
+  console_write("] ");
+  console_write_color(buf, -1, WBLUE_COLOR);
+  console_write("\n");
 }
 
 void console_init(int s, int l, int b, int f) {

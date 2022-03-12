@@ -21,8 +21,8 @@
 	.globl set_up_gdt
 set_up_gdt:
 	mov	$0x10, %ax
-	lgdt	1f
-	jmp	$0x8, $2f
+	lgdt 1f
+	jmp	$0x8, $(2f - 0xC0000000)
 2:
 	mov	%ax, %ds
 	mov	%ax, %es

@@ -3,8 +3,8 @@
 
 .global idt_flush
 
-.extern intr_handler
-.extern irq_handler
+.extern idt_interrupt_handler
+.extern idt_hwinterrupt_handler
 
 .macro INTR_NOERRCODE num
 	.global intr\num
@@ -178,7 +178,7 @@ intr_cstub:
 	mov	%ax, %fs
 	mov	%ax, %gs
 	// Call the kernel IRQ handler
-	call	intr_handler
+	call	idt_interrupt_handler
 
 	pop	%fs
 	pop	%gs
@@ -201,7 +201,7 @@ irq_cstub:
 	mov	%ax, %fs
 	mov	%ax, %gs
 	// Call the kernel IRQ handler
-	call	irq_handler
+	call	idt_hwinterrupt_handler
 
 	pop	%fs
 	pop	%gs

@@ -23,9 +23,6 @@ CCFLAGS= -Iinclude -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-exceptio
 CCFLAGS += -W -Wall -Wno-unused-parameter -Wno-type-limits -Wno-parentheses -Wno-unused-variable -Wno-maybe-uninitialized -Wno-return-local-addr -Wno-return-type
 ASFLAGS = -m32
 ifeq ($(BUILDOS),win)
-#	LDEMU=-mi386pe
-	LDEMU=-melf_i386
-else
 	LDEMU=-melf_i386
 endif
 LDFILE=link.ld
@@ -85,12 +82,8 @@ endif
 	$(ASM) $(NASMSOURCES)
 	$(CC) $(CEMU) -c $(ASMSOURCES)
 	@mv *.o build/
-	$(LD) $(LDEMU) -T$(LDFILE) -o build/$(OUTBIN).bin build/*.o --build-id=none 
-ifeq ($(BUILDOS),win)	
-	objcopy -O elf32-i386 build/$(OUTBIN).bin $(OUTBIN)
-else
+	$(LD) $(LDEMU) -T$(LDFILE) -O2 -nostdlib -g -ggdb -o build/$(OUTBIN).bin build/*.o --build-id=none 
 	cp build/$(OUTBIN).bin $(OUTBIN)
-endif
 
 img:
 
