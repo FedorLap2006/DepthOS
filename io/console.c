@@ -12,43 +12,6 @@ int dfcolor = WHITE_COLOR;
 
 int cursorx = 0, cursory = 0;
 
-void mod_loga(char *file, int line, char *mod, char *msg, ...) {
-  static char mlog_s[sizeof(msg)];
-  va_list args;
-  va_start(args, msg);
-  vsprintf(mlog_s, msg, args);
-  va_end(args);
-  printk("(%s:%d) [%s]: %s\n", file, line, mod, mlog_s);
-}
-
-void print_mod(char *buf, int m) {
-  const char *mod;
-  uint8_t color;
-
-  switch (m) {
-  case MOD_OK:
-    mod = "OK";
-    color = WGREEN_COLOR;
-    break;
-  case MOD_ERR:
-    mod = "ERROR";
-    color = PINK_COLOR;
-    break;
-  case MOD_WARNING:
-    mod = "WARN";
-    color = YELLOW_COLOR;
-    break;
-  default:
-    return;
-  }
-
-  console_write("[");
-  console_write_color(mod, -1, color);
-  console_write("] ");
-  console_write_color(buf, -1, WBLUE_COLOR);
-  console_write("\n");
-}
-
 void console_init(int s, int l, int b, int f) {
   if (s > 0)
     strs_count = s;
@@ -59,7 +22,7 @@ void console_init(int s, int l, int b, int f) {
   if (f > 0)
     dfcolor = f;
   console_clear();
-  print_mod("console initialized", MOD_OK);
+  print_status("console initialized", MOD_OK);
 }
 
 void console_movec(int x, int y) {

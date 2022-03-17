@@ -23,17 +23,15 @@ SECTIONS {
    }
 
    .bss ALIGN (4096) : AT(ADDR(.bss) - 0xC0000000) {
-       _sbss = .;
        *(COMMON)
        *(.bss)
-       _ebss = .;
    }
 
    .data ALIGN (4096) : AT(ADDR(.data) - 0xC0000000) {
        *(.data)
    }
 
-   end = .; _end = .; __end = .;
+   kernel_end = .; _kernel_end = .; __kernel_end = .;
  
    /DISCARD/ : {
        *(.eh_frame);

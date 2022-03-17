@@ -1,5 +1,7 @@
 #pragma once
 
+#include <depthos/stdtypes.h>
+
 #define ROUND_DOWN(x, s) ((x) & ~((s)-1))
 #define ROUND_UP(N, S) ((((N) + (S)-1) / (S)) * (S))
 

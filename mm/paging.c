@@ -7,17 +7,15 @@
 int paging_enabled = 0;
 
 pde_t kernel_pgd[1024] __align(4096);
-
 pde_t *current_pgd __align(4096);
 
 page_t kernel_pgt[1024] __align(4096); /* 768 */
-page_t heap_1_pgt[1024] __align(4096); /* 769 */
 
 #define page_offset(a) (((uint32_t)a) & 0xfff)
 #define page_index(a) ((((uint32_t)a) >> 12) & 0x3ff)
 #define table_index(a) (((uint32_t)a) >> 22)
-int pde_index(uint32_t addr) { return addr >> 22; }
 
+int pde_index(uint32_t addr) { return addr >> 22; }
 uintptr_t pte_index(uint32_t addr) { return (uintptr_t)((addr / 4096) % 1024); }
 
 void activate_pgd(pagedir_t pgd) {
@@ -31,21 +29,15 @@ pagedir_t get_current_pgd(void) {
   return (pagedir_t)ADDR_TO_VIRT(ret);
 }
 
-pagedir_t activate_pgd_save(pagedir_t pgd) {
-  pagedir_t tmp = get_current_pgd();
-  activate_pgd(pgd);
-  return tmp;
-}
-
-void *get_paddr(pagedir_t dir, void *vaddr) {
+void *get_paddr(pagedir_t dir, void *virtual_address) {
   if (!paging_enabled)
-    return (void *)(vaddr - VIRT_BASE);
+    return (void *)ADDR_TO_PHYS(virtual_address);
   pde_t *pdes = dir, pde;
   page_t *ptes;
   page_t page;
   uint32_t addr;
-  int pdi = pde_index((uint32_t)vaddr);
-  int pti = pte_index((uint32_t)vaddr);
+  int pdi = pde_index((uint32_t)virtual_address);
+  int pti = pte_index((uint32_t)virtual_address);
 
   pde = pdes[pdi];
   pde >>= PDE_ADDR_SHIFT;
@@ -62,7 +54,7 @@ void *get_paddr(pagedir_t dir, void *vaddr) {
   if (page == 0)
     return NULL;
   addr = page;
-  addr += page_offset(vaddr);
+  addr += page_offset(virtual_address);
 
   return (void *)addr;
 }
@@ -82,18 +74,15 @@ page_t *get_page(pagedir_t pgd, uint32_t vaddr) {
 
   page_t *ptes;
 
-  ipde = pde_index(vaddr);
-  ipte = pte_index(vaddr);
-
-  pde = pdes[ipde];
+  pde = pgd[pde_index(vaddr)];
   pde >>= PDE_ADDR_SHIFT;
   pde <<= 12;
-  if (pde == 0)
+  if (!pde)
     return NULL;
+
   pde += VIRT_BASE;
 
-  ptes = (page_t *)pde;
-  return &ptes[ipte];
+  return (page_t *)pde + pte_index(vaddr);
 }
 // 0000100 << 2
 // int i = 0000000;
@@ -101,24 +90,19 @@ page_t *get_page(pagedir_t pgd, uint32_t vaddr) {
 // i >>= 2;
 
 page_t make_pte(uint32_t paddr, int user, int rw) {
-  paddr = paddr >> 12;
-
-  return (0x0 | (1 << PTE_PRESENT_SHIFT) | (rw << PTE_RW_SHIFT) |
-          (user << PTE_USER_SHIFT) | (1 << PTE_WRITETHRU_SHIFT) |
-          (0 << PTE_CACHE_SHIFT) | (0 << PTE_ACCESS_SHIFT) |
-          (0 << PTE_DIRTY_SHIFT) & (PTE_ZERO_MASK) |
-          (0 << PTE_GLOB_SHIFT) & (PTE_AVAIL_MASK) | (paddr << PTE_ADDR_SHIFT));
+  return 0x0 | (1 << PTE_PRESENT_SHIFT) | (rw << PTE_RW_SHIFT) |
+         (user << PTE_USER_SHIFT) | (1 << PTE_WRITETHRU_SHIFT) |
+         (0 << PTE_CACHE_SHIFT) | (0 << PTE_ACCESS_SHIFT) |
+         (0 << PTE_DIRTY_SHIFT) & (PTE_ZERO_MASK) |
+         (0 << PTE_GLOB_SHIFT) & (PTE_AVAIL_MASK) | paddr;
 }
 
 pde_t make_pde(uint32_t paddr, int user, int rw) {
-
-  paddr = paddr >> 12;
-
   return 0x0 | (1 << PDE_PRESENT_SHIFT) | (rw << PDE_RW_SHIFT) |
          (user << PDE_USER_SHIFT) | (1 << PDE_WRITETHRU_SHIFT) |
          (0 << PDE_CACHE_SHIFT) | (0 << PDE_ACCESS_SHIFT) |
          (0 << PDE_ZERO_SHIFT) | (0 << PDE_SIZE_SHIFT) |
-         (0 << PDE_IGNORE_SHIFT) & (PDE_AVAIL_MASK) | (paddr << PDE_ADDR_SHIFT);
+         (0 << PDE_IGNORE_SHIFT) & (PDE_AVAIL_MASK) | paddr;
 }
 
 void enable_paging() {
@@ -193,7 +177,7 @@ void paging_init() {
   activate_pgd(kernel_pgd);
   enable_paging();
   idt_enable_hwinterrupts();
-  print_mod("vmem initialized", MOD_OK);
+  print_status("vmem initialized", MOD_OK);
 }
 
 pageinfo_t parse_page(page_t *pg) {

@@ -1,130 +1,96 @@
-#include "depthos/pgm.h"
 #include <depthos/console.h>
+#include <depthos/logging.h>
+#include <depthos/pgm.h>
 #include <depthos/stdbits.h>
 #include <depthos/string.h>
 
-extern void *glob_get_mem(size_t);
+extern void *kimalloc(size_t);
 
 extern pagedir_t current_pgd;
 
 uint8_t *pgm_bitmap;
-size_t bitmap_sz;
-size_t bitmap_pgc;
+size_t bitmap_size;
+size_t pgm_pagecount;
+bool pgm_initialised = false;
 
-static size_t get_arr_index(size_t idx, size_t c) {
-  size_t res;
-  res = idx / c;
-  if ((idx % c) != 0) {
-    res++;
-  }
-  if (res > 0 && (idx % c) != 0) {
-    res--;
-  }
-  return res;
+#define ARRAY_INDEX(idx, c) ((idx) / c)
+
+void pgm_init(size_t memory_size) {
+  pgm_pagecount = memory_size / 4096 + (memory_size % 4096 != 0);
+  klogf("initialising page manager for %d pages", pgm_pagecount);
+  bitmap_size = ARRAY_INDEX(pgm_pagecount - 1, 8) + 1;
+  klogf("estimated page manager bitmap size is %d bytes", bitmap_size);
+  pgm_bitmap = (uint8_t *)kimalloc(bitmap_size);
+  uint32_t upper_addr = kimalloc(0);
+  for (int i = 0; i < ADDR_TO_PHYS(upper_addr); i += 4096)
+    pgm_set(i >> 12, true);
+  pgm_initialised = true;
 }
 
-void __pgm_init(size_t mm_sz) {
-  bitmap_pgc = mm_sz / 4096;
+page_t *pgm_alloc(size_t count) {
+  if (!count)
+    return NULL;
 
-  bitmap_sz = get_arr_index(bitmap_pgc, 8) + 1;
-  if (bitmap_pgc % 8 == 0)
-    bitmap_sz--;
-  pgm_bitmap = (uint8_t *)glob_get_mem(bitmap_sz);
+  int current_count = 0, starting_index = 0;
+  for (int i = 0; i < pgm_pagecount; i++) {
+    if (pgm_get(i)) {
+      klogf("page %d is not available, skipping", i);
+      current_count = 0;
+      continue;
+    }
+    if (!current_count) {
+      klogf("starting_index=%d", i);
+      starting_index = i;
+    }
 
-  memset(pgm_bitmap, 0, bitmap_sz);
-
-  __pgm_dump();
-}
-page_t *__pgm_alloc(size_t count) {
-  page_t *ret = NULL;
-
-  size_t cidx = 0;
-  size_t cursz = 0;
-  size_t nidx = 0;
-  mod_log(__func__, "has started");
-  for (cidx = 0; cidx < bitmap_pgc; cidx++) {
-    // printk("state[%d](%d:%d) at 0x%x: %d\n",cidx, get_arr_index(cidx,8), cidx
-    // % 8, cidx * 4096, pgm_bitmap[get_arr_index(cidx,8)] & (1 << cidx % 8));
-    mod_log(__func__, "state[%d](%d:%d) at %d: %d\n", cidx,
-            get_arr_index(cidx, 8), cidx % 8, cidx * 4096, __pgm_get_bme(cidx));
-    if (cursz >= count) {
-      mod_log(__func__, "finded free page(%d), csz=%d", nidx, cursz);
-      size_t i;
-      for (i = nidx; i < nidx + cursz; i++) { // 0; 0 < 0 + 1
-        mod_log(__func__, "marking free page:[%d]", i);
-        __pgm_set_bme(i, true);
-        mod_log(__func__, "checking marking free page:[%d] %d", i,
-                __pgm_get_bme(i));
+    if (++current_count == count) {
+      klogf("return condition is met (count=%d index=%d)", current_count,
+            starting_index);
+      for (int j = starting_index; j <= i; j++) {
+        pgm_set(j, true);
       }
 
-      ret = get_page(current_pgd, (4096 * nidx));
-      // mod_log(__func__,"checking marking free page:[%d] %d", i -
-      // 1,__pgm_get_bme(i - 1));
-      break;
-    }
-
-    if (__pgm_get_bme(cidx) != 0 && cursz < count) {
-      mod_log(__func__, "reset indices, last(%d,%d)", nidx, cursz);
-      cursz = 0;
-      nidx = 0;
-    }
-    if (__pgm_get_bme(cidx) == 0) {
-      //			ret = get_page(current_pgdir,(4096 * cidx));
-      //			last_idx =
-      //			break;
-      mod_log(__func__, "new alloc[%d]", cidx);
-      if (nidx == 0) {
-        mod_log(__func__, "setup new indices(%d)", cidx);
-        nidx = cidx;
-      }
-      cursz++;
+      return get_page(current_pgd, starting_index << 12);
     }
   }
-  mod_log(__func__, "has ended");
 
-  return ret;
+  return NULL;
 }
 
-void __pgm_free(page_t *pg, size_t count) {
-  size_t cidx;
+void pgm_free(page_t *pg, size_t count) {
   pageinfo_t pgi = parse_page(pg);
-  for (cidx = 0; cidx < bitmap_pgc; cidx++) {
-    if (cidx * 4096 >= pgi.frame && cidx * 4096 <= count * 4096 + pgi.frame) {
-      __pgm_set_bme(cidx, false);
-    }
-  }
+  for (int i = pgi.frame >> 12;
+       i < pgm_pagecount && i < (pgi.frame >> 12) + count; i++)
+    pgm_set(i, false);
 }
 
-void __pgm_set_bme(uint32_t idx, bool busy) {
-  if (idx >= bitmap_sz)
+void pgm_set(uint32_t idx, bool busy) {
+  if (idx >= pgm_pagecount)
     return;
+
+  // klogf("value=%d index=%d offset=%d", busy, ARRAY_INDEX(idx, 8), idx % 8);
+
   if (busy) {
-    pgm_bitmap[get_arr_index(idx, 8)] =
-        pgm_bitmap[get_arr_index(idx, 8)] | (1 << idx % 8);
+    pgm_bitmap[ARRAY_INDEX(idx, 8)] |= (1 << idx % 8);
   } else {
-    pgm_bitmap[get_arr_index(idx, 8)] =
-        pgm_bitmap[get_arr_index(idx, 8)] & ~(1 << idx % 8);
+    pgm_bitmap[ARRAY_INDEX(idx, 8)] &= ~(1 << idx % 8);
   }
 }
 
-void __pgm_set_rpg_addr(uint32_t addr, bool busy) {
-  __pgm_set_bme(addr / 4096, busy);
-}
-void __pgm_set_rpg_desc(page_t *pg, bool busy) {
-  __pgm_set_rpg_addr(parse_page(pg).frame, busy);
+void pgm_set_addr(uint32_t addr, bool busy) { pgm_set(addr / 4096, busy); }
+void pgm_set_desc(page_t *pg, bool busy) {
+  pgm_set_addr(parse_page(pg).frame, busy);
 }
 
-uint8_t __pgm_get_bme(uint32_t idx) {
-  return (pgm_bitmap[get_arr_index(idx, 8)] >> (idx % 8)) & 1;
+uint8_t pgm_get(uint32_t idx) {
+  return (pgm_bitmap[ARRAY_INDEX(idx, 8)] >> (idx % 8)) & 1;
 }
-uint8_t __pgm_get_rpg_addr(uint32_t addr) { return __pgm_get_bme(addr / 4096); }
-uint8_t __pgm_get_rpg_desc(page_t *pg) {
-  return __pgm_get_rpg_addr(parse_page(pg).frame);
-}
+uint8_t pgm_get_addr(uint32_t addr) { return pgm_get(addr / 4096); }
+uint8_t pgm_get_desc(page_t *pg) { return pgm_get_addr(parse_page(pg).frame); }
 
-void __pgm_dump() {
+void pgm_dump() {
   size_t i = 0;
-  for (i = 0; i < bitmap_pgc; i++) {
-    printk("%d - %d\n", i, pgm_bitmap[get_arr_index(i, 8)] & (1 << i % 8));
+  for (i = 0; i < pgm_pagecount; i++) {
+    printk("%d: %d\n", i, pgm_get(i));
   }
 }

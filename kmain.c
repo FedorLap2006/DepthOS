@@ -8,6 +8,7 @@
 #include <depthos/string.h>
 //#include <depthos/stdio.h>
 #include <depthos/keyboard.h>
+#include <depthos/logging.h>
 #include <depthos/stdarg.h>
 #include <depthos/stdbits.h>
 #include <depthos/tools.h>
@@ -71,7 +72,7 @@ struct multiboot_information {
 };
 
 // extern heap_t *kern_heap;
-extern uint32_t end;
+extern uint32_t kernel_end;
 
 extern void shell_eventloop();
 
@@ -88,7 +89,7 @@ void console_write_centered(const char *str) {
   console_write_color_centered(str, -1, -1);
 }
 
-bool fullscreen_welcome_message = true;
+bool fullscreen_welcome_message = false;
 
 void welcome_message() {
   if (!fullscreen_welcome_message) {
@@ -127,86 +128,41 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
   if (strstr(boot_ptr->cmdline, "console=ttyS0")) {
     serial_console_init(0);
   }
-
-  print_mod("GDT initialized", MOD_OK);
+  print_status("GDT initialized", MOD_OK);
   idt_init();
-
   paging_init();
-  // __pgm_init(10 * 4096); // | 0 0 0 0 0 0 0 0 |
-  // pmm_init(1096 * (1024 * 1024));
+  pgm_init(1024 * 4096);
+  // pgm_dump();
+  klogf("349=%d 348=%d", pgm_get(349), pgm_get(348));
+  // page_t *page_alloc1 = pgm_alloc(1);
+  // klogf("(pgm_alloc(1) at 0%x).frame = 0x%x", page_alloc1,
+  //       parse_page(page_alloc1).frame);
+  // page_t *page_alloc2 = pgm_alloc(1);
+  // klogf("(pgm_alloc(1) at 0%x).frame = 0x%x", page_alloc2,
+  //       parse_page(page_alloc2).frame);
+  // pgm_dump();
+  // klogf("should fail");
+  // pgm_free(0x0c010900f, 1);
+  // pgm_dump();
+  // pgm_free(page_alloc1, 1);
+  // pgm_dump();
+  // page_t *page_alloc3 = pgm_alloc(2);
+  // klogf("(pgm_alloc(2) at 0%x).frame = 0x%x", page_alloc3,
+  //       parse_page(page_alloc3).frame);
+  // pgm_dump();
+  // pgm_free(page_alloc2, 1);
+  // pgm_dump();
+  // pgm_free(page_alloc3, 2);
+  // pgm_dump();
 
+  // pgm_init(10 * 4096); // | 0 0 0 0 0 0 0 0 |
+  // pmm_init(1096 * (1024 * 1024));
   idt_register_interrupt(0x80, syscall_event);
   init_timer(1000);
   __kb_driver_init();
 
   welcome_message();
-
   shell_eventloop();
-
-  /*	*/
-
-  /*	struct __mmh heap;
-
-          init_heap(&heap,100);
-
-          char* one = (char*)malloc(sizeof(char) * 5,&heap);
-          one[0] = 'h';
-          one[1] = 'e';
-          one[2] = 'l';
-          one[3] = 'l';
-          one[4] = 'o';
-          
-          printk("0x%x - %s\n",one,one);
-          
-          free(one,&heap);
-
-          char* two = (char*)malloc(sizeof(char) * 5,&heap);
-          two[0] = 'n';
-          two[1] = 'e';
-          two[2] = 'w';
-          two[3] = '!';
-          two[4] = '!';
-          
-          printk("0x%x - %s\n",two,two);
-          
-          printk("0x%x - %s\n",one,one);
-
-          
-          free(two,&heap);
-  */
-  // int *ptr = (int*)(4 * 1024 * 1024 + 4097);
-
-  /*pageinfo_t pgi;*/
-  /*pageinfo_t pgi2;*/
-  /*page_t *pg;*/
-  /*page_t *pg2;*/
-
-  /*// pgi = parse_page(get_page(kernel_pgd,0));*/
-
-  /*pg = __pgm_alloc(1);*/
-
-  /*pgi = parse_page(pg);*/
-
-  /*printk("%d,%d,%d: %d\n", pgi.pres, pgi.rw, pgi.us, pgi.frame);*/
-
-  /*pg2 = __pgm_alloc(1);*/
-
-  /*pgi2 = parse_page(pg);*/
-
-  /*printk("%d,%d,%d: %d\n", pgi2.pres, pgi2.rw, pgi2.us, pgi2.frame);*/
-
-  /*//__pgm_free(pg2,1);*/
-
-  /*pg2 = __pgm_alloc(1);*/
-
-  /*pgi2 = parse_page(pg);*/
-
-  /*printk("%d,%d,%d: %d\n", pgi2.pres, pgi2.rw, pgi2.us, pgi2.frame);*/
-
-  /*//	printk("%d,%d:*/
-  /*//%d\n",getbit(*pgi.pg,PTE_PRESENT_SHIFT),getbit(*pgi.pg,PTE_RW_SHIFT),getbit(*pgi.pg,PTE_USER_SHIFT));*/
-
-  /*//	printk("%d",*ptr);*/
 
   /*printk("mem size: %d", boot_ptr->mem_upper - boot_ptr->mem_lower);*/
 

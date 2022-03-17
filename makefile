@@ -58,6 +58,9 @@ os_info:
 	@echo ---------- build for $(BUILDOS) ----------
 	@echo
 
+format:
+	find -iname "*.h" -o -iname "*.c" | xargs clang-format -i
+
 clean:
 	@rm -f build/*.o
 	@rm -f build/*.bin
@@ -117,9 +120,9 @@ test:
 	@echo ----------- testing os ------------
 	@echo
 ifeq ($(DEBUG), on)
-	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN) # -S -s # -nographic
+	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN) $(QEMU_ARGS) # -S -s # -nographic
 else ifeq ($(DEBUG), true)
-	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN) # -S -s # -nographic
+	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN) $(QEMU_ARGS) # -S -s # -nographic
 else
-	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN) # -d int,pcall,cpu,fpu -D qemu_log.log # -S -s # -nographic
+	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN) $(QEMU_ARGS) # -d int,pcall,cpu,fpu -D qemu_log.log # -S -s # -nographic
 endif

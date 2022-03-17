@@ -57,7 +57,7 @@ struct pic_config default_pic_config = {
     .secondary_offset = 0x28,
     .sec_irq_line_num = 0x2,
     .sconn_irq_line = 0x4,
-    .mask = (uint16_t)IRQC0 | IRQC1, // IRQ0 (PIT)
+    .mask = (uint16_t)IRQCALL, // IRQ0 (PIT)
 };
 
 void idt_register_llhandler(uint8_t i, uint32_t cb) {
@@ -71,7 +71,7 @@ void idt_register_llhandler(uint8_t i, uint32_t cb) {
   idt[i].addr_high = ((cb & 0xffff0000) >> 16);
 }
 
-void _idt_unregistered_interrupt_llhandler() { console_write("hello!"); }
+void _idt_unregistered_interrupt_llhandler() {}
 
 void idt_init() {
   __init_idt = 1;
@@ -80,17 +80,13 @@ void idt_init() {
 
   pic_init(default_pic_config);
 
-#define idef(i)                                                                \
-  extern void intr##i();                                                       \
-  idt_register_llhandler(i, (uint32_t)intr##i)
 #include "idt_handlers.h"
-#undef idef
 
   for (int i = INTERRUPTS_COUNT; i < IDT_SIZE; i++) {
     idt_register_llhandler(i, (uint32_t)_idt_unregistered_interrupt_llhandler);
   }
   idt_flush();
-  print_mod("IDT initialized", MOD_OK);
+  print_status("IDT initialized", MOD_OK);
 }
 
 void idt_hwinterrupt_handler(regs_t r) {
@@ -107,12 +103,13 @@ void idt_interrupt_handler(regs_t r) {
 
 void idt_register_interrupt(uint32_t i, intr_handler_t f) {
   if (i >= INTERRUPTS_COUNT) {
-    print_mod("cannot register interrupt: interrupt vector is out of range",
-              MOD_ERR);
+    print_status("cannot register interrupt: interrupt vector is out of range",
+                 MOD_ERR);
     return;
   }
   if (intrs[i] != 0) {
-    print_mod("warning: overwriting existing interrupt handler", MOD_WARNING);
+    print_status("warning: overwriting existing interrupt handler",
+                 MOD_WARNING);
   }
   intrs[i] = f;
 }
