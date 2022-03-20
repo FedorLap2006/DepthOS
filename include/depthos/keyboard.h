@@ -154,4 +154,4 @@ enum KEYCODE {
   KEY_NUMKEYCODES
 };
 
-void __kb_driver_init();
+void keyboard_driver_init();

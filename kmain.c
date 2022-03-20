@@ -123,6 +123,55 @@ void welcome_message() {
   console_clear();
 }
 
+void test_kheap() {
+#define alloc(idx, size)                                                       \
+  void *addr##idx = kmalloc(size);                                             \
+  klogf("kmalloc(%d)[%d] = 0x%x", size, idx - 1, addr##idx);
+#define free(idx, size)                                                        \
+  klogf("free(addr[%d]=0x%x size=%d)", idx - 1, addr##idx, size);              \
+  kfree(addr##idx, size);
+
+  alloc(1, 10);
+  alloc(2, 10);
+  alloc(3, 9); // = alloc(1, 10)
+  free(2, 10);
+  alloc(4, 9); // = alloc(1, 10)
+  free(1, 10);
+  // alloc(5, 15);
+  free(3, 9);
+  alloc(6, 9);
+  // alloc(7, 15);
+  // free(7, 15);
+  // alloc(8, 15);
+  alloc(9, 9);
+  alloc(10, 9);
+  alloc(11, 9);
+  alloc(12, 9);
+  alloc(13, 9);
+  alloc(14, 9);
+  alloc(15, 9);
+  alloc(16, 9); //
+  free(9, 9);
+  free(10, 9);
+  free(11, 9);
+  free(12, 9);
+  free(13, 9);
+  free(14, 9);
+  free(15, 9);
+  free(16, 9);
+
+  free(4, 9);
+  free(6, 9);
+
+  alloc(17, 9);
+  // free(17, 9);
+  // free(6, 9);
+  // free(4, 9);
+
+#undef alloc
+#undef free
+}
+
 void kmain(int magic, struct multiboot_information *boot_ptr) {
   console_init(25, 80, 0, BGRAY_COLOR);
   if (strstr(boot_ptr->cmdline, "console=ttyS0")) {
@@ -131,40 +180,16 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
   print_status("GDT initialized", MOD_OK);
   idt_init();
   paging_init();
-  pgm_init(1024 * 4096);
-  // pgm_dump();
-  klogf("349=%d 348=%d", pgm_get(349), pgm_get(348));
-  // page_t *page_alloc1 = pgm_alloc(1);
-  // klogf("(pgm_alloc(1) at 0%x).frame = 0x%x", page_alloc1,
-  //       parse_page(page_alloc1).frame);
-  // page_t *page_alloc2 = pgm_alloc(1);
-  // klogf("(pgm_alloc(1) at 0%x).frame = 0x%x", page_alloc2,
-  //       parse_page(page_alloc2).frame);
-  // pgm_dump();
-  // klogf("should fail");
-  // pgm_free(0x0c010900f, 1);
-  // pgm_dump();
-  // pgm_free(page_alloc1, 1);
-  // pgm_dump();
-  // page_t *page_alloc3 = pgm_alloc(2);
-  // klogf("(pgm_alloc(2) at 0%x).frame = 0x%x", page_alloc3,
-  //       parse_page(page_alloc3).frame);
-  // pgm_dump();
-  // pgm_free(page_alloc2, 1);
-  // pgm_dump();
-  // pgm_free(page_alloc3, 2);
-  // pgm_dump();
-
-  // pgm_init(10 * 4096); // | 0 0 0 0 0 0 0 0 |
-  // pmm_init(1096 * (1024 * 1024));
+  pgm_init(400 * 4096);
   idt_register_interrupt(0x80, syscall_event);
   init_timer(1000);
-  __kb_driver_init();
+  keyboard_driver_init();
+  kheap_init();
+  test_kheap();
+  pgm_dump();
 
   welcome_message();
   shell_eventloop();
-
-  /*printk("mem size: %d", boot_ptr->mem_upper - boot_ptr->mem_lower);*/
 
   for (;;)
     __asm __volatile("hlt");

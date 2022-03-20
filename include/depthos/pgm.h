@@ -7,7 +7,8 @@ void pgm_init(size_t mm_sz);
 
 page_t *pgm_alloc(size_t count);
 
-void pgm_free(page_t *start_page, size_t count);
+void pgm_free(page_t *pg, size_t count);
+void pgm_free_frame(uint32_t frame, size_t count);
 
 void pgm_set(uint32_t idx, bool busy);
 void pgm_set_addr(uint32_t addr, bool busy);

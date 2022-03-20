@@ -136,6 +136,6 @@ void shell_keyhandler(int keycode) {
 }
 
 void shell_eventloop() {
-  __kb_driver_set_handler(shell_keyhandler);
+  keyboard_driver_set_handler(shell_keyhandler);
   command_prompt();
 }

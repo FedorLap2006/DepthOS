@@ -98,7 +98,7 @@ void (*keyboard_event_handler)(uint32_t keycode);
 
 static int keycodes_pos = 0;
 
-void kb_event(regs_t r) {
+void keyboard_driver_intr_handler(regs_t r) {
   uint8_t status;
   uint16_t scancode;
 
@@ -136,25 +136,25 @@ void standard_keycode_handler(uint32_t keycode) {
   }
 }
 
-char __kb_driver_readchar() {
+char keyboard_driver_readchar() {
   if (keycodes_pos - 1 < 0)
     return -1;
   else
     return keycodes_buf[keycodes_pos--];
 }
 
-int __kb_driver_readkc() {
+int keyboard_driver_readkc() {
   if (keycodes_pos - 1 < 0)
     return -1;
   else
     return scancode_set_1[keycodes_buf[keycodes_pos--]];
 }
 
-void __kb_driver_init() {
-  idt_register_interrupt(0x20 + 0x1, kb_event);
-  __kb_driver_set_handler(standard_keycode_handler);
+void keyboard_driver_init() {
+  idt_register_interrupt(0x20 + 0x1, keyboard_driver_intr_handler);
+  keyboard_driver_set_handler(standard_keycode_handler);
 }
-void __kb_driver_set_handler(void (*handler)(int)) {
+void keyboard_driver_set_handler(void (*handler)(int)) {
   if (!handler)
     return;
   keyboard_event_handler = handler;

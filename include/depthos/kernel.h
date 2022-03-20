@@ -5,7 +5,6 @@
 #define ROUND_DOWN(x, s) ((x) & ~((s)-1))
 #define ROUND_UP(N, S) ((((N) + (S)-1) / (S)) * (S))
 
-// #define VIRT_BASE 0x00000000 // TODO: investigate as well
 #define VIRT_BASE 0xC0000000
 #define ADDR_TO_PHYS(addr) ((uint32_t)addr - VIRT_BASE)
 #define ADDR_TO_VIRT(addr) ((uint32_t)addr + VIRT_BASE)

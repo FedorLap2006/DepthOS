@@ -13,16 +13,16 @@ typedef pde_t *pagedir_t;
 typedef struct __pageinfo {
   page_t *pg;
 
-  uint32_t pres : 1;
-  uint32_t rw : 1;
-  uint32_t us : 1;
-  uint32_t pwt : 1;
-  uint32_t pcd : 1;
-  uint32_t accessed : 1;
-  uint32_t dirty : 1;
-  uint32_t pat : 1;
-  uint32_t glob : 1;
-  uint32_t frame : 20;
+  bool pres : 1;
+  bool rw : 1;
+  bool us : 1;
+  bool pwt : 1;
+  bool pcd : 1;
+  bool accessed : 1;
+  bool dirty : 1;
+  bool pat : 1;
+  bool glob : 1;
+  uint32_t frame;
 
 } pageinfo_t;
 

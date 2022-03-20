@@ -21,8 +21,9 @@ void pgm_init(size_t memory_size) {
   bitmap_size = ARRAY_INDEX(pgm_pagecount - 1, 8) + 1;
   klogf("estimated page manager bitmap size is %d bytes", bitmap_size);
   pgm_bitmap = (uint8_t *)kimalloc(bitmap_size);
-  uint32_t upper_addr = kimalloc(0);
-  for (int i = 0; i < ADDR_TO_PHYS(upper_addr); i += 4096)
+  extern uint32_t imalloc_ptr;
+  klogf("0x%lx", imalloc_ptr);
+  for (int i = 0; i < ADDR_TO_PHYS(imalloc_ptr); i += 4096)
     pgm_set(i >> 12, true);
   pgm_initialised = true;
 }
@@ -34,7 +35,7 @@ page_t *pgm_alloc(size_t count) {
   int current_count = 0, starting_index = 0;
   for (int i = 0; i < pgm_pagecount; i++) {
     if (pgm_get(i)) {
-      klogf("page %d is not available, skipping", i);
+      // klogf("page %d is not available, skipping", i);
       current_count = 0;
       continue;
     }
@@ -49,24 +50,32 @@ page_t *pgm_alloc(size_t count) {
       for (int j = starting_index; j <= i; j++) {
         pgm_set(j, true);
       }
-
       return get_page(current_pgd, starting_index << 12);
     }
   }
 
   return NULL;
 }
+void *pgm_alloc_frame(size_t count) {
+  return parse_page(pgm_alloc(count)).frame;
+}
 
 void pgm_free(page_t *pg, size_t count) {
-  pageinfo_t pgi = parse_page(pg);
-  for (int i = pgi.frame >> 12;
-       i < pgm_pagecount && i < (pgi.frame >> 12) + count; i++)
+  return pgm_free_frame(parse_page(pg).frame, count);
+}
+void pgm_free_frame(uint32_t frame, size_t count) {
+  for (int i = frame >> 12; i < pgm_pagecount && i < (frame >> 12) + count;
+       i++) {
+    klogf("i=%d index=%d offset=%d", i, ARRAY_INDEX(i, 8), i % 8);
     pgm_set(i, false);
+  }
 }
 
 void pgm_set(uint32_t idx, bool busy) {
-  if (idx >= pgm_pagecount)
+  if (idx >= pgm_pagecount) {
+    klogf("page %d is out of bounds", idx);
     return;
+  }
 
   // klogf("value=%d index=%d offset=%d", busy, ARRAY_INDEX(idx, 8), idx % 8);
 
