@@ -1,12 +1,14 @@
-
 #include <depthos/console.h>
 #include <depthos/idt.h>
+#include <depthos/multiboot.h>
 //#include <depthos/pgm.h>
 #include <depthos/heap.h>
 #include <depthos/paging.h>
 #include <depthos/serial.h>
 #include <depthos/string.h>
 //#include <depthos/stdio.h>
+#include <depthos/fs.h>
+#include <depthos/initrd.h>
 #include <depthos/keyboard.h>
 #include <depthos/logging.h>
 #include <depthos/stdarg.h>
@@ -63,14 +65,6 @@ void sleep(size_t ms) {
     ;
 }
 
-struct multiboot_information {
-  uint32_t flags;
-  uint32_t mem_lower;
-  uint32_t mem_upper;
-  uint32_t boot_device;
-  const char *cmdline;
-};
-
 // extern heap_t *kern_heap;
 extern uint32_t kernel_end;
 
@@ -123,70 +117,60 @@ void welcome_message() {
   console_clear();
 }
 
-void test_kheap() {
-#define alloc(idx, size)                                                       \
-  void *addr##idx = kmalloc(size);                                             \
-  klogf("kmalloc(%d)[%d] = 0x%x", size, idx - 1, addr##idx);
-#define free(idx, size)                                                        \
-  klogf("free(addr[%d]=0x%x size=%d)", idx - 1, addr##idx, size);              \
-  kfree(addr##idx, size);
+void multiboot_init_early(int magic, struct multiboot_information *boot_ptr) {
+  if (MULTIBOOT_HAS_FEATURE(boot_ptr, CMDLINE) &&
+      strstr(boot_ptr->cmdline, "console=ttyS0")) {
+    serial_console_init(0);
+  }
+  if (MULTIBOOT_HAS_FEATURE(boot_ptr, MODULES) && boot_ptr->mods_count > 0) {
+    extern uint32_t imalloc_ptr;
+    imalloc_ptr = ADDR_TO_VIRT(boot_ptr->mods[boot_ptr->mods_count - 1].end);
+  }
+}
 
-  alloc(1, 10);
-  alloc(2, 10);
-  alloc(3, 9); // = alloc(1, 10)
-  free(2, 10);
-  alloc(4, 9); // = alloc(1, 10)
-  free(1, 10);
-  // alloc(5, 15);
-  free(3, 9);
-  alloc(6, 9);
-  // alloc(7, 15);
-  // free(7, 15);
-  // alloc(8, 15);
-  alloc(9, 9);
-  alloc(10, 9);
-  alloc(11, 9);
-  alloc(12, 9);
-  alloc(13, 9);
-  alloc(14, 9);
-  alloc(15, 9);
-  alloc(16, 9); //
-  free(9, 9);
-  free(10, 9);
-  free(11, 9);
-  free(12, 9);
-  free(13, 9);
-  free(14, 9);
-  free(15, 9);
-  free(16, 9);
+void multiboot_init(struct multiboot_information *boot_ptr) {
+  if (MULTIBOOT_HAS_FEATURE(boot_ptr, MODULES) && boot_ptr->mods_count >= 1) {
+    initrd_init(&boot_ptr->mods[0]);
+  }
+}
 
-  free(4, 9);
-  free(6, 9);
-
-  alloc(17, 9);
-  // free(17, 9);
-  // free(6, 9);
-  // free(4, 9);
-
-#undef alloc
-#undef free
+char *resolve_filetype(struct fs_node *file) {
+  switch (file->type) {
+  case FS_FILE:
+    return "file";
+  case FS_DIR:
+    return "directory";
+  case FS_MOUNT:
+    return "mount";
+  case FS_PIPE:
+    return "pipe";
+  }
+  return "unknown";
 }
 
 void kmain(int magic, struct multiboot_information *boot_ptr) {
   console_init(25, 80, 0, BGRAY_COLOR);
-  if (strstr(boot_ptr->cmdline, "console=ttyS0")) {
-    serial_console_init(0);
-  }
+  multiboot_init_early(magic, boot_ptr);
+
   print_status("GDT initialized", MOD_OK);
   idt_init();
-  paging_init();
-  pgm_init(400 * 4096);
-  idt_register_interrupt(0x80, syscall_event);
   init_timer(1000);
-  keyboard_driver_init();
+  paging_init();
+  pgm_init(1024 * 4096);
   kheap_init();
-  test_kheap();
-  pgm_dump();
+  multiboot_init(boot_ptr);
+  vfs_init();
+
+  fs_node_t *cfg = vfs_open("/hello.txt");
+  if (cfg) {
+    char *buffer = kmalloc(1024);
+    int b = vfs_read(cfg, buffer, 1024);
+    buffer[b] = 0;
+    klogf("%s [%s]: %s", cfg->path, resolve_filetype(cfg), buffer);
+  } else
+    klogf("not found");
+  idt_register_interrupt(0x80, syscall_event);
+  keyboard_driver_init();
 
   welcome_message();
   shell_eventloop();

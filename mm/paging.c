@@ -1,3 +1,4 @@
+#include <depthos/logging.h>
 #include <depthos/paging.h>
 
 #include <depthos/idt.h>

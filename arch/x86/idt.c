@@ -1,5 +1,6 @@
 #include <depthos/idt.h>
 #include <depthos/kernel.h>
+#include <depthos/logging.h>
 #include <depthos/pic.h>
 
 int __init_idt = 0;
@@ -90,11 +91,18 @@ void idt_init() {
 }
 
 void idt_hwinterrupt_handler(regs_t r) {
+  // klogf("interrupt received %d", r.int_num);
   idt_interrupt_handler(r);
   pic_eoi(r.int_num);
 }
 
 void idt_interrupt_handler(regs_t r) {
+  /*if (r.int_num == 0x20 || r.int_num == 0x21)*/
+  /*klogf("interrupt received %d", r.int_num);*/
+  if (r.int_num == 13) {
+    klogf("gpf: 0x%x", r.err_code);
+    dump_registers(r);
+  }
   if (intrs[r.int_num] != 0) {
     intr_handler_t h = intrs[r.int_num];
     h(r);

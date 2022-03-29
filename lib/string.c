@@ -1,4 +1,5 @@
-#include "depthos/string.h"
+#include <depthos/heap.h>
+#include <depthos/string.h>
 
 void *memchr(const void *p, int c, size_t n) {
   const char *s = p;
@@ -51,6 +52,17 @@ char *strchr(const char *s, int c) {
     return NULL;
   else
     return (char *)s;
+}
+
+char *strrchr(const char *s, int c) {
+  const char *s1 = s + strlen(s) - 1;
+  while (s1 >= s && *s1 != c)
+    --s1;
+
+  if (s1 < s)
+    return NULL;
+  else
+    return (char *)s1;
 }
 
 int strcmp(const char *a, const char *b) {
@@ -106,4 +118,10 @@ int strsplt(const char *src, char *dest, size_t buf_str_size, size_t n,
   } while ((p = strchr(p, delim)));
 
   return c;
+}
+
+char *strdup(const char *s) {
+  char *s1 = (char *)kmalloc(strlen(s) + 1);
+  memcpy(s1, s, strlen(s) + 1);
+  return s1;
 }

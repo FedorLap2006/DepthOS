@@ -69,7 +69,7 @@ clean:
 	@rm -f $(OSNAME)-*
 
 
-build: checks kernel img iso
+build: checks kernel
 
 checks:
 kernel: $(CSOURCES) $(ASMSOURCES) $(NASMSOURCES) $(LDFILE)
@@ -82,14 +82,15 @@ endif
 	@mkdir -p build
 	@mv *.o build/
 	$(ASM) $(NASMSOURCES)
-	$(CC) $(CEMU) -c $(ASMSOURCES)
+	$(CC) $(CEMU) -g -c $(ASMSOURCES)
 	@mv *.o build/
 	$(LD) $(LDEMU) -T$(LDFILE) -O2 -nostdlib -g -ggdb -o build/$(OUTBIN).bin build/*.o --build-id=none 
 	cp build/$(OUTBIN).bin $(OUTBIN)
 
-img:
 
-iso:
+iso: DepthOS-1.0
+	cp DepthOS-1.0 iso/boot/
+	cp initrd.img iso/boot/
 
 hex_info:
 	@echo ---------- HEX INFO ----------

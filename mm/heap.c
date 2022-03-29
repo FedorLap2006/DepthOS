@@ -9,6 +9,7 @@
 
 extern uint32_t _kernel_end;
 uint32_t imalloc_ptr = (uint32_t)&_kernel_end;
+
 void *kimalloc(size_t count) {
   if (count < 0)
     return NULL;
@@ -31,7 +32,6 @@ static bool slab_has_addr(heap_slab_t *slab, void *addr) {
 struct heap_slab *kheap_cache_grow(uint16_t size, bool large) {
   klogf("allocating new slab");
 
-  kheap_cache_dump();
   uint32_t slab_size = (!large ? HEAP_SLAB_PAGES : HEAP_LGSLAB_PAGES) * 4096;
   void *start = ADDR_TO_VIRT(pgm_alloc_frame(slab_size / 4096));
   klogf("allocated new slab at 0x%x (size=%d large=%d)", start, size, large);
@@ -64,10 +64,10 @@ struct heap_slab *kheap_cache_grow(uint16_t size, bool large) {
 void kheap_cache_shrink(struct heap_slab *slab) {
   for (int i = 0; i < heap_cache_size; i++) {
     if (heap_cache + i == slab) {
-      pgm_dump();
+      // pgm_dump();
       pgm_free_frame(ADDR_TO_PHYS(slab->start),
                      (!slab->large ? HEAP_SLAB_PAGES : HEAP_LGSLAB_PAGES));
-      pgm_dump();
+      // pgm_dump();
       heap_cache_size--;
       if (i != heap_cache_size)
         heap_cache[i] = heap_cache[heap_cache_size];
@@ -89,9 +89,9 @@ void kheap_cache_dump() {
 
 void kheap_init() {
   // heap_metacache = allocate_slab(sizeof(heap_slab_t), true);
-  kheap_cache_grow(10, false);
   kheap_cache_grow(8, false);
-  kheap_cache_grow(20, false);
+  kheap_cache_grow(16, true);
+  kheap_cache_grow(32, false);
 }
 
 void *kmalloc(int size) {
@@ -121,8 +121,6 @@ void *kmalloc(int size) {
     }
   }
   slab = fit ? heap_cache + fit_idx : kheap_cache_grow(size, false);
-  if (!fit)
-    kheap_cache_dump();
 
   klogf("slab at 0x%x (inuse=%d first={addr=0x%x next=0x%x})", slab,
         slab->inuse, slab->first, slab->first->next);

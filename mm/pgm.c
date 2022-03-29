@@ -22,7 +22,7 @@ void pgm_init(size_t memory_size) {
   klogf("estimated page manager bitmap size is %d bytes", bitmap_size);
   pgm_bitmap = (uint8_t *)kimalloc(bitmap_size);
   extern uint32_t imalloc_ptr;
-  klogf("0x%lx", imalloc_ptr);
+  klogf("0x%lx 0x%lx", imalloc_ptr, pgm_bitmap + bitmap_size);
   for (int i = 0; i < ADDR_TO_PHYS(imalloc_ptr); i += 4096)
     pgm_set(i >> 12, true);
   pgm_initialised = true;

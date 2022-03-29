@@ -21,24 +21,28 @@
 	.globl set_up_gdt
 set_up_gdt:
 	mov	$0x10, %ax
-	lgdt 1f
+	lgdt (1f - 0xC0000000)
+	# lgdt 1f
 	jmp	$0x8, $(2f - 0xC0000000)
+	# jmp	$0x8, $2f
 2:
 	mov	%ax, %ds
 	mov	%ax, %es
+	mov %ax, %gs
+	mov %ax, %fs
 	mov	%ax, %ss
 	ret
 
 	.data
 1:
 	.short	.Lgdt_end - .Lgdt
-	.long	.Lgdt
+	.long	(.Lgdt - 0xC0000000)
 
 	.align	16
 .Lgdt:
 	.long	0
 	.long	0
-
+	
 	.long	DESC_LIMIT_LOW(KERNEL_CODE_LIMIT) | \
 		DESC_BASE_LOW(KERNEL_CODE_BASE)
 	.long	DESC_G | DESC_D_B | \

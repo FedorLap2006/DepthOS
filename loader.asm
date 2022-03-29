@@ -14,17 +14,13 @@ section .multiboot
 MB1_MAGIC          equ 0x1BADB002 ; MB 2 - 0xe85250d6
 MB1_FLAGS_MEMINFO  equ 1<<1
 MB1_FLAGS_MBALIGN  equ 1<<0
-MB1_FLAGS          equ 0 | MB1_FLAGS_MBALIGN | MB1_FLAGS_MEMINFO
-MB1_HEADER_LENGTH  equ multiboot_header_end - multiboot_header
-MB1_CHECKSUM       equ 0x100000000 - (MB1_MAGIC + MB1_FLAGS + MB1_HEADER_LENGTH)
+MB1_FLAGS          equ MB1_FLAGS_MBALIGN | MB1_FLAGS_MEMINFO
 
 align 4 
 multiboot_header:
 	dd MB1_MAGIC
 	dd MB1_FLAGS
 	dd -(MB1_MAGIC + MB1_FLAGS)
-	dd MB1_HEADER_LENGTH
-	dd MB1_CHECKSUM
 multiboot_header_end:
 
 section .data
@@ -49,9 +45,13 @@ PG_BIT  equ 0x80000000
 
 
 global _loader
-_loader equ lower_loader - VM_BASE
+; _loader equ lower_loader - VM_BASE
+_loader equ lower_loader
 
 lower_loader:
+	extern set_up_gdt
+	call set_up_gdt
+
 	; Update current page directory and prepare for jump
 	mov ecx, (lowerkrnl_page_directory - VM_BASE)
 	mov cr3, ecx
@@ -78,13 +78,10 @@ higher_loader:
 
 	finit
 	mov esp, stack_top
-
+		
 	push ebx
 	push eax
- 	
 	extern kmain
-	extern set_up_gdt
-	call set_up_gdt
 	call kmain
  
 	cli
