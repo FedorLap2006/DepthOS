@@ -73,15 +73,14 @@ uintptr_t pte_index(uint32_t addr);
 
 void activate_pgd(pagedir_t pgd);
 
-pagedir_t __save_pgd(void);
-
-pagedir_t activate_pgd_save(pagedir_t pgd);
+pagedir_t get_current_pgd();
 
 void *get_paddr(pagedir_t dir, void *vaddr); // get physical addr from virtual
 
 void turn_page(page_t *p);
 
 page_t *get_page(pagedir_t dir, uint32_t vaddr);
+void map_addr(pagedir_t pgd, uint32_t vaddr, size_t npages, bool user, bool rw);
 
 extern pde_t kernel_pgd[1024] __align(4096);
 

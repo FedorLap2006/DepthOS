@@ -1,3 +1,4 @@
+on_check=$(filter $(1),on true 1)
 
 ifeq ($(OS),Windows_NT)
 	BUILDOS ?= win
@@ -9,6 +10,23 @@ DEBUG?=on
 OSVER?=1.0
 OSNAME?=DepthOS
 BINCPATH?=/bin
+INITRD_FILE?=initrd.img
+QEMU_ARGS=
+QEMU_DEBUG?=false
+ifeq ($(QEMU_DEBUG),$(call on_check,$(QEMU_DEBUG)))
+	QEMU_ARGS += -s -S
+endif
+QEMU_APPEND?=
+ifeq ($(QEMU_TTY),$(call on_check,$(QEMU_TTY)))
+	QEMU_APPEND += console=ttyS0
+	QEMU_ARGS += -monitor none -serial stdio
+endif
+ifeq ($(NO_COLOR),$(call on_check,$(NO_COLOR)))
+	QEMU_APPEND += console_no_color
+endif
+QEMU_ARGS += -append "$(QEMU_APPEND)"
+
+
 ifeq ($(BUILDOS),win)
 	CC=$(BINCPATH)/i686-elf-gcc
 	LD=$(BINCPATH)/i686-elf-ld
@@ -33,15 +51,13 @@ OUTBIN=$(OSNAME)-$(OSVER)
 # CSOURCES ?=
 # ASMSOURCES ?=
 # NASMSOURCES ?=
-CSOURCES +=kmain.c
-CSOURCES +=shell.c
 NASMSOURCES +=loader.asm
 #CSOURCES += $(shell find . -name "*.c" -type f -print )
 #ASMSOURCES += $(shell find . -name "*.s" -type f -print )
 #NASMSOURCES += $(shell find . -name "*.asm" -type f -print )
-CSOURCES +=$(wildcard */*.c)
-ASMSOURCES +=$(wildcard */*.S)
-ASMSOURCES +=$(wildcard */*.s)
+CSOURCES +=$(filter-out $(wildcard apps/*.*),$(wildcard */*.c))
+ASMSOURCES +=$(filter-out $(wildcard apps/*.*),$(wildcard */*.S))
+ASMSOURCES +=$(filter-out $(wildcard apps/*.*),$(wildcard */*.s))
 NASMSOURCES +=$(wildcard */*.asm)
 # OBJS=build/*.o
 # .PHONY: all clean
@@ -51,6 +67,16 @@ ASMSOURCES+=$(wildcard */$(ARCH)/*.S)
 ASMSOURCES+=$(wildcard */$(ARCH)/*.s)
 NASMSOURCES+=$(wildcard */$(ARCH)/*.asm)
 
+KCONFIG_LOG_ENABLE?=1
+
+KCONFIG_DEF=-DOSVER=\"$(OSVER)\" 
+ifeq ($(KCONFIG_LOG_ENABLE),$(call on_check,$(KCONFIG_LOG_ENABLE)))
+	KCONFIG_DEF+=-DKLOG_ENABLED=1
+endif
+
+
+.PHONY: build
+.PHONY: clean
 all: os_info clean build test
 	
 
@@ -67,30 +93,46 @@ clean:
 	@rm -f build/*.o
 	@rm -f build/*.bin
 	@rm -f $(OSNAME)-*
+	@rm -f $(INITRD_FILE)
 
 
-build: checks kernel
+build: checks apps kernel initrd
 
 checks:
-kernel: $(CSOURCES) $(ASMSOURCES) $(NASMSOURCES) $(LDFILE)
+kernel: $(OUTBIN)
+$(OUTBIN): $(CSOURCES) $(NASMSOURCES) $(ASMSOURCES) $(LDFILE) 
 	@echo ---------- build kernel -----------
 ifeq ($(DEBUG),$(filter $(DEBUG),on true))
-	$(CC) $(CEMU) -std=c$(CSTD) -g -c -DOSVER=\"$(OSVER)\" -DKLOG_ENABLED=1 $(CSOURCES) $(CCFLAGS)
+	$(CC) $(CEMU) -std=c$(CSTD) -g -c $(KCONFIG_DEF) $(CSOURCES) $(ASMSOURCES) $(CCFLAGS)
 else
-	$(CC) $(CEMU) -std=c$(CSTD) -c -DOSVER=\"$(OSVER)\" $(CSOURCES) $(CCFLAGS)
+	$(CC) $(CEMU) -std=c$(CSTD) -c $(KCONFIG_DEF) $(CSOURCES) $(CCFLAGS)
 endif
 	@mkdir -p build
 	@mv *.o build/
 	$(ASM) $(NASMSOURCES)
-	$(CC) $(CEMU) -g -c $(ASMSOURCES)
 	@mv *.o build/
 	$(LD) $(LDEMU) -T$(LDFILE) -O2 -nostdlib -g -ggdb -o build/$(OUTBIN).bin build/*.o --build-id=none 
 	cp build/$(OUTBIN).bin $(OUTBIN)
 
-
-iso: DepthOS-1.0
+iso: $(OUTBIN) $(INITRD_FILE)
 	cp DepthOS-1.0 iso/boot/
 	cp initrd.img iso/boot/
+
+initrd: $(INITRD_FILE)
+$(INITRD_FILE): initrd/
+	python3 tools/initrd.py initrd/
+
+test: $(OUTBIN) $(INITRD_FILE) 
+	@echo
+	@echo ----------- testing os ------------
+	@echo
+	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN) -initrd $(INITRD_FILE) $(QEMU_ARGS)
+	@# -d int,pcall,cpu,fpu -D qemu_log.log # -S -s # -nographic
+
+
+apps: initrd/autoload.bin
+initrd/autoload.bin: apps/helloworld.S
+	$(CC) $(CEMU) -std=c$(CSTD) -o initrd/autoload.bin apps/helloworld.S  -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pic
 
 hex_info:
 	@echo ---------- HEX INFO ----------
@@ -98,31 +140,24 @@ hex_info:
 	hexdump -x build/loader.o
 	@echo kernel hex info
 	hexdump -x $(OUTBIN)
+
 elf_info:
 	@echo ---------- ELF INFO ----------
 	readelf -l $(OUTBIN)
-#dis_asm:
-#	@echo ---------- DIS ASM ----------
-#	@echo loader disasm
-#	ndisasm -b 32 build/loader.o
-#	@echo kernel disasm
-#	ndisasm -b 32 $(OUTBIN)
+
 obj_info:
 	@echo ---------- OBJ INFO ----------
 	@echo loader obj info
 	objdump -f -h build/loader.o
 	@echo kernel obj info
 	objdump -f -h $(OUTBIN)
+
+# dis_asm:
+# 	@echo ---------- DIS ASM ----------
+# 	@echo loader disasm
+# 	ndisasm -b 32 build/loader.o
+# 	@echo kernel disasm
+# 	ndisasm -b 32 $(OUTBIN)
+
 info: hex_info obj_info elf_info # dis_asm
 
-test:
-	@echo
-	@echo ----------- testing os ------------
-	@echo
-ifeq ($(DEBUG), on)
-	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN) $(QEMU_ARGS) # -S -s # -nographic
-else ifeq ($(DEBUG), true)
-	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN) $(QEMU_ARGS) # -S -s # -nographic
-else
-	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN) $(QEMU_ARGS) # -d int,pcall,cpu,fpu -D qemu_log.log # -S -s # -nographic
-endif

@@ -123,5 +123,6 @@ int strsplt(const char *src, char *dest, size_t buf_str_size, size_t n,
 char *strdup(const char *s) {
   char *s1 = (char *)kmalloc(strlen(s) + 1);
   memcpy(s1, s, strlen(s) + 1);
+  s1[strlen(s)] = 0;
   return s1;
 }

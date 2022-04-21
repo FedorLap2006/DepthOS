@@ -25,3 +25,6 @@ struct multiboot_information {
   uint32_t mods_count;
   struct multiboot_module *mods;
 };
+
+void multiboot_init_early(int magic, struct multiboot_information *boot_ptr);
+void multiboot_init(struct multiboot_information *boot_ptr);

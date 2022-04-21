@@ -3,6 +3,7 @@
 
 #include <depthos/idt.h>
 #include <depthos/kernel.h>
+#include <depthos/pmm.h>
 #include <depthos/stdbits.h>
 
 int paging_enabled = 0;
@@ -11,6 +12,7 @@ pde_t kernel_pgd[1024] __align(4096);
 pde_t *current_pgd __align(4096);
 
 page_t kernel_pgt[1024] __align(4096); /* 768 */
+page_t heap_1_pgt[1024] __align(4096);
 
 #define page_offset(a) (((uint32_t)a) & 0xfff)
 #define page_index(a) ((((uint32_t)a) >> 12) & 0x3ff)
@@ -85,6 +87,29 @@ page_t *get_page(pagedir_t pgd, uint32_t vaddr) {
 
   return (page_t *)pde + pte_index(vaddr);
 }
+
+void map_addr(pagedir_t pgd, uint32_t vaddr, size_t npages, bool user,
+              bool rw) {
+  // klogf("=================== test ================");
+  for (int i = 0; i <= npages / 1024; i++) {
+    klogf("mapping 0x%x table", vaddr + i * 4096 * 1024);
+    if (!(pgd[pde_index(vaddr + i * 4096 * 1024)] >> PDE_ADDR_SHIFT)) {
+      klogf("allocating new table");
+      pagetb_t tb = kmalloc(4096);
+      memset(tb, 0, 4096);
+      pgd[pde_index(vaddr + i * 4096 * 1024)] =
+          make_pde(ADDR_TO_PHYS(tb), user, rw);
+    }
+    klogf("a %d %d %d %d", npages, 0 < 4096, 0 < npages,
+          0 < 4096 && 0 < npages);
+    for (int j = 0; j < 4096 && j < npages; j++) {
+      klogf("mapping 0x%x", vaddr + i * 4096 * 1024 + j * 4096);
+      *get_page(pgd, vaddr + i * 4096 * 1024 + j * 4096) =
+          make_pte(pmm_alloc(1), user, rw);
+    }
+  }
+}
+
 // 0000100 << 2
 // int i = 0000000;
 // i = 0000100;
@@ -120,32 +145,33 @@ void enable_paging() {
 }
 
 #define PAGEFAULT_STATE(r)                                                     \
-  int present = r.err_code & 0x1;                                              \
-  int rw = r.err_code & 0x2;                                                   \
-  int us = r.err_code & 0x4;                                                   \
-  int reserved = r.err_code & 0x8;                                             \
-  int id = r.err_code & 0x10;
+  int present = r->err_code & 0x1 != 0;                                        \
+  int rw = r->err_code & 0x2 != 0;                                             \
+  int us = r->err_code & 0x4 != 0;                                             \
+  int reserved = r->err_code & 0x8 != 0;                                       \
+  int id = r->err_code & 0x10 != 0;
 
-void __noreturn __do_fatal_pf(regs_t r) {
-  while (1)
-    ;
+void __noreturn __do_fatal_pf(regs_t *r) {
+  if (r->eip >= VIRT_BASE)
+    panicf("Kernel pagefault");
+  else {
+    sys_exit();
+  }
 }
 
-void __do_soft_pf(regs_t r) {
+void __do_soft_pf(regs_t *r) {
   __do_fatal_pf(r);
   return;
 }
 
-void pagefault_handler(regs_t r) {
+void pagefault_handler(regs_t *r) {
   uint32_t cr2;
-  __asm __volatile("mov %%cr2, %0" : "=r"(cr2));
-  printk("page fault: [0x%x] ", cr2);
-
-#if 1
+  __asm__ volatile("mov %%cr2, %0" : "=r"(cr2));
   PAGEFAULT_STATE(r);
-  printk("( .pres = %d, .rw = %d, .supervisor = %d, .reserved = %d, .id = %d )",
-         present, rw, us, reserved, id);
-#endif
+  printk("Page fault [0x%x] at 0x%x: ", cr2, r->eip);
+  printk("0x%x ( .pres = %d, .rw = %d, .supervisor = %d, .reserved = %d, .id = "
+         "%d )\n",
+         r->err_code, present, rw, us, reserved, id);
 
   if (present == 0) {
     __do_soft_pf(r);
@@ -164,15 +190,21 @@ void paging_init() {
     page_t pg = make_pte(i, 0, 1);
     kernel_pgt[pte_index(i)] = pg;
   }
+  for (i = 0 * 1024 * 1024; i < 4 * 1024 * 1024; i += 4096) {
+    page_t pg = make_pte(i + 1 * 1024 * 4096, 0, 1);
+    heap_1_pgt[pte_index(i)] = pg;
+  }
 
   // change_page(&kernel_pgt[0],0,0,1);
 
   //	printk("%x || %x - %x = %x\n",
-  //(int)kernel_pgt,(int)kernel_pgt,(int)VIRT_BASE,(uint32_t)((int)kernel_pgt -
-  //(int)VIRT_BASE));
+  //(int)kernel_pgt,(int)kernel_pgt,(int)VIRT_BASE,(uint32_t)((int)kernel_pgt
+  //- (int)VIRT_BASE));
   uint32_t kernel_pgd_entry = make_pde(ADDR_TO_PHYS(kernel_pgt), 0, 1);
   kernel_pgd[pde_index(VIRT_BASE)] = kernel_pgd_entry;
   kernel_pgd[pde_index(0)] = kernel_pgd_entry; // TODO: remove when not needed
+  kernel_pgd[pde_index(VIRT_BASE + 1 * 1024 * 4096)] =
+      make_pde(ADDR_TO_PHYS(heap_1_pgt), 0, 1);
 
   idt_register_interrupt(14, pagefault_handler);
   activate_pgd(kernel_pgd);

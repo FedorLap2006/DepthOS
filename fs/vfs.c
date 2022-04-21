@@ -1,3 +1,4 @@
+#include <depthos/assert.h>
 #include <depthos/fs.h>
 #include <depthos/heap.h>
 #include <depthos/initrd.h>
@@ -22,6 +23,7 @@ struct filesystem_operations *vfs_get_filesystem(const char *name) {
   for (int i = 0; i < vfs_filesystems_count; i++)
     if (strcmp(name, vfs_filesystems[i]->name) == 0)
       return vfs_filesystems[i];
+  return NULL;
 }
 void vfs_register_fs(struct filesystem_operations *fs) {
   vfs_filesystems[vfs_filesystems_count++] = fs;
@@ -29,6 +31,7 @@ void vfs_register_fs(struct filesystem_operations *fs) {
 
 struct mount *vfs_mount(const char *path, struct filesystem_operations *fs,
                         struct device *dev) {
+  assert(fs != NULL);
   struct filesystem *fsi;
   if (fs->mount) {
     fsi = fs->mount(dev);

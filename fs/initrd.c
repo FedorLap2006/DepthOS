@@ -21,8 +21,12 @@ void initrd_init(struct multiboot_module *module) {
 int initrdfs_read(struct fs_node *file, char *buffer, size_t nbytes) {
   initrd_header_t header = initrd_headers[INODE(file->impl)];
   int i;
+  // klogf("offset=%d", header.offset);
   for (i = 0; i < header.length - file->pos && i < nbytes; i++) {
-    *(buffer + i) = *(char *)(initrd_data + header.offset + i + file->pos);
+    // klogf("buffer[%d]: base=0x%x index=%d src=0x%x dst=0x%x", i, initrd_data,
+    //       header.offset + i + file->pos,
+    //       initrd_data + header.offset + i + file->pos, buffer + i);
+    buffer[i] = ((char *)initrd_data)[header.offset + i + file->pos];
   }
   file->pos += i;
   return i;

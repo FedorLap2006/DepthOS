@@ -11,6 +11,7 @@ extern int strs_count;
 extern int cursorx;
 extern int cursory;
 
+extern bool console_no_color;
 #define BLACK_COLOR 0
 #define BLUE_COLOR 1
 #define GREEN_COLOR 2

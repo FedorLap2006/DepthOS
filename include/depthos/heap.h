@@ -6,6 +6,8 @@
 #define HEAP_SLAB_PAGES 2
 #define HEAP_LGSLAB_PAGES 4
 
+#define HEAP_BASE (VIRT_BASE + 1 * 1024 * 4096)
+
 typedef struct heap_slab_freelist {
   struct heap_slab_freelist *next;
 } heap_slab_freelist_t;

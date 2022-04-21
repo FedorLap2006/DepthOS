@@ -5,6 +5,8 @@ section .bss
 STACK_SIZE equ 60000 ; 4096 * 1024 * 1024 + 400
 	
 align 4 
+global stack_top
+global stack_end
 stack_end:
 	resb STACK_SIZE
 stack_top:
@@ -29,6 +31,7 @@ align 4096
 VM_BASE   equ 0xC0000000
 PDE_INDEX equ (VM_BASE >> 22)
 
+
 global lowerkrnl_page_directory
 lowerkrnl_page_directory:
     dd 0x00000083 
@@ -47,10 +50,8 @@ PG_BIT  equ 0x80000000
 global _loader
 ; _loader equ lower_loader - VM_BASE
 _loader equ lower_loader
-
+global lower_loader
 lower_loader:
-	extern set_up_gdt
-	call set_up_gdt
 
 	; Update current page directory and prepare for jump
 	mov ecx, (lowerkrnl_page_directory - VM_BASE)
@@ -78,7 +79,9 @@ higher_loader:
 
 	finit
 	mov esp, stack_top
-		
+	
+	extern set_up_gdt
+	call set_up_gdt
 	push ebx
 	push eax
 	extern kmain

@@ -1,4 +1,5 @@
 #include <depthos/console.h>
+#include <depthos/fs.h>
 #include <depthos/keyboard.h>
 
 char shell_buffer[1024];
@@ -82,6 +83,22 @@ void execute_command() {
 
     printk("%dh %dm %ds %dms have passed since OS started\n",
            tick / 1000 / 60 / 60, tick / 1000 / 60, tick / 1000, tick % 1000);
+  } else if (!strcmp(command_argv[0], "cat")) {
+    if (command_argc < 2)
+      console_write_color("No file specified", BLACK_COLOR, RED_COLOR);
+    else {
+      struct fs_node *file = vfs_open(command_argv[1]);
+      if (!file) {
+        console_write_color("No such file or directory\n", BLACK_COLOR,
+                            RED_COLOR);
+        goto out;
+      }
+      char *buffer = kmalloc(1024 + 1);
+      int b = vfs_read(file, buffer, 1024);
+      buffer[b] = 0;
+      printk("%s", buffer);
+      kfree(buffer, 1024 + 1);
+    }
   } else if (!strcmp(command_argv[0], "help")) {
 #define COMMAND(c, desc) printk("%-10s - %s\n", #c, desc);
     COMMAND(uname, "Output OS version and hostname")
@@ -92,7 +109,7 @@ void execute_command() {
     COMMAND(shutdown, "Shutdown the OS")
 #undef COMMAND
   }
-
+out:
   console_write(shell_playback_buffer);
   // NOTE: shell_executing should be set to false before resetting the index,
   // so if the keyboard interrupt gets called at this line it will write into

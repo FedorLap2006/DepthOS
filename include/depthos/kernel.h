@@ -17,3 +17,7 @@ typedef struct __stdregs {
   uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
   uint32_t eip, cs, eflags, useresp, ss;
 } stdregs_t;
+
+void panic(const char *file, int line, const char *loc, const char *format,
+           ...);
+#define panicf(fmt, ...) panic(__FILE__, __LINE__, __func__, fmt, ##__VA_ARGS__)

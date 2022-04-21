@@ -1,4 +1,5 @@
 #include <depthos/console.h>
+#include <depthos/kernel.h>
 #include <depthos/logging.h>
 #include <depthos/stdtypes.h>
 
@@ -47,4 +48,17 @@ void dump_registers(regs_t r) {
   printk("EDI=0x%x ESI=0x%x EBP=0x%x ESP=0x%x EBX=0x%x EDX=0x%x ECX=0x%x "
          "EAX=0x%x\n",
          r.edi, r.esi, r.ebp, r.esp, r.ebx, r.edx, r.ecx, r.eax);
+}
+
+void panic(const char *file, int line, const char *loc, const char *format,
+           ...) {
+  static char buffer[1024];
+  va_list args;
+  va_start(args, format);
+  vsprintf(buffer, format, args);
+  va_end(args);
+  printk("Kernel panic: %s (%s:%d): %s\n", loc, file, line, buffer);
+  // dump_registers(); // TODO
+  while (1)
+    __asm__ volatile("hlt");
 }

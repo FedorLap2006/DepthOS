@@ -87,8 +87,9 @@ struct fs_node *vfs_open(const char *path);
  */
 void vfs_close(struct fs_node *file);
 
-#define vfs_write(file, ...) file->ops->write(file, __VA_ARGS__)
-#define vfs_read(file, ...) file->ops->read(file, __VA_ARGS__)
+#define vfs_write(file, buffer, nbytes) file->ops->write(file, buffer, nbytes)
+#define vfs_read(file, buffer, nbytes) file->ops->read(file, buffer, nbytes)
+#define vfs_seek(file, newpos) file->pos = newpos
 
 /**
  * @brief Find filesystem by the name

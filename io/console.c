@@ -12,6 +12,8 @@ int dfcolor = WHITE_COLOR;
 
 int cursorx = 0, cursory = 0;
 
+bool console_no_color = false;
+
 void console_init(int s, int l, int b, int f) {
   if (s > 0)
     strs_count = s;

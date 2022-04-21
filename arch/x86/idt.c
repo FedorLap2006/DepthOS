@@ -21,7 +21,7 @@ struct __idt_ptr {
   uint32_t addr;
 } __pack;
 
-static struct __idt_entry idt[IDT_SIZE];
+struct __idt_entry idt[IDT_SIZE];
 struct __idt_ptr idt_ptr;
 
 intr_handler_t intrs[INTERRUPTS_COUNT];
@@ -61,14 +61,14 @@ struct pic_config default_pic_config = {
     .mask = (uint16_t)IRQCALL, // IRQ0 (PIT)
 };
 
-void idt_register_llhandler(uint8_t i, uint32_t cb) {
+void idt_register_llhandler(uint8_t i, uint8_t type, uint8_t dpl, uint32_t cb) {
   if (i >= IDT_SIZE)
     return;
   idt[i].addr_low = (cb & 0x0000ffff);
 
   idt[i].sel = 0x8;
   idt[i].zero = 0x00;
-  idt[i].flags = 0x8E;
+  idt[i].flags = (type & 0xF) | (dpl << 5) | 0x80;
   idt[i].addr_high = ((cb & 0xffff0000) >> 16);
 }
 
@@ -77,14 +77,17 @@ void _idt_unregistered_interrupt_llhandler() {}
 void idt_init() {
   __init_idt = 1;
   idt_ptr.size = (sizeof(struct __idt_entry) * IDT_SIZE) - 1;
-  idt_ptr.addr = (uint32_t)&idt - VIRT_BASE;
+  idt_ptr.addr = (uint32_t)&idt;
 
   pic_init(default_pic_config);
 
 #include "idt_handlers.h"
 
+  extern void intr128();
+  idt_register_llhandler(0x80, 0xF, 3, (uint32_t)intr128);
   for (int i = INTERRUPTS_COUNT; i < IDT_SIZE; i++) {
-    idt_register_llhandler(i, (uint32_t)_idt_unregistered_interrupt_llhandler);
+    idt_register_llhandler(i, 0xE, 0,
+                           (uint32_t)_idt_unregistered_interrupt_llhandler);
   }
   idt_flush();
   print_status("IDT initialized", MOD_OK);
@@ -99,13 +102,14 @@ void idt_hwinterrupt_handler(regs_t r) {
 void idt_interrupt_handler(regs_t r) {
   /*if (r.int_num == 0x20 || r.int_num == 0x21)*/
   /*klogf("interrupt received %d", r.int_num);*/
+  // klogf("interrupt: %d", r.int_num);
   if (r.int_num == 13) {
     klogf("gpf: 0x%x", r.err_code);
     dump_registers(r);
   }
   if (intrs[r.int_num] != 0) {
     intr_handler_t h = intrs[r.int_num];
-    h(r);
+    h(&r);
   }
 }
 
@@ -120,6 +124,15 @@ void idt_register_interrupt(uint32_t i, intr_handler_t f) {
                  MOD_WARNING);
   }
   intrs[i] = f;
+}
+
+void idt_dump() {
+  for (int i = 0; i < INTERRUPTS_COUNT; i++) {
+    printk("[%d]: 0x%x flags=%x selector=%x\n", i,
+           idt[i].addr_low | (idt[i].addr_high << 16), idt[i].flags,
+           idt[i].sel);
+  }
+  printk("\n");
 }
 
 void idt_disable_hwinterrupts() { __asm__ volatile("cli"); }
