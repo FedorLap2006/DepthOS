@@ -159,7 +159,7 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
 #endif
   extern struct task *current_task;
   current_task = kmalloc(sizeof(struct task));
-  load_elf("/autoload.bin");
+  elf_load("/autoload.bin");
   // enter_usemode();
 
   for (;;)
