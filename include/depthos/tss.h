@@ -28,7 +28,7 @@ struct tss {
   uint16_t gs, : 16;
   uint16_t ldt, : 16;
   uint16_t debug_trap : 1, : 15, bitmap;
-} __packed;
+} __pack;
 
 void tss_init();
 
