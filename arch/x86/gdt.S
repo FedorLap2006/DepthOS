@@ -38,7 +38,6 @@ set_up_gdt:
 	// subl $0xC0000000, %ecx
 	movl %ecx, %edx
 	lea .Lgdt, %ebx
-	lea .Lgdt, %ebp
 	andl $0x0000ffff, %edx
 	shl $16, %edx
 	orl %edx, (5 * 8)(%ebx)

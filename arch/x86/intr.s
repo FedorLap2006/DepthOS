@@ -10,6 +10,7 @@
 	.global intr\num
 	intr\num:
 		cli
+		pushl $0 # XXX: ebp, could be polluted, set to zero to prevent further frame jumps
 		pushl $0
 		pushl $\num
 		jmp intr_cstub
@@ -19,6 +20,8 @@
 	.global intr\num
 	intr\num:
 		cli
+		pushl (%esp) # error code
+		movl $0, 4(%esp) # XXX: ebp, could be polluted, set to zero to prevent further frame jumps
 		pushl $\num
 		jmp intr_cstub
 .endm
@@ -27,6 +30,7 @@
 	.global intr\num
 	intr\num:
 		// push 0 in place of the error code
+		pushl $0 # XXX: ebp, could be polluted, set to zero to prevent further frame jumps
 		pushl	$0
 		pushl	$\num
 		jmp	irq_cstub
@@ -177,6 +181,8 @@ intr_cstub:
 	mov	%ax, %es
 	mov	%ax, %fs
 	mov	%ax, %gs
+	leal 56(%esp), %ebp
+
 	// Call the kernel IRQ handler
 	call	idt_interrupt_handler
 
@@ -185,7 +191,7 @@ intr_cstub:
 	pop	%es
 	pop	%ds
 	popa
-	add	$8, %esp
+	add	$12, %esp
 	sti
 	iret
 
@@ -200,6 +206,8 @@ irq_cstub:
 	mov	%ax, %es
 	mov	%ax, %fs
 	mov	%ax, %gs
+	leal 56(%esp), %ebp
+
 	// Call the kernel IRQ handler
 	call	idt_hwinterrupt_handler
 
@@ -208,8 +216,8 @@ irq_cstub:
 	pop	%es
 	pop	%ds
 	popa
-	// pop error code and IRQ number
-	add	$8, %esp
+	// pop error code, stack frame and IRQ number
+	add	$12, %esp
 	iret
 
 .extern idt_ptr

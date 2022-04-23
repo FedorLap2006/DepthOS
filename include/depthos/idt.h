@@ -1,16 +1,18 @@
 #pragma once
 
+#include <depthos/console.h>
 #include <depthos/ports.h>
 #include <depthos/stdtypes.h>
 #include <depthos/tools.h>
-
-#include <depthos/console.h>
+#include <depthos/trace.h>
 
 typedef struct __regs {
   uint32_t fs, gs, es, ds;
   uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
   uint32_t int_num, err_code;
-  uint32_t eip, cs, eflags, useresp, ss;
+  struct trace_stackframe *trace_frame;
+  uintptr_t eip;
+  uint32_t cs, eflags, useresp, ss;
 } regs_t;
 
 typedef void (*intr_handler_t)(regs_t *);

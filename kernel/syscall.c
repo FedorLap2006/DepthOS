@@ -34,8 +34,10 @@ uintptr_t resolve_syscall_no(long no) {
 }
 void syscall_interrupt_handler(regs_t *r) {
   uintptr_t function = resolve_syscall_no(r->eax);
-  if (!function)
+  if (!function) {
+    klogf("syscall not found");
     return;
+  }
   long ret;
   __asm__ volatile("pushl %1;"
                    "pushl %2;"
@@ -52,4 +54,7 @@ void syscall_interrupt_handler(regs_t *r) {
                    : "r"(r->edi), "r"(r->esi), "r"(r->edx), "r"(r->ecx),
                      "r"(r->ebx), "r"(function));
   r->eax = ret;
+#ifdef CONFIG_SYS_TRACE
+  trace(0, -1);
+#endif
 }

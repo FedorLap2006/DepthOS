@@ -84,6 +84,7 @@ higher_loader:
 	call set_up_gdt
 	push ebx
 	push eax
+	xor ebp, ebp
 	extern kmain
 	call kmain
  

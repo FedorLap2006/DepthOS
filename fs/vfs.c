@@ -131,6 +131,7 @@ struct fs_node *vfs_open(const char *path) {
     return NULL;
   node->path = strdup(path);
   node->name = strdup(strrchr(path, PATH_SEPARATOR) + 1);
+  node->eof = false;
   return node;
 }
 

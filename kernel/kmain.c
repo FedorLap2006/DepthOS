@@ -15,6 +15,7 @@
 #include <depthos/initrd.h>
 #include <depthos/kconfig.h>
 #include <depthos/keyboard.h>
+#include <depthos/ksymbols.h>
 #include <depthos/logging.h>
 #include <depthos/proc.h>
 #include <depthos/stdarg.h>
@@ -144,6 +145,7 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
   // pmm_dump_compact();
   multiboot_init(boot_ptr);
   vfs_init();
+  ksymbols_load("/kernel.map");
   idt_register_interrupt(0x80, syscall_interrupt_handler);
   keyboard_driver_init();
   tss_init();

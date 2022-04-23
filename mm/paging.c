@@ -145,11 +145,11 @@ void enable_paging() {
 }
 
 #define PAGEFAULT_STATE(r)                                                     \
-  int present = r->err_code & 0x1 != 0;                                        \
-  int rw = r->err_code & 0x2 != 0;                                             \
-  int us = r->err_code & 0x4 != 0;                                             \
-  int reserved = r->err_code & 0x8 != 0;                                       \
-  int id = r->err_code & 0x10 != 0;
+  int present = (r->err_code & 0x1) != 0;                                      \
+  int rw = (r->err_code & 0x2) != 0;                                           \
+  int us = (r->err_code & 0x4) != 0;                                           \
+  int reserved = (r->err_code & 0x8) != 0;                                     \
+  int id = (r->err_code & 0x10) != 0;
 
 void __noreturn __do_fatal_pf(regs_t *r) {
   if (r->eip >= VIRT_BASE)
@@ -169,10 +169,10 @@ void pagefault_handler(regs_t *r) {
   __asm__ volatile("mov %%cr2, %0" : "=r"(cr2));
   PAGEFAULT_STATE(r);
   printk("Page fault [0x%x] at 0x%x: ", cr2, r->eip);
-  printk("0x%x ( .pres = %d, .rw = %d, .supervisor = %d, .reserved = %d, .id = "
-         "%d )\n",
-         r->err_code, present, rw, us, reserved, id);
-
+  printk("0x%x (pres=%d rw=%d super=%d reserved=%d id=%d)\n", r->err_code,
+         present, rw, us, reserved, id);
+  dump_registers(*r);
+  trace(1, -1);
   if (present == 0) {
     __do_soft_pf(r);
   } else {

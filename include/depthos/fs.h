@@ -29,6 +29,7 @@ typedef struct fs_node {
 
   uint8_t type;
   uint32_t pos;
+  bool eof;
   struct file_operations *ops;
 
   void *impl;
@@ -89,6 +90,7 @@ void vfs_close(struct fs_node *file);
 
 #define vfs_write(file, buffer, nbytes) file->ops->write(file, buffer, nbytes)
 #define vfs_read(file, buffer, nbytes) file->ops->read(file, buffer, nbytes)
+#define vfs_eof(file) file->eof
 #define vfs_seek(file, newpos) file->pos = newpos
 
 /**
@@ -100,7 +102,7 @@ void vfs_close(struct fs_node *file);
 struct filesystem_operations *vfs_get_filesystem(const char *name);
 /**
  * @brief Register a filesystem
- * 
+ *
  * @param fs Filesystem
  * @internal
  */

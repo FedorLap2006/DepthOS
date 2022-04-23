@@ -196,7 +196,9 @@ __noreturn void elf_load(const char *path) {
                        "mov %%ax, %%es;"
                        "mov %%ax, %%fs;"
                        "mov %%ax, %%gs;" ::);
-      __asm__ volatile("pushl $((4 * 8) | 3);"
+      __asm__ volatile("movl %%eax, %%esp;"
+                       "xor %%ebp, %%ebp;"
+                       "pushl $((4 * 8) | 3);"
                        "pushl %%eax;"
                        "pushl $0x202;"
                        "pushl $((3 * 8) | 3);"

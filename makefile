@@ -11,6 +11,8 @@ OSVER?=1.0
 OSNAME?=DepthOS
 BINCPATH?=/bin
 INITRD_FILE?=initrd.img
+INITRD_ROOT=./initrd
+KERNEL_MAP_FILE?= $(INITRD_ROOT)/kernel.map
 QEMU_ARGS=
 QEMU_DEBUG?=false
 ifeq ($(QEMU_DEBUG),$(call on_check,$(QEMU_DEBUG)))
@@ -99,7 +101,7 @@ clean:
 build: checks apps kernel initrd
 
 checks:
-kernel: $(OUTBIN)
+kernel: $(OUTBIN) 
 $(OUTBIN): $(CSOURCES) $(NASMSOURCES) $(ASMSOURCES) $(LDFILE) 
 	@echo ---------- build kernel -----------
 ifeq ($(DEBUG),$(filter $(DEBUG),on true))
@@ -114,13 +116,17 @@ endif
 	$(LD) $(LDEMU) -T$(LDFILE) -O2 -nostdlib -g -ggdb -o build/$(OUTBIN).bin build/*.o --build-id=none 
 	cp build/$(OUTBIN).bin $(OUTBIN)
 
+kernel-map: $(KERNEL_MAP_FILE)
+$(KERNEL_MAP_FILE): $(OUTBIN)
+	nm --demangle=gnu-v3 -n $(OUTBIN) > $(KERNEL_MAP_FILE)
+
 iso: $(OUTBIN) $(INITRD_FILE)
 	cp DepthOS-1.0 iso/boot/
 	cp initrd.img iso/boot/
 
 initrd: $(INITRD_FILE)
-$(INITRD_FILE): initrd/
-	python3 tools/initrd.py initrd/
+$(INITRD_FILE): $(INITRD_ROOT)/
+	python3 tools/initrd.py $(INITRD_ROOT)
 
 test: $(OUTBIN) $(INITRD_FILE) 
 	@echo

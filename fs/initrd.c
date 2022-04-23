@@ -29,6 +29,8 @@ int initrdfs_read(struct fs_node *file, char *buffer, size_t nbytes) {
     buffer[i] = ((char *)initrd_data)[header.offset + i + file->pos];
   }
   file->pos += i;
+  if (!i)
+    file->eof = true;
   return i;
 }
 

@@ -108,12 +108,14 @@ void idt_interrupt_handler(regs_t r) {
     dump_registers(r);
   }
   if (intrs[r.int_num] != 0) {
+    // klogf("(%x) registers at 0x%x", r.int_num, &r);
     intr_handler_t h = intrs[r.int_num];
     h(&r);
   }
 }
 
 void idt_register_interrupt(uint32_t i, intr_handler_t f) {
+  // trace(1, 5);
   if (i >= INTERRUPTS_COUNT) {
     print_status("cannot register interrupt: interrupt vector is out of range",
                  MOD_ERR);
