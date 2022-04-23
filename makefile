@@ -94,8 +94,9 @@ format:
 clean:
 	@rm -f build/*.o
 	@rm -f build/*.bin
-	@rm -f $(OSNAME)-*
+	@rm -f $(OUTBIN)
 	@rm -f $(INITRD_FILE)
+	@rm -f $(KERNEL_MAP_FILE)
 
 
 build: checks apps kernel initrd
@@ -116,7 +117,7 @@ endif
 	$(LD) $(LDEMU) -T$(LDFILE) -O2 -nostdlib -g -ggdb -o build/$(OUTBIN).bin build/*.o --build-id=none 
 	cp build/$(OUTBIN).bin $(OUTBIN)
 
-kernel-map: $(KERNEL_MAP_FILE)
+# kernel-map: $(KERNEL_MAP_FILE)
 $(KERNEL_MAP_FILE): $(OUTBIN)
 	nm --demangle=gnu-v3 -n $(OUTBIN) > $(KERNEL_MAP_FILE)
 
@@ -125,7 +126,7 @@ iso: $(OUTBIN) $(INITRD_FILE)
 	cp initrd.img iso/boot/
 
 initrd: $(INITRD_FILE)
-$(INITRD_FILE): $(INITRD_ROOT)/
+$(INITRD_FILE): $(KERNEL_MAP_FILE) $(INITRD_ROOT)/
 	python3 tools/initrd.py $(INITRD_ROOT)
 
 test: $(OUTBIN) $(INITRD_FILE) 
