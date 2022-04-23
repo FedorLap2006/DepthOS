@@ -8,7 +8,7 @@
 
 #define DECL_SYSCALL(name, nargs, ...)                                         \
   __diag_push(GCC);                                                            \
-  __diag_ignore(GCC, "-Wattribute-alias=",                                     \
+  __diag_ignore(GCC, "-Wattribute-alias",                                      \
                 "Type aliasing is used to sanitize system call arguments");    \
   asmlinkage long sys_##name(__MAP(nargs, _SC_DECL, __VA_ARGS__))              \
       __attribute__((alias(__stringify(__se_sys_##name))));                    \
