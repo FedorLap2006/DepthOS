@@ -1,5 +1,6 @@
 #include <depthos/kernel.h>
 #include <depthos/logging.h>
+#include <depthos/proc.h>
 #include <depthos/trace.h>
 
 void trace(unsigned skip, unsigned max) {
@@ -12,8 +13,8 @@ void trace(unsigned skip, unsigned max) {
   for (unsigned i = 0; i < max && ebp != NULL; i++) {
     printk("\t");
     if (ebp->eip >= VIRT_BASE) {
-      s = ksymbols_lookup(ebp->eip);
-      if (s) {
+      s = ksymbols_lookup(ebp->eip, false);
+      if (s && (s->type == 'T' || s->type == 't')) {
         printk("%s+0x%x\n", s->name, ebp->eip - s->address);
         ebp = ebp->next;
         continue;
@@ -23,4 +24,8 @@ void trace(unsigned skip, unsigned max) {
     printk("? 0x%x\n", ebp->eip);
     ebp = ebp->next;
   }
+#if 1
+  extern struct task *current_task;
+  printk("task: %s\n", current_task->name);
+#endif
 }

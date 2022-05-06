@@ -6,6 +6,8 @@ _syscall_entries:
   .long 0
   .long sys_write
   .long sys_exit
+  .long sys_fork
+  .long sys_execve
 _syscall_entries_end:
 
 .globl syscall_entries_len

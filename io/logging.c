@@ -45,6 +45,7 @@ void print_status(char *buf, int m) {
 void dump_registers(regs_t r) {
   printk("EIP=0x%x CS=0x%x EFLAGS=0x%x USERESP=0x%x STACK=0x%x\n", r.eip, r.cs,
          r.eflags, r.useresp, r.ss);
+  printk("FS=0x%x GS=0x%x ES=0x%x DS=0x%x\n", r.fs, r.gs, r.es, r.ds);
   printk("EDI=0x%x ESI=0x%x EBP=0x%x ESP=0x%x EBX=0x%x EDX=0x%x ECX=0x%x "
          "EAX=0x%x\n",
          r.edi, r.esi, r.ebp, r.esp, r.ebx, r.edx, r.ecx, r.eax);

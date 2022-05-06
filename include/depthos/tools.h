@@ -8,6 +8,9 @@
 #define __unused __attribute__((unused))
 #define __pack __attribute__((packed))
 #define __align(X) __attribute__((aligned(X)))
+#define __always_inline __attribute__((always_inline))
+#define __noinline __attribute__((noinline))
+#define offsetof(type, member) __builtin_offsetof(type, member)
 #define asmlinkage __attribute__((__regparm__(0)))
 
 #define __pragma(x) _Pragma(#x)
@@ -22,4 +25,5 @@
 #define __MAP0(m, ...)
 #define __MAP1(m, t, a) m(t, a)
 #define __MAP2(m, t, a, ...) m(t, a), __MAP1(m, __VA_ARGS__)
+#define __MAP3(m, t, a, ...) m(t, a), __MAP2(m, __VA_ARGS__)
 #define __MAP(x, ...) __MAP##x(__VA_ARGS__)

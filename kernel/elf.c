@@ -11,17 +11,20 @@
 
 bool elf_probe(const char *path) {
   struct fs_node *file = vfs_open(path);
+  if (!file) {
+    // printk("UHHHHHH\n");
+    return false;
+  }
   vfs_seek(file, 0);
   char magic[4];
-  int b = vfs_read(file, magic, 3);
+  int b = vfs_read(file, magic, 4);
   magic[b] = 0;
-  if (strcmp(magic, "ELF") != 0)
-    return false;
-
-  return true;
+  // for (int i = 0; i < 4; i++)
+  //   printk("elf: %x %c\n", (unsigned char)magic[i], (unsigned char)magic[i]);
+  return magic[0] == 0x7f && strcmp(magic + 1, "ELF") == 0;
 }
 
-__noreturn void elf_load(const char *path) {
+void elf_load(struct task *tsk, const char *path) {
   struct fs_node *file = vfs_open(path);
 
   char magic[5];
@@ -84,7 +87,6 @@ __noreturn void elf_load(const char *path) {
   }
 #endif
 
-  extern struct task *current_task;
   for (int i = 0; i < header.pheader_num; i++) {
     klogf("segments[%d]: type=%d offset=0x%x addr=0x%x vaddr=0x%x filesz=%d "
           "memsz=%d "
@@ -100,16 +102,19 @@ __noreturn void elf_load(const char *path) {
         goto finish;
 
       // klogf("pgd = %d", sizeof(kernel_pgd));
-      current_task->pgd = kmalloc(sizeof(kernel_pgd));
-      memset(current_task->pgd, 0, sizeof(kernel_pgd));
-      memcpy(current_task->pgd, kernel_pgd, sizeof(kernel_pgd));
+      // tsk->pgd = kmalloc(sizeof(kernel_pgd));
+      if (tsk->pgd)
+        kfree(tsk->pgd, 4096);
+      tsk->pgd = create_pgd();
+      // memset(tsk->pgd, 0, sizeof(kernel_pgd));
+      // memcpy(tsk->pgd, kernel_pgd, sizeof(kernel_pgd));
       for (int j = 0; j < header.sheader_num; j++) {
         if (!sections[j].addr)
           continue;
-        // current_task->pgd[pde_index(ROUND_DOWN(sections[j].addr, 0x1000))] =
+        // tsk->pgd[pde_index(ROUND_DOWN(sections[j].addr, 0x1000))] =
         // 0;
 
-        map_addr(current_task->pgd, sections[j].addr, 1, true, true);
+        map_addr(tsk->pgd, sections[j].addr, 1, true);
       }
 
 #if 0
@@ -122,25 +127,25 @@ __noreturn void elf_load(const char *path) {
                 addr + j + k, table[pte_index(addr + j + k)] & 0xFFFFF000,
                 table[pte_index(addr + j + k)]);
         }
-        current_task->pgd[pde_index(addr + j)] =
+        tsk->pgd[pde_index(addr + j)] =
             make_pde(ADDR_TO_PHYS(table), 1, 1);
       }
 #endif
       // klogf("directory:");
       // for (int j = 0; j < 1024; j++) {
-      //   if (!current_task->pgd[j])
+      //   if (!tsk->pgd[j])
       //     continue;
-      //   klogf("[0x%x]: %x:", j * 4096 * 1024, current_task->pgd[j]);
+      //   klogf("[0x%x]: %x:", j * 4096 * 1024, tsk->pgd[j]);
       //   for (int k = 0; k < 1024; k++) {
       //     pageinfo_t pg = parse_page(
-      //         get_page(current_task->pgd, j * 4096 * 1024 + k * 4096));
+      //         get_page(tsk->pgd, j * 4096 * 1024 + k * 4096));
       //     klogf("\t[0x%x]: 0x%x", j * 4096 * 1024 + k * 4096, pg.frame);
       //   }
       // }
 #if 0
       klogf("table:");
       for (int j = 0; j < 1024; j++) {
-        page_t *page = get_page(current_task->pgd, addr + j * 4096);
+        page_t *page = get_page(tsk->pgd, addr + j * 4096);
         if (!page) {
           klogf("0x%x is not mapped", addr + j * 4096);
           continue;
@@ -155,12 +160,12 @@ __noreturn void elf_load(const char *path) {
       // *(char *)addr = 0;
 
       pagetb_t stack_table = kmalloc(4096);
-      current_task->pgd[pde_index(VIRT_BASE - 4096)] =
+      tsk->pgd[pde_index(VIRT_BASE - 4096)] =
           make_pde(stack_table, 1, 1);
       stack_table[pte_index(VIRT_BASE - 4096)] = make_pte(pmm_alloc(1), 1, 1);
 #endif
 
-      map_addr(current_task->pgd, VIRT_BASE - 4096, 1, true, true);
+      map_addr(tsk->pgd, VIRT_BASE - 4096, 1, true);
 
       unsigned char *buf = kmalloc(segments[i].memsz);
       if (!buf)
@@ -170,7 +175,8 @@ __noreturn void elf_load(const char *path) {
       // for (uint32_t j = 0; j < segments[i].memsz; j++) {
       //   klogf("[%d]: %x", j, buf[j]);
       // }
-      activate_pgd(current_task->pgd);
+      pagedir_t pgd = get_current_pgd();
+      activate_pgd(tsk->pgd); // TODO: move to sched or syscall
       for (int j = 0; j < header.sheader_num; j++) {
         if (!sections[j].addr)
           continue;
@@ -179,6 +185,7 @@ __noreturn void elf_load(const char *path) {
         vfs_read(file, buf, sections[j].size);
         memcpy(sections[j].addr, buf, sections[j].size);
       }
+      activate_pgd(pgd);
       // klogf("reading directly from memory:");
       // for (uint32_t j = 0; j < segments[i].memsz; j++) {
       //   klogf("[%d] %x", j, *((unsigned char *)addr + j));
@@ -187,29 +194,14 @@ __noreturn void elf_load(const char *path) {
       // klogf("0x%x", *(unsigned char *)header.entry);
       // idt_dump();
 
-      current_task->binfo.entry = header.entry;
-      vfs_close(file);
-      kfree(segments, header.phentry_size * header.pheader_num);
-      idt_disable_hwinterrupts();
-      __asm__ volatile("mov $((4 * 8) | 3), %%ax;"
-                       "mov %%ax, %%ds;"
-                       "mov %%ax, %%es;"
-                       "mov %%ax, %%fs;"
-                       "mov %%ax, %%gs;" ::);
-      __asm__ volatile("movl %%eax, %%esp;"
-                       "xor %%ebp, %%ebp;"
-                       "pushl $((4 * 8) | 3);"
-                       "pushl %%eax;"
-                       "pushl $0x202;"
-                       "pushl $((3 * 8) | 3);"
-                       "pushl %%ebx;"
-                       "iret"
-                       :
-                       : "a"(VIRT_BASE), "b"(header.entry));
+      tsk->binfo.entry = header.entry;
+      goto finish;
     }
   }
 
 finish:
+  tsk->binfo.entry = header.entry;
+  tsk->name = path;
   vfs_close(file);
   kfree(segments, header.phentry_size * header.pheader_num);
 
@@ -221,4 +213,24 @@ finish:
   //       sections[header.shstrndx].offset,
   //       sections[header.shstrndx].size,
   //       sections[header.shstrndx].addralign);
+}
+
+void elf_exec(struct task *tsk) {
+  idt_disable_hwinterrupts();
+  activate_pgd(tsk->pgd);
+  __asm__ volatile("mov $((4 * 8) | 3), %%ax;"
+                   "mov %%ax, %%ds;"
+                   "mov %%ax, %%es;"
+                   "mov %%ax, %%fs;"
+                   "mov %%ax, %%gs;" ::);
+  __asm__ volatile("movl %%eax, %%esp;"
+                   "xor %%ebp, %%ebp;"
+                   "pushl $((4 * 8) | 3);"
+                   "pushl %%eax;"
+                   "pushl $0x202;"
+                   "pushl $((3 * 8) | 3);"
+                   "pushl %%ebx;"
+                   "iret"
+                   :
+                   : "a"(VIRT_BASE), "b"(tsk->binfo.entry));
 }

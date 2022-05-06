@@ -56,6 +56,8 @@ struct heap_slab *kheap_cache_grow(uint16_t size, bool large) {
   current->next = NULL;
   klogf("first=0x%x current=0x%x current->next=0x%x", first, current,
         current->next);
+  // for (current = first; current != NULL; current = current->next)
+  //   klogf("0x%x 0x%x", current, current->next);
   heap_cache[heap_cache_size] = (heap_slab_t){
       .start = first,
       .first = first,
@@ -94,9 +96,9 @@ void kheap_cache_dump() {
   heap_slab_t *slab;
   for (int i = 0; i < heap_cache_size; i++) {
     slab = heap_cache + i;
-    klogf("slab[%d]: start=0x%x first=0x%x size=%d inuse=%d large=%d", i,
-          slab->start, slab->first, slab->object_size, slab->inuse,
-          slab->large);
+    printk("slab[%d]: start=0x%x first=0x%x size=%d inuse=%d large=%d\n", i,
+           slab->start, slab->first, slab->object_size, slab->inuse,
+           slab->large);
   }
 }
 
@@ -152,16 +154,18 @@ void *kmalloc(int size) {
       }
     }
   }
-  slab = fit ? heap_cache + fit_idx : kheap_cache_grow(size, false);
+  // kheap_cache_dump();
+  // bitmap_dump_compact(&kheap_bitmap, 0, -1, 32);
+  slab = fit ? heap_cache + fit_idx : kheap_cache_grow(size, size >= 1024);
 
   klogf("slab at 0x%x (inuse=%d first={addr=0x%x next=0x%x})", slab,
-        slab->inuse, slab->first, slab->first->next);
+        slab->inuse, slab->first, slab->first ? slab->first->next : NULL);
   slab->inuse++;
   void *ret = slab->first;
   slab->first = slab->first->next;
 
   klogf("updated slab at 0x%x (inuse=%d first={addr=0x%x next=0x%x})", slab,
-        slab->inuse, slab->first, slab->first->next);
+        slab->inuse, slab->first, slab->first ? slab->first->next : NULL);
   return ret;
 }
 

@@ -58,9 +58,11 @@ fail:
   return -EINVAL;
 }
 
-struct kernel_symbol *ksymbols_lookup(uintptr_t addr) {
-  for (int i = kernel_symbols_length - 1; i >= 0; i--)
-    if (addr >= kernel_symbols[i].address)
+struct kernel_symbol *ksymbols_lookup(uintptr_t addr, bool precise) {
+  for (int i = kernel_symbols_length - 1; i >= 0; i--) {
+    if (addr == kernel_symbols[i].address ||
+        (!precise && addr > kernel_symbols[i].address))
       return &kernel_symbols[i];
+  }
   return NULL;
 }

@@ -63,28 +63,30 @@ typedef struct __pageinfo {
 #define PG_RND_DOWN(a) ROUND_DOWN(a, 0x1000)
 #define PG_RND_UP(a) ROUND_UP(a, 0x1000)
 
+static inline void invlpg(uintptr_t addr) {
+  __asm__ volatile("invlpg (%0)" : : "r"(addr) : "memory");
+}
 pageinfo_t parse_page(page_t *pg);
-
 void change_page(page_t *pg, int pres, int rw, int us);
+void turn_page(page_t *p);
 
 int pde_index(uint32_t addr);
-
 uintptr_t pte_index(uint32_t addr);
 
 void activate_pgd(pagedir_t pgd);
-
 pagedir_t get_current_pgd();
 
-void *get_paddr(pagedir_t dir, void *vaddr); // get physical addr from virtual
-
-void turn_page(page_t *p);
-
 page_t *get_page(pagedir_t dir, uint32_t vaddr);
-void map_addr(pagedir_t pgd, uint32_t vaddr, size_t npages, bool user, bool rw);
-
-extern pde_t kernel_pgd[1024] __align(4096);
+void *get_paddr(pagedir_t dir, void *vaddr); // get physical addr from virtual
+void map_addr_phys(pagedir_t pgd, uintptr_t vaddr, uintptr_t phys, bool user);
+void map_addr(pagedir_t pgd, uint32_t vaddr, size_t npages, bool user);
 
 page_t make_pte(uint32_t paddr, int user, int rw);
 pde_t make_pde(uint32_t paddr, int user, int rw);
+
+extern pde_t kernel_pgd[1024] __align(4096);
+pagedir_t create_pgd(void);
+pagedir_t dup_pgd(pagedir_t original);
+pagedir_t clone_pgd(pagedir_t original);
 
 void paging_init();

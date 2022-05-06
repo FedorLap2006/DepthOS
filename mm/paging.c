@@ -1,10 +1,14 @@
 #include <depthos/logging.h>
 #include <depthos/paging.h>
 
+#include <depthos/bitmap.h>
+#include <depthos/heap.h>
 #include <depthos/idt.h>
 #include <depthos/kernel.h>
 #include <depthos/pmm.h>
+#include <depthos/proc.h>
 #include <depthos/stdbits.h>
+#include <depthos/string.h>
 
 int paging_enabled = 0;
 
@@ -30,6 +34,54 @@ pagedir_t get_current_pgd(void) {
   uint32_t ret;
   __asm__ __volatile("mov %%cr3, %0" : "=r"(ret));
   return (pagedir_t)ADDR_TO_VIRT(ret);
+}
+
+pagedir_t create_pgd() {
+  pagedir_t pgd = kmalloc(4096);
+  memset(pgd, 0, sizeof(kernel_pgd));
+  memcpy(&pgd[pde_index(VIRT_BASE)], &kernel_pgd[pde_index(VIRT_BASE)],
+         sizeof(kernel_pgd) - pde_index(VIRT_BASE) * sizeof(pde_t));
+  return pgd;
+}
+
+pagedir_t dup_pgd(pagedir_t original) {
+  pagedir_t pgd = kmalloc(4096);
+  memcpy(pgd, original, 4096);
+  return pgd;
+}
+
+pagedir_t clone_pgd(pagedir_t original) {
+  pagedir_t pgd = dup_pgd(original);
+  pagedir_t current_pgd = get_current_pgd();
+  kheap_cache_dump();
+  void *buffer = kmalloc(4096);
+  kheap_cache_dump();
+  for (int i = 0; i < 1024; i++) {
+    if (!original[i] || i * 1024 * 4096 >= VIRT_BASE)
+      continue;
+    pagetb_t table = kmalloc(4096);
+    memset(table, 0, 4096);
+    pgd[i] = make_pde(ADDR_TO_PHYS(table), (original[i] >> PDE_USER_SHIFT) != 0,
+                      (original[i] >> PDE_RW_SHIFT) != 0);
+    for (int j = 0; j < 1024; j++) {
+      if (!*get_page(original, i * 1024 * 4096 + j * 4096))
+        continue;
+      page_t *page = get_page(original, i * 1024 * 4096 + j * 4096);
+      table[j] = make_pte(pmm_alloc(1), getbit(*page, PTE_USER_SHIFT),
+                          getbit(*page, PTE_RW_SHIFT));
+      activate_pgd(original);
+      // printk("booya 0x%x\n", i * 1024 * 4096 + j * 4096);
+      memcpy(buffer, i * 1024 * 4096 + j * 4096, 4096);
+      activate_pgd(pgd);
+      // printk("yahoo\n");
+      memcpy(i * 1024 * 4096 + j * 4096, buffer, 4096);
+      activate_pgd(current_pgd);
+      // setbit(&table[j], PTE_COW_SHIFT, true);
+      // setbit(page, PTE_RW_SHIFT, 0);
+    }
+  }
+  kfree(buffer, 4096);
+  return pgd;
 }
 
 void *get_paddr(pagedir_t dir, void *virtual_address) {
@@ -88,9 +140,10 @@ page_t *get_page(pagedir_t pgd, uint32_t vaddr) {
   return (page_t *)pde + pte_index(vaddr);
 }
 
-void map_addr(pagedir_t pgd, uint32_t vaddr, size_t npages, bool user,
-              bool rw) {
+void map_addr(pagedir_t pgd, uint32_t vaddr, size_t npages, bool user) {
   // klogf("=================== test ================");
+  map_addr_phys(pgd, vaddr, pmm_alloc(npages), user);
+#if 0
   for (int i = 0; i <= npages / 1024; i++) {
     klogf("mapping 0x%x table", vaddr + i * 4096 * 1024);
     if (!(pgd[pde_index(vaddr + i * 4096 * 1024)] >> PDE_ADDR_SHIFT)) {
@@ -108,6 +161,19 @@ void map_addr(pagedir_t pgd, uint32_t vaddr, size_t npages, bool user,
           make_pte(pmm_alloc(1), user, rw);
     }
   }
+#endif
+}
+
+void map_addr_phys(pagedir_t pgd, uintptr_t vaddr, uintptr_t phys, bool user) {
+  if (!(pgd[pde_index(vaddr)] >> PDE_ADDR_SHIFT)) {
+    // klogf("hello world");
+    pagetb_t tb = kmalloc(0x1000);
+    memset(tb, 0, 0x1000);
+    // klogf("bye world");
+    pgd[pde_index(vaddr)] = make_pde(ADDR_TO_PHYS(tb), user, true);
+  }
+
+  *get_page(pgd, vaddr) = make_pte(phys, user, true);
 }
 
 // 0000100 << 2
@@ -151,17 +217,29 @@ void enable_paging() {
   int reserved = (r->err_code & 0x8) != 0;                                     \
   int id = (r->err_code & 0x10) != 0;
 
-void __noreturn __do_fatal_pf(regs_t *r) {
-  if (r->eip >= VIRT_BASE)
-    panicf("Kernel pagefault");
-  else {
-    sys_exit();
-  }
+__noreturn void _do_kernel_pgf(regs_t *r, uintptr_t cr2) {
+  panicf("Kernel panic");
 }
 
-void __do_soft_pf(regs_t *r) {
-  __do_fatal_pf(r);
-  return;
+// void _do_cow(uintptr_t cr2) {
+//   void *buffer = kmalloc(4096);
+//   memcpy(buffer, cr2, 4096);
+//   *get_page(current_task->pgd, cr2) = make_pte(pmm_alloc(1), 1, 1);
+//   invlpg(cr2);
+//   memcpy(cr2, buffer, 4096);
+//   kfree(buffer, 4096);
+
+//   if (current_task->parent)
+//     setbit(get_page(current_task->parent->pgd, cr2), 1, 1);
+// }
+
+void _do_user_pgf(regs_t *r, uintptr_t cr2) {
+  // if (getbit(*get_page(get_current_pgd(), cr2), PTE_COW_SHIFT)) {
+  //   _do_cow(cr2);
+  //   return;
+  // }
+
+  sys_exit();
 }
 
 void pagefault_handler(regs_t *r) {
@@ -173,11 +251,14 @@ void pagefault_handler(regs_t *r) {
          present, rw, us, reserved, id);
   dump_registers(*r);
   trace(1, -1);
-  if (present == 0) {
-    __do_soft_pf(r);
-  } else {
-    __do_fatal_pf(r);
-  }
+#if 0
+  extern bitmap_t kheap_bitmap;
+  bitmap_dump_compact(&kheap_bitmap, 0, -1, 32);
+#endif
+  if (r->eip >= VIRT_BASE)
+    _do_kernel_pgf(r, cr2);
+  else
+    _do_user_pgf(r, cr2);
 }
 
 #undef PAGEFAULT_STATE

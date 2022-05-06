@@ -9,4 +9,4 @@ struct kernel_symbol {
 };
 
 int ksymbols_load(const char *path);
-struct kernel_symbol *ksymbols_lookup(uintptr_t addr);
+struct kernel_symbol *ksymbols_lookup(uintptr_t addr, bool precise);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <depthos/proc.h>
 #include <depthos/stddef.h>
 #include <depthos/stdtypes.h>
 
@@ -95,8 +96,10 @@ struct elf_program_header {
 bool elf_probe(const char *path);
 
 /**
- * @brief Load an ELF application
+ * @brief Load an ELF application into specified task
  *
+ * @param tsk Task to load application into
  * @param path Path to the application
  */
-void elf_load(const char *path);
+void elf_load(struct task *tsk, const char *path);
+void elf_exec(struct task *tsk);

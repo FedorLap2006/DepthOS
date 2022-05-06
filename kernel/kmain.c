@@ -31,8 +31,12 @@ extern unsigned short *videoMemory;
 extern page_t kernel_pgt[1024] __align(4096);
 
 uint32_t tick = 0;
-void ticker(regs_t *regs) {
+bool ticker_sched_enable = false;
+void ticker(regs_t *registers) {
   tick++;
+  if (ticker_sched_enable) {
+    sched_ticker(registers);
+  }
   // klogf("%d", tick);
   //	if ( (tick % 4) != 0 ) return;
   // console_write("tick:");
@@ -124,12 +128,42 @@ char *resolve_filetype(struct fs_node *file) {
 }
 
 void init() {
-  welcome_message();
-  shell_eventloop();
-  idt_enable_hwinterrupts();
+  // welcome_message();
+  // klogf("we're okay?");
+  // // __asm__ volatile("int $0x30");
+  // klogf("we're okay?");
+  // welcome_message();
+  // // __asm__ volatile("int $0x30");
+  // klogf("we're okay?");
+  // welcome_message();
+  // // shell_eventloop();
+  // // idt_enable_hwinterrupts();
+  // printk("lmao?");
+  extern struct task *current_task;
+  long var;
+  // bool probe = elf_probe("/autoload.bin");
+  // if (!probe)
+  //   printk("LMAO");
+  __asm__ volatile("int $0x80" : "=a"(var) : "a"(11), "b"("/autoload.bin"));
+  // printk("result: %d", var);
+  // elf_load(current_task, "/autoload.bin");
+  // elf_exec(current_task);
   for (;;)
-    __asm__ volatile("hlt");
+    // __asm__ volatile("hlt");
+    __asm__ volatile("int $0x30");
+  // __asm__ volatile("int $0x80" ::"a"(1));
   // printk("aaaa - %c\n", serial_console_readc());
+}
+void init_userspace() {
+  char *val = "test test";
+  __asm__ volatile("int $0x80" ::"a"(4), "b"(sizeof("test test")), "c"(val));
+  // sys_sched_yield();
+  __asm__ volatile("int $0x80" ::"a"(4), "b"(sizeof("test test")), "c"(val));
+  // for (;;) {
+  // __asm__ volatile("int $0x30");
+  // __asm__ volatile("hlt");
+  // }
+  __asm__ volatile("int $0x80" ::"a"(1));
 }
 
 void kmain(int magic, struct multiboot_information *boot_ptr) {
@@ -152,16 +186,28 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
   uint32_t esp;
   __asm__ volatile("movl %%esp, %0" : "=r"(esp));
   tss_set_stack(esp);
+  sched_init();
+  // pagedir_t pgd = create_pgd();
+  // for (int i = 0; i < 10; i++) {
+  //   klogf("%d", i);
+  //   kmalloc(0x1000);
+  // }
+
+  // printk("here we go!\n");
+
+  extern struct task *current_task;
+  reschedule_to(current_task);
+
   tests_init();
 
   welcome_message();
-
 #ifdef CONFIG_TESTS_ENABLED
   tests_run();
 #endif
-  extern struct task *current_task;
-  current_task = kmalloc(sizeof(struct task));
-  elf_load("/autoload.bin");
+  // create_task();
+  // elf_load(current_task, "/autoload.bin");
+  // elf_exec(current_task);
+
   // enter_usemode();
 
   for (;;)

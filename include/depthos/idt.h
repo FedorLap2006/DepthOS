@@ -6,14 +6,14 @@
 #include <depthos/tools.h>
 #include <depthos/trace.h>
 
-typedef struct __regs {
+typedef struct registers {
   uint32_t fs, gs, es, ds;
   uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
   uint32_t int_num, err_code;
   struct trace_stackframe *trace_frame;
   uintptr_t eip;
   uint32_t cs, eflags, useresp, ss;
-} regs_t;
+} __packed, regs_t;
 
 typedef void (*intr_handler_t)(regs_t *);
 

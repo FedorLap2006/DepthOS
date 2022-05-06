@@ -171,56 +171,59 @@ INTR_NOERRCODE 128
 
 
 intr_cstub:
-	pusha
-	push	%ds
-	push	%es
-	push	%gs
-	push	%fs
+	pushal
+	pushl	%ds
+	pushl	%es
+	pushl	%gs
+	pushl	%fs
+
+	cld
 	mov	$0x10, %ax
 	mov	%ax, %ds
 	mov	%ax, %es
 	mov	%ax, %fs
 	mov	%ax, %gs
 	leal 56(%esp), %ebp
-
+	
+	pushl %esp
 	// Call the kernel IRQ handler
 	call	idt_interrupt_handler
+	add $4, %esp
 
-	pop	%fs
-	pop	%gs
-	pop	%es
-	pop	%ds
-	popa
-	add	$12, %esp
-	sti
-	iret
+	jmp intr_exit
+
 
 irq_cstub:
-	pusha
-	push	%ds
-	push	%es
-	push	%gs
-	push	%fs
+	pushal
+	pushl	%ds
+	pushl	%es
+	pushl	%gs
+	pushl	%fs
+
+	cld
 	mov	$0x10, %ax
 	mov	%ax, %ds
 	mov	%ax, %es
 	mov	%ax, %fs
 	mov	%ax, %gs
 	leal 56(%esp), %ebp
-
+	
+	pushl %esp
 	// Call the kernel IRQ handler
 	call	idt_hwinterrupt_handler
+	add $4, %esp
 
-	pop	%fs
-	pop	%gs
-	pop	%es
-	pop	%ds
-	popa
+.global intr_exit
+intr_exit:
+	popl	%fs
+	popl	%gs
+	popl	%es
+	popl	%ds
+	popal
 	// pop error code, stack frame and IRQ number
 	add	$12, %esp
 	iret
 
-.extern idt_ptr
 
 idt_flush:
 	lidt idt_ptr

@@ -84,34 +84,39 @@ void idt_init() {
 #include "idt_handlers.h"
 
   extern void intr128();
-  idt_register_llhandler(0x80, 0xF, 3, (uint32_t)intr128);
+  idt_register_llhandler(0x80, 0xE, 3, (uint32_t)intr128);
+  idt_register_llhandler(0x30, 0xE, 3, (uint32_t)intr48);
   for (int i = INTERRUPTS_COUNT; i < IDT_SIZE; i++) {
     idt_register_llhandler(i, 0xE, 0,
                            (uint32_t)_idt_unregistered_interrupt_llhandler);
   }
+  void gpf_handler(regs_t *);
+  idt_register_interrupt(13, gpf_handler);
   idt_flush();
   print_status("IDT initialized", MOD_OK);
 }
 
-void idt_hwinterrupt_handler(regs_t r) {
+void idt_hwinterrupt_handler(regs_t *r) {
   // klogf("interrupt received %d", r.int_num);
   idt_interrupt_handler(r);
-  pic_eoi(r.int_num);
+  pic_eoi(r->int_num);
 }
 
-void idt_interrupt_handler(regs_t r) {
+void idt_interrupt_handler(regs_t *r) {
   /*if (r.int_num == 0x20 || r.int_num == 0x21)*/
   /*klogf("interrupt received %d", r.int_num);*/
-  // klogf("interrupt: %d", r.int_num);
-  if (r.int_num == 13) {
-    klogf("gpf: 0x%x", r.err_code);
-    dump_registers(r);
-  }
-  if (intrs[r.int_num] != 0) {
+  // printk("interrupt: %d\n", r.int_num);
+  if (intrs[r->int_num] != 0) {
     // klogf("(%x) registers at 0x%x", r.int_num, &r);
-    intr_handler_t h = intrs[r.int_num];
-    h(&r);
+    intr_handler_t h = intrs[r->int_num];
+    h(r);
   }
+}
+
+void gpf_handler(regs_t *r) {
+  printk("GP fault: 0x%x\n", r->err_code);
+  dump_registers(*r);
+  trace(0, -1);
 }
 
 void idt_register_interrupt(uint32_t i, intr_handler_t f) {

@@ -1,14 +1,15 @@
 .data
 hello:
-.string "\x1B[1;34mInit start!\x1B[0m"
+.string "\x1B[1;34mUserapp start!\x1B[0m"
 hello_end:
 
 after:
-.string "\x1B[1;34mInit end!\x1B[0m"
+.string "\x1B[1;34mUserapp middle!\x1B[0m"
 after_end:
 
-prefork: .string "\x1B[1;34mPre-fork\x1b[0m"
-prefork_end:
+after2:
+.string "\x1B[1;34mUserapp end!\x1B[0m"
+after_end2:
 
 .text
 .globl _start
@@ -16,15 +17,6 @@ prefork_end:
 something:
   pushl %ebp
   movl %esp, %ebp
-
-  movl $4, %eax
-  movl $(prefork_end - prefork), %ebx
-  movl $prefork, %ecx
-  int $0x80
-
-  movl $2, %eax
-  int $0x80
-
 
   // movl $0, %ecx
   // movl $1, %edi
@@ -40,11 +32,13 @@ something:
   int $0x80
 
   int $0x30
-  // movl $5, %eax
-  // int $0x80
   
   movl $(after_end - after), %ebx
   movl $after, %ecx
+  movl $4, %eax
+  int $0x80
+  movl $(after_end2 - after2), %ebx
+  movl $after2, %ecx
   movl $4, %eax
   int $0x80
 
@@ -63,10 +57,12 @@ _start:
 
   call something
 
-  // movl $(after_end - after), %ebx
-  // movl $after, %ecx
+  // movl $(hello_end - hello), %ebx
+  // movl $hello, %ecx
   // movl $4, %eax
   // int $0x80
 
+// a:
+//   jmp a
   movl $1, %eax # sys_exit
   int $0x80

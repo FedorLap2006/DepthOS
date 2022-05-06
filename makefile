@@ -133,13 +133,18 @@ test: $(OUTBIN) $(INITRD_FILE)
 	@echo
 	@echo ----------- testing os ------------
 	@echo
-	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN) -initrd $(INITRD_FILE) $(QEMU_ARGS)
+	qemu-system-i386 -M pc-i440fx-2.8 -kernel $(OUTBIN) -initrd $(INITRD_FILE) $(QEMU_ARGS) # -d int,pcall
 	@# -d int,pcall,cpu,fpu -D qemu_log.log # -S -s # -nographic
 
 
-apps: initrd/autoload.bin
+apps: initrd/autoload.bin initrd/autoload2.bin
 initrd/autoload.bin: apps/helloworld.S
 	$(CC) $(CEMU) -std=c$(CSTD) -o initrd/autoload.bin apps/helloworld.S  -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pic
+
+initrd/autoload2.bin: apps/helloworld2.S
+	$(CC) $(CEMU) -std=c$(CSTD) -o initrd/autoload2.bin apps/helloworld2.S  -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pic
+
+
 
 hex_info:
 	@echo ---------- HEX INFO ----------
