@@ -58,8 +58,13 @@ void panic(const char *file, int line, const char *loc, const char *format,
   va_start(args, format);
   vsprintf(buffer, format, args);
   va_end(args);
+  if (!console_no_color)
+    printk("\x1B[31;1m");
   printk("Kernel panic: %s (%s:%d): %s\n", loc, file, line, buffer);
+  if (!console_no_color)
+    printk("\x1B[0m");
   // dump_registers(); // TODO
+  idt_disable_hwinterrupts(); // TODO
   while (1)
     __asm__ volatile("hlt");
 }

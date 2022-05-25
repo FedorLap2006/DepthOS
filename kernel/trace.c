@@ -2,6 +2,7 @@
 #include <depthos/logging.h>
 #include <depthos/proc.h>
 #include <depthos/trace.h>
+#include <depthos/kconfig.h>
 
 void trace(unsigned skip, unsigned max) {
   struct trace_stackframe *ebp;
@@ -24,8 +25,10 @@ void trace(unsigned skip, unsigned max) {
     printk("? 0x%x\n", ebp->eip);
     ebp = ebp->next;
   }
-#if 1
-  extern struct task *current_task;
-  printk("task: %s\n", current_task->name);
+#ifdef CONFIG_TRACE_TASK_INFO
+	if (current_task->process)
+		printk("thread: %s [%d]", current_task->process->filepath, current_task->thid);
+	else printk("kernel thread: %s", current_task->name);
+	printk("\n");
 #endif
 }

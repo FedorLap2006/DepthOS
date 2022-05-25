@@ -84,6 +84,7 @@ void idt_init() {
 #include "idt_handlers.h"
 
   extern void intr128();
+  idt_register_llhandler(0x64, 0xE, 3, (uint32_t)intr100);
   idt_register_llhandler(0x80, 0xE, 3, (uint32_t)intr128);
   idt_register_llhandler(0x30, 0xE, 3, (uint32_t)intr48);
   for (int i = INTERRUPTS_COUNT; i < IDT_SIZE; i++) {

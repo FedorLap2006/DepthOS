@@ -1,6 +1,7 @@
 #pragma once
 
 #include <depthos/proc.h>
+#include <depthos/fs.h>
 #include <depthos/stddef.h>
 #include <depthos/stdtypes.h>
 
@@ -102,4 +103,5 @@ bool elf_probe(const char *path);
  * @param path Path to the application
  */
 void elf_load(struct task *tsk, const char *path);
+void elf_loadf(struct task *tsk, struct fs_node* file);
 void elf_exec(struct task *tsk);

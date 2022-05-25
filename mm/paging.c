@@ -53,9 +53,9 @@ pagedir_t dup_pgd(pagedir_t original) {
 pagedir_t clone_pgd(pagedir_t original) {
   pagedir_t pgd = dup_pgd(original);
   pagedir_t current_pgd = get_current_pgd();
-  kheap_cache_dump();
+  // kheap_cache_dump();
   void *buffer = kmalloc(4096);
-  kheap_cache_dump();
+  // kheap_cache_dump();
   for (int i = 0; i < 1024; i++) {
     if (!original[i] || i * 1024 * 4096 >= VIRT_BASE)
       continue;

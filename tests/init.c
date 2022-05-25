@@ -1,8 +1,17 @@
-#include <depthos/assert.h>
 #include <depthos/bitmap.h>
 #include <depthos/heap.h>
+#include <depthos/list.h>
 #include <depthos/logging.h>
 #include <depthos/pmm.h>
+#include <depthos/syscall.h>
+
+#define TEST(name)                                                             \
+  printk("\n\x1B[96;1m%s: Executing %s\x1B[0m\n", __func__, name);
+#define assert(expr)                                                           \
+  if (!(expr))                                                                 \
+    panicf("%s: Assertion failed (%s)", __func__, #expr);                      \
+  else                                                                         \
+    printk("\x1B[32;1m%s: Assertion passed (%s)\x1B[0m\n", __func__, #expr);
 
 void test_kheap() {
 #define a(n, s)                                                                \
@@ -95,10 +104,211 @@ void test_pmm() {
   bitmap_dump_pretty(&pmm_bitmap, 360, 500);
 }
 
+void test_list() {
+  struct list *list = list_create();
+  TEST("insert_value to empty list");
+  assert(list != NULL);
+  assert(list->first == NULL);
+  assert(list->last == NULL);
+  assert(list->length == 0);
+  struct list_entry *first = list_insert_value(list, NULL, NULL, 0xDEADC0DE);
+  assert(first != NULL);
+  assert(list->first == first);
+  assert(list->first == list->last);
+  assert(list->first->next == NULL);
+  assert(list->first->prev == NULL);
+  assert(list->length == 1);
+  assert(list->first->value == 0xDEADC0DE);
+
+  // list_foreach(list, item) {
+  //   printk("{next=0x%x prev=0x%x value=0x%llx} at 0x%x\n", item->next,
+  //          item->prev, list_item(item, uint64_t), (uint32_t)item);
+  // }
+  TEST("insert_value to the back");
+  struct list_entry *second = list_insert_value(list, first, NULL, 0xC0DE);
+  assert(second != NULL);
+  assert(list->first == first);
+  assert(list->last == second);
+  assert(list->first->next == second);
+  assert(list->last->prev == first);
+  assert(list->last->next == NULL);
+  assert(list->first->value == 0xDEADC0DE);
+  assert(list->last->value == 0xC0DE);
+  assert(list->length == 2);
+  // list_foreach(list, item) {
+  //   printk("{next=0x%x prev=0x%x value=0x%llx} at 0x%x\n", item->next,
+  //          item->prev, list_item(item, uint64_t), (uint32_t)item);
+  // }
+
+  TEST("remove first element in 2-element list");
+  list_remove(list, first);
+  assert(list->first == second);
+  assert(list->last == second);
+  assert(list->length == 1);
+  assert(second->next == NULL);
+  assert(second->prev == NULL);
+
+  list_insert(list, NULL, second, first);
+  assert(list->first == first);
+  assert(list->last == second);
+  assert(list->first->next == second);
+  assert(list->last->prev == first);
+  assert(list->last->next == NULL);
+  assert(list->first->value == 0xDEADC0DE);
+  assert(list->last->value == 0xC0DE);
+  assert(list->length == 2);
+
+  TEST("remove second element in 2-element list");
+  list_remove(list, second);
+  assert(list->first == first);
+  assert(list->last == first);
+  assert(list->length == 1);
+  assert(first->next == NULL);
+  assert(first->prev == NULL);
+
+  list_insert(list, first, NULL, second);
+  assert(list->first == first);
+  assert(list->last == second);
+  assert(list->first->next == second);
+  assert(list->last->prev == first);
+  assert(list->last->next == NULL);
+  assert(list->first->value == 0xDEADC0DE);
+  assert(list->last->value == 0xC0DE);
+  assert(list->length == 2);
+
+  TEST("remove all elements in 2-element list");
+  list_remove(list, first);
+  list_remove(list, second);
+  assert(list->first == NULL);
+  assert(list->last == NULL);
+  assert(list->length == 0);
+
+  list_insert(list, NULL, NULL, first);
+  list_insert(list, first, NULL, second);
+  assert(list->first == first);
+  assert(list->last == second);
+  assert(list->first->next == second);
+  assert(list->last->prev == first);
+  assert(list->last->next == NULL);
+  assert(list->first->value == 0xDEADC0DE);
+  assert(list->last->value == 0xC0DE);
+  assert(list->length == 2);
+
+  TEST("insert value in-between");
+  struct list_entry *third = list_insert_value(list, first, second, 0x64);
+  assert(third != NULL);
+  assert(list->first == first);
+  assert(list->last == second);
+  assert(list->first->next == third);
+  assert(list->last->prev == third);
+  assert(list->last->next == NULL);
+  assert(list->length == 3);
+
+  TEST("remove first element from 3-element list");
+  list_remove(list, first);
+  assert(list->first == third);
+  assert(list->last == second);
+  assert(list->first->next == second);
+  assert(list->last->prev == third);
+  assert(list->length == 2);
+
+  list_insert(list, NULL, third, first);
+  assert(list->first == first);
+  assert(list->last == second);
+  assert(list->first->next == third);
+  assert(list->last->prev == third);
+  assert(list->last->next == NULL);
+  assert(list->length == 3);
+
+  TEST("remove last element from 3-element list");
+  list_remove(list, second);
+  assert(list->first == first);
+  assert(list->last == third);
+  assert(list->first->next == third);
+  assert(list->last->prev == first);
+  assert(list->last->next == NULL);
+  assert(list->length == 2);
+
+  list_insert(list, third, NULL, second);
+  assert(list->first == first);
+  assert(list->last == second);
+  assert(list->first->next == third);
+  assert(list->last->prev == third);
+  assert(list->last->next == NULL);
+  assert(list->length == 3);
+
+  TEST("remove middle element of 3-element list");
+  list_remove(list, third);
+  assert(list->first == first);
+  assert(list->last == second);
+  assert(list->first->next == second);
+  assert(list->last->prev == first);
+  assert(list->first->prev == NULL);
+  assert(list->last->next == NULL);
+  assert(list->length == 2);
+
+  list_insert(list, first, second, third);
+  assert(list->first == first);
+  assert(list->last == second);
+  assert(list->first->next == third);
+  assert(list->last->prev == third);
+  assert(list->last->next == NULL);
+  assert(list->length == 3);
+
+  TEST("remove first and last elements of 3 element list");
+  list_remove(list, first);
+  list_remove(list, second);
+  assert(list->first == third);
+  assert(list->last == list->first);
+  assert(list->first->prev == NULL);
+  assert(list->first->next == NULL);
+  assert(list->length == 1);
+
+  TEST("list_push");
+  struct list_entry *fourth = list_push(list, 0x1);
+  assert(list->last == fourth);
+  klogf("0x%x 0x%x", list->last->prev, second);
+  assert(list->last->prev == third);
+  assert(list->last->prev->next == fourth);
+  assert(list->last->next == NULL);
+
+  TEST("list_pop");
+  list_pop(list);
+  assert(list->last == third);
+  assert(list->last->next == NULL);
+
+  TEST("list_push_front");
+  struct list_entry *fifth = list_push_front(list, 0x2);
+  assert(list->first == fifth);
+  assert(list->first->next == third);
+
+  TEST("list_pop_front");
+  list_pop_front(list);
+  assert(list->first == third);
+
+  TEST("list_pop_front on 1 element list");
+  list_pop_front(list);
+  assert(list->first == NULL);
+  assert(list->last == NULL);
+  assert(list->length == 0);
+
+  TEST("list_push on empty list");
+  first = list_push_front(list, 0x3);
+  assert(list->first == first);
+  assert(list->last == first);
+  assert(list->length == 1);
+}
+
 void tests_init() {}
 
 void tests_run() {
+  // preempt_disable();
+  idt_disable_hwinterrupts();
   // test_bitmap();
   // test_pmm();
   // test_kheap();
+  test_list();
+  // preempt_enable();
+  idt_enable_hwinterrupts();
+  sys_exit();
 }

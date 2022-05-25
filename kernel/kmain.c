@@ -127,33 +127,6 @@ char *resolve_filetype(struct fs_node *file) {
   return "unknown";
 }
 
-void init() {
-  // welcome_message();
-  // klogf("we're okay?");
-  // // __asm__ volatile("int $0x30");
-  // klogf("we're okay?");
-  // welcome_message();
-  // // __asm__ volatile("int $0x30");
-  // klogf("we're okay?");
-  // welcome_message();
-  // // shell_eventloop();
-  // // idt_enable_hwinterrupts();
-  // printk("lmao?");
-  extern struct task *current_task;
-  long var;
-  // bool probe = elf_probe("/autoload.bin");
-  // if (!probe)
-  //   printk("LMAO");
-  __asm__ volatile("int $0x80" : "=a"(var) : "a"(11), "b"("/autoload.bin"));
-  // printk("result: %d", var);
-  // elf_load(current_task, "/autoload.bin");
-  // elf_exec(current_task);
-  for (;;)
-    // __asm__ volatile("hlt");
-    __asm__ volatile("int $0x30");
-  // __asm__ volatile("int $0x80" ::"a"(1));
-  // printk("aaaa - %c\n", serial_console_readc());
-}
 void init_userspace() {
   char *val = "test test";
   __asm__ volatile("int $0x80" ::"a"(4), "b"(sizeof("test test")), "c"(val));
@@ -180,7 +153,8 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
   multiboot_init(boot_ptr);
   vfs_init();
   ksymbols_load("/kernel.map");
-  idt_register_interrupt(0x80, syscall_interrupt_handler);
+  idt_register_interrupt(0x64, syscall_handler);
+  idt_register_interrupt(0x80, posix_syscall_handler);
   keyboard_driver_init();
   tss_init();
   uint32_t esp;
@@ -195,15 +169,30 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
 
   // printk("here we go!\n");
 
-  extern struct task *current_task;
-  reschedule_to(current_task);
+  /*struct task *init_task = (struct task *)kmalloc(sizeof(struct task));
+  elf_load(init_task, "/init.bin");
+  bootstrap_user_task(init_task, true);
+  sched_add(init_task);
 
-  tests_init();
+  struct task *user_task = kmalloc(sizeof(struct task));
+  printk("yolo: %d\n", elf_probe("/autoload2.bin"));
+  elf_load(user_task, "/autoload2.bin");
+  bootstrap_user_task(user_task, true);
+  sched_add(user_task);
+        */
+  process_spawn("/init.bin", NULL);
 
-  welcome_message();
 #ifdef CONFIG_TESTS_ENABLED
-  tests_run();
+  tests_init();
+  struct task *tests_task = create_kernel_task(tests_run, true);
+  tests_task->name = "tests";
+  tests_task->process = NULL;
+  sched_add(tests_task);
 #endif
+
+  // extern struct task *current_task;
+  reschedule();
+
   // create_task();
   // elf_load(current_task, "/autoload.bin");
   // elf_exec(current_task);

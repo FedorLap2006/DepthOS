@@ -3,11 +3,9 @@
 .globl _syscall_entries
 
 _syscall_entries:
-  .long 0
-  .long sys_write
-  .long sys_exit
-  .long sys_fork
-  .long sys_execve
+#define SC(name, num) .long name
+#include "syscall_decl.inc"
+#undef SC
 _syscall_entries_end:
 
 .globl syscall_entries_len

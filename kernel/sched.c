@@ -1,5 +1,6 @@
 #include <depthos/elf.h>
 #include <depthos/heap.h>
+#include <depthos/list.h>
 #include <depthos/logging.h>
 #include <depthos/pic.h>
 #include <depthos/pmm.h>
@@ -8,15 +9,17 @@
 #include <depthos/syscall.h>
 #include <depthos/tss.h>
 
-struct tasklist {
-  struct tasklist *next;
-  struct tasklist *prev;
-  struct task *task;
-};
+// struct tasklist {
+//   struct tasklist *next;
+//   struct tasklist *prev;
+//   struct task *task;
+// };
 
-static struct tasklist *tasklist_head;
-static struct tasklist *tasklist_top;
-static struct tasklist *tasklist_current;
+// static struct tasklist *tasklist_head;
+// static struct tasklist *tasklist_top;
+// static struct tasklist *tasklist_current;
+static struct list *tasklist;
+static struct list_entry *current_entry;
 struct task *current_task;
 
 bool __preempt_enabled = false;
@@ -53,9 +56,9 @@ void dump_task(struct task *t) {
   {                                                                            \
     char buffer[256];                                                          \
     snprintf(buffer, 256, fmt, __VA_ARGS__);                                   \
-    printk("\t| %-10s | %-30s |\n", #name, buffer);                            \
-    memset(buffer, '=', sizeof("\t| | |") + 10 + 30);                          \
-    buffer[sizeof("\t| | |") + 10 + 30] = 0;                                   \
+    printk("\t| %-15s | %-30s |\n", #name, buffer);                            \
+    memset(buffer, '=', sizeof("\t| | |") + 15 + 30);                          \
+    buffer[sizeof("\t| | |") + 15 + 30] = 0;                                   \
     printk("\t%s\n", buffer);                                                  \
   }
 
@@ -73,13 +76,13 @@ void dump_task(struct task *t) {
   } else {
     PRINT(pgd, "0x%x", t->pgd);
   }
+  PRINT(regs->eip, "0x%x", t->regs->eip);
+  PRINT(regs->useresp, "0x%x", t->regs->useresp);
 #undef PRINT
 }
 
 void dump_tasks() {
-  for (struct tasklist *task = tasklist_head; task != NULL; task = task->next) {
-    dump_task(task->task);
-  }
+  list_foreach(tasklist, task) { dump_task(list_item(task, struct task *)); }
 }
 
 void _task_init(struct task *task) {
@@ -95,9 +98,7 @@ static struct task *create_dummy_task() {
 
 void sched_init() {
   idt_disable_hwinterrupts();
-  tasklist_head = kmalloc(sizeof(struct tasklist));
-  tasklist_top = tasklist_head;
-  tasklist_current = tasklist_head;
+  tasklist = list_create();
 
   void sched_yield(regs_t * r);
   idt_register_interrupt(0x30, sched_yield); // yield
@@ -105,29 +106,12 @@ void sched_init() {
   struct task *idle_task = create_kernel_task(__idle_thread, true);
   idle_task->name = "idle";
   idle_task->pgd = kernel_pgd;
-  tasklist_head->task = idle_task;
-  void init();
-  struct task *init_task = create_kernel_task(init, true);
-  init_task->name = "init";
-  // tasklist_head->task = init_task;
-  sched_add(init_task);
+  idle_task->process = NULL;
+  idle_task->thid = 0;
+  sched_add(idle_task);
 
-  struct task *user_task = kmalloc(sizeof(struct task));
-  printk("yolo: %d\n", elf_probe("/autoload2.bin"));
-  elf_load(user_task, "/autoload2.bin");
-  bootstrap_user_task(user_task, true);
-  sched_add(user_task);
-
-  struct task *th1 = create_kernel_task(__th1, true);
-  th1->name = "kthread1";
-  sched_add(th1);
-
-  struct task *th2 = create_kernel_task(__th2, true);
-  th2->name = "kthread2";
-  sched_add(th2);
-
-  current_task = tasklist_head->task;
-  tasklist_top->next = NULL;
+  current_entry = tasklist->first;
+  current_task = list_item(current_entry, struct task *);
 
   extern bool ticker_sched_enable;
   ticker_sched_enable = true;
@@ -137,10 +121,15 @@ void sched_init() {
 }
 
 void reschedule_to(struct task *t) {
+  current_task->state = TASK_RUNNING;
   current_task = t;
-  current_task->running = 0;
-  // printk("switching to %s\n", t->name);
-  // dump_task(current_task);
+#if 0
+  if (t->process)
+    printk("switching to thread no. %d of %s\n", t->thid, t->process->filepath);
+  else
+    printk("switching to %s\n", t->name);
+  dump_task(current_task);
+#endif
   tss_set_stack(t->kernel_esp);
 
   if (t->pgd)
@@ -151,22 +140,28 @@ void reschedule_to(struct task *t) {
                    "jmp intr_exit;" ::"r"(current_task->regs));
 }
 
-static struct tasklist *pick_next_task() {
-  if (tasklist_current->next)
-    return tasklist_current->next;
-  return tasklist_head;
+static struct list_entry *pick_next_task() {
+  if (current_entry->next)
+    return current_entry->next;
+  return tasklist->first;
 }
 
 void reschedule(void) {
   if (!__preempt_enabled)
     reschedule_to(current_task);
 
-  struct tasklist *next = pick_next_task();
-  tasklist_current = next;
-  reschedule_to(next->task);
+  struct list_entry *next = pick_next_task();
+  if (current_task->state == TASK_DYING) {
+    printk("cleaning up dying task\n");
+    sched_remove(current_task);
+    kfree(current_task, sizeof(*current_task));
+  }
+
+  current_entry = next;
+  reschedule_to(list_item(current_entry, struct task *));
 }
 
-void bootstrap_user_task(struct task *task, bool do_stack) {
+void bootstrap_user_task(struct task *task, bool do_stack, void *stack) {
   _task_init(task);
   if (!do_stack)
     return;
@@ -203,14 +198,19 @@ void bootstrap_user_task(struct task *task, bool do_stack) {
   }
 #endif
 
+#if 0
   map_addr_phys(get_current_pgd(), VIRT_BASE - 0x1000, page, 1);
   activate_pgd(get_current_pgd());
   if (task->pgd)
     map_addr_phys(task->pgd, VIRT_BASE - 0x1000, page, 1);
-  uint32_t *stack = VIRT_BASE;
-  memset(VIRT_BASE - 0x1000, 0, 0x1000 - 1);
-  uint32_t tmp = stack;
-#define PUSH(v) *--stack = v
+#endif
+  map_addr_phys(task->pgd, stack, page, 1);
+  if (task->pgd == get_current_pgd())
+    activate_pgd(get_current_pgd());
+  uint32_t *kstack = task->kernel_esp;
+  // memset(task->kernel_stack, 0, 0x1000 - 1);
+  uint32_t tmp = stack + 0x1000;
+#define PUSH(v) *--kstack = v
   PUSH(0x23);              /* ss */
   PUSH(tmp);               /* useresp */
   PUSH(0x202);             /* eflags */
@@ -221,7 +221,6 @@ void bootstrap_user_task(struct task *task, bool do_stack) {
   PUSH(0);
   PUSH(0);
 
-  tmp = stack;
   PUSH(0x0);  /* eax */
   PUSH(0x0);  /* ecx */
   PUSH(0x0);  /* edx */
@@ -237,21 +236,25 @@ void bootstrap_user_task(struct task *task, bool do_stack) {
 #undef PUSH
   // get_current_pgd()[pde_index(VIRT_BASE - 0x1000)] = 0;
   // activate_pgd(get_current_pgd());
-  task->regs = (struct registers *)stack;
-  task->stack = stack;
+  task->regs = (struct registers *)kstack;
+  task->stack = kstack;
 }
 
-struct task *create_task(void *entry, pagedir_t pgd, bool do_stack) {
+struct task *create_task(void *entry, pagedir_t pgd, bool do_stack,
+                         void *stack) {
   struct task *task = create_dummy_task();
   task->pgd = pgd;
-  bootstrap_user_task(task, do_stack);
+  task->binfo.entry = entry;
+  bootstrap_user_task(task, do_stack, stack);
   return task;
 }
 
+// FIXME: kernel tasks cannot use fork
 struct task *create_task_fork(struct task *parent) {
   struct task *task = kmalloc(sizeof(struct task));
   *task = *parent;
   task->parent = parent;
+  task->name = strdup(parent->name);
   task->pgd = clone_pgd(parent->pgd);
   _task_init(task);
   memcpy(task->kernel_stack, parent->kernel_stack, 0x1000);
@@ -299,47 +302,20 @@ struct task *create_kernel_task(void *entry, bool do_stack) {
 #undef PUSH
   task->regs = (struct registers *)stack;
   task->stack = stack;
+  task->binfo.entry = entry;
   return task;
 }
 
 void sched_add(struct task *task) {
-  tasklist_top->next = kmalloc(sizeof(struct tasklist));
-  tasklist_top->next->prev = tasklist_top;
-  tasklist_top = tasklist_top->next;
-  tasklist_top->next = NULL;
-  tasklist_top->task = task;
+  struct list_entry *entry = list_push(tasklist, (list_value_t)task);
+  task->state = TASK_STARTING;
+  task->sched_entry = entry;
 }
 
 void sched_remove(struct task *task) {
-  if (!tasklist_head && !tasklist_top)
-    return;
-  for (struct tasklist *ptr = tasklist_head; ptr != NULL; ptr = ptr->next) {
-    if (ptr->task == task) {
-      if (!ptr->prev) { // beginning
-        tasklist_head = ptr->next;
-        if (ptr->next) // and the end
-          ptr->next->prev = NULL;
-      } else {
-        ptr->prev->next = ptr->next;
-        if (ptr->next)
-          ptr->next->prev = ptr->prev;
-      }
-
-      if (!ptr->next)
-        tasklist_top = ptr->prev;
-      // if (!ptr->prev) {
-      //   tasklist_head = ptr->next;
-      // } else
-      //   ptr->prev->next = ptr->next;
-      // if (ptr->prev) {
-      //   printk("ready player one\n");
-      //   ptr->prev->next = ptr->next;
-      // } else {
-      //   printk("moving forward\n");
-      //   tasklist_head = ptr->next;
-      // }
-    }
-  }
+  list_remove(tasklist, task->sched_entry);
+  kfree(task->sched_entry, sizeof(struct list_entry));
+  task->sched_entry = NULL;
 }
 
 void sched_yield(regs_t *r) {
@@ -354,6 +330,7 @@ void sched_yield(regs_t *r) {
 void sched_ticker(regs_t *r) {
   // trace(0, -1);
   idt_disable_hwinterrupts();
-  current_task->running++;
+  current_task->running_time++;
+  current_task->running_time_sched = 0;
   sched_yield(r);
 }

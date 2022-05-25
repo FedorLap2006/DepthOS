@@ -137,9 +137,9 @@ test: $(OUTBIN) $(INITRD_FILE)
 	@# -d int,pcall,cpu,fpu -D qemu_log.log # -S -s # -nographic
 
 
-apps: initrd/autoload.bin initrd/autoload2.bin
-initrd/autoload.bin: apps/helloworld.S
-	$(CC) $(CEMU) -std=c$(CSTD) -o initrd/autoload.bin apps/helloworld.S  -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pic
+apps: initrd/init.bin initrd/autoload2.bin
+initrd/init.bin: apps/init.c
+	$(CC) $(CEMU) -std=c$(CSTD) -o initrd/init.bin apps/init.c -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pic
 
 initrd/autoload2.bin: apps/helloworld2.S
 	$(CC) $(CEMU) -std=c$(CSTD) -o initrd/autoload2.bin apps/helloworld2.S  -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pic

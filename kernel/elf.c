@@ -1,5 +1,5 @@
-#include <depthos/bitmap.h>
 #include <depthos/elf.h>
+#include <depthos/bitmap.h>
 #include <depthos/fs.h>
 #include <depthos/heap.h>
 #include <depthos/kernel.h>
@@ -24,9 +24,7 @@ bool elf_probe(const char *path) {
   return magic[0] == 0x7f && strcmp(magic + 1, "ELF") == 0;
 }
 
-void elf_load(struct task *tsk, const char *path) {
-  struct fs_node *file = vfs_open(path);
-
+void elf_loadf(struct task *tsk, struct fs_node *file) {
   char magic[5];
   vfs_seek(file, 0);
   int b = vfs_read(file, magic, 4);
@@ -53,7 +51,7 @@ void elf_load(struct task *tsk, const char *path) {
         "pheader={0x%x,size=%d,count=%d} "
         "sheader={0x%x,size=%d,actual=%d,count=%d} "
         "stridx=%d",
-        path, elf, header.ident.magic[0], header.ident.x64,
+        file->path, elf, header.ident.magic[0], header.ident.x64,
         header.ident.big_endian, header.ident.version, header.type,
         header.machine, header.version, header.entry, header.pheader_offset,
         header.phentry_size, header.pheader_num, header.sheader_offset,
@@ -201,7 +199,7 @@ void elf_load(struct task *tsk, const char *path) {
 
 finish:
   tsk->binfo.entry = header.entry;
-  tsk->name = path;
+  tsk->name = strdup(file->path);
   vfs_close(file);
   kfree(segments, header.phentry_size * header.pheader_num);
 
@@ -213,6 +211,11 @@ finish:
   //       sections[header.shstrndx].offset,
   //       sections[header.shstrndx].size,
   //       sections[header.shstrndx].addralign);
+}
+
+void elf_load(struct task *tsk, const char *path) {
+  struct fs_node *file = vfs_open(path);
+	elf_loadf(tsk, file);
 }
 
 void elf_exec(struct task *tsk) {

@@ -1,0 +1,7 @@
+SC(0, 0)
+SC(sys_exit, 1)
+SC(sys_write, 2)
+SC(sys_fork, 3)
+SC(sys_execve, 4)
+SC(sys_thcreate, 5)
+SC(sys_thkill, 6)
