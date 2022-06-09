@@ -10,6 +10,7 @@
 //#include <depthos/stdio.h>
 #include <depthos/assert.h>
 #include <depthos/bitmap.h>
+#include <depthos/dev.h>
 #include <depthos/elf.h>
 #include <depthos/fs.h>
 #include <depthos/initrd.h>
@@ -139,12 +140,32 @@ void init_userspace() {
   __asm__ volatile("int $0x80" ::"a"(1));
 }
 
-void kmain(int magic, struct multiboot_information *boot_ptr) {
-  console_init(25, 80, 0, BGRAY_COLOR);
-  multiboot_init_early(magic, boot_ptr);
+void device_init() {
+	devfs_register("txtfb", &console_device);
+}
 
-  print_status("GDT initialized", MOD_OK);
+#if 0
+void device_test() {
+  idt_enable_hwinterrupts();
+  struct fs_node *console = vfs_open("/dev/console");
+  vfs_write(console, "blobber stop please", strlen("blobber stop please"));
+  char buf[10];
+  struct fs_node *tty = vfs_open("/dev/tty");
+
+  while (true) {
+    vfs_read(tty, buf, 1);
+    printk("%c", *buf);
+  }
+  vfs_close(console);
+  vfs_close(tty);
+}
+#endif
+
+void kmain(int magic, struct multiboot_information *boot_ptr) {
+  multiboot_init_early(magic, boot_ptr);
   paging_init();
+  console_init(25, 80, 0, BGRAY_COLOR);
+  print_status("GDT initialized", MOD_OK);
   idt_init();
   init_timer(1000);
   pmm_init(3 * 1024 * 4096 + 2 * 1024 * 4096);
@@ -153,9 +174,12 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
   multiboot_init(boot_ptr);
   vfs_init();
   ksymbols_load("/kernel.map");
+  device_init();
+  keyboard_driver_init();
+  tty_init();
+  // device_test();
   idt_register_interrupt(0x64, syscall_handler);
   idt_register_interrupt(0x80, posix_syscall_handler);
-  keyboard_driver_init();
   tss_init();
   uint32_t esp;
   __asm__ volatile("movl %%esp, %0" : "=r"(esp));
@@ -180,7 +204,11 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
   bootstrap_user_task(user_task, true);
   sched_add(user_task);
         */
-  process_spawn("/init.bin", NULL);
+  // process_spawn("/autoload2-t.bin", NULL);
+  struct process *init_proc = process_spawn("/init.bin", NULL);
+	struct fs_node *tty_file = vfs_open("/dev/tty0");
+  list_item(init_proc->threads->first, struct task *)->filetable[0] = tty_file;
+  list_item(init_proc->threads->first, struct task *)->filetable[1] = tty_file;
 
 #ifdef CONFIG_TESTS_ENABLED
   tests_init();

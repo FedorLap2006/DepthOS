@@ -31,14 +31,9 @@ endif
 QEMU_ARGS += -append "$(QEMU_APPEND)"
 
 
-ifeq ($(BUILDOS),win)
-	CC=$(BINCPATH)/i686-elf-gcc
-	LD=$(BINCPATH)/i686-elf-ld
-else
-	CC=$(BINCPATH)/gcc
-	LD=$(BINCPATH)/ld
-endif
-ASM=nasm -f elf32
+CC?=$(BINCPATH)/gcc
+LD?=$(BINCPATH)/ld
+ASM?=nasm -f elf32
 export CC
 export LD
 export ASM
@@ -54,12 +49,10 @@ endif
 LDFILE=link.ld
 OUTBIN=$(OSNAME)-$(OSVER)
 
-KCONFIG_LOG_ENABLE?=1
-KCONFIG_DEF=-DOSVER=\"$(OSVER)\" 
-ifeq ($(KCONFIG_LOG_ENABLE),$(call on_check,$(KCONFIG_LOG_ENABLE)))
-	KCONFIG_DEF+=-DKLOG_ENABLED=1
+BUILDDEFS=-DOSVER=\"$(OSVER)\"
+ifeq ($(DEBUG), $(call on_check,$(DEBUG)))
+	BUILDDEFS += -DDEBUG
 endif
-
 APPS=init
 APPS_ROOTPATH=..
 APPS_BUILDDIR=apps-build

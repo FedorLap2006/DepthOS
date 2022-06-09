@@ -62,7 +62,13 @@ void dump_task(struct task *t) {
     printk("\t%s\n", buffer);                                                  \
   }
 
-  printk("%s:\n", t->name);
+  if (t->process)
+    printk("thread %s [%d]: ", t->process->filepath, t->thid);
+
+  if (t->name)
+    printk("%s: ", t->name);
+  printk("\n");
+
   if (t->binfo.entry)
     PRINT(entry, "0x%x", t->binfo.entry);
   PRINT(stack, "0x%x-0x%x", t->kernel_stack, t->kernel_esp);
@@ -240,6 +246,11 @@ void bootstrap_user_task(struct task *task, bool do_stack, void *stack) {
   task->stack = kstack;
 }
 
+void setup_task_filetable(struct fs_node *ft) {
+
+  memset(ft, 0, sizeof(struct fs_node *) * TASK_FILETABLE_MAX);
+}
+
 struct task *create_task(void *entry, pagedir_t pgd, bool do_stack,
                          void *stack) {
   struct task *task = create_dummy_task();
@@ -256,6 +267,9 @@ struct task *create_task_fork(struct task *parent) {
   task->parent = parent;
   task->name = strdup(parent->name);
   task->pgd = clone_pgd(parent->pgd);
+  task->filetable = kmalloc(sizeof(struct fs_node *) * TASK_FILETABLE_MAX);
+  memcpy(task->filetable, parent->filetable,
+         sizeof(struct fs_node *) * TASK_FILETABLE_MAX);
   _task_init(task);
   memcpy(task->kernel_stack, parent->kernel_stack, 0x1000);
   task->regs =
@@ -303,6 +317,10 @@ struct task *create_kernel_task(void *entry, bool do_stack) {
   task->regs = (struct registers *)stack;
   task->stack = stack;
   task->binfo.entry = entry;
+
+  task->filetable = kmalloc(sizeof(struct fs_node *) * TASK_FILETABLE_MAX);
+  setup_task_filetable(task->filetable);
+
   return task;
 }
 

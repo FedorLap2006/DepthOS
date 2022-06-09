@@ -65,4 +65,4 @@ fs_ops_t initrdfs = (fs_ops_t){
     .mount = NULL,
 };
 
-void initrdfs_init() { vfs_register_fs(&initrdfs); }
+void initrdfs_init() { vfs_register(&initrdfs); }

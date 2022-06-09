@@ -11,25 +11,27 @@ static struct mount *root_mount = NULL;
 static struct mount vfs_mounts[MAX_VFS_MOUNTS];
 #define MAX_VFS_FILESYSTEMS 10
 static int vfs_filesystems_count = 0;
-static struct filesystem_operations *vfs_filesystems[MAX_VFS_FILESYSTEMS];
+static struct fs_operations *vfs_filesystems[MAX_VFS_FILESYSTEMS];
 
 void vfs_init() {
   initrdfs_init();
+  devfs_init();
 
   vfs_mount("/", vfs_get_filesystem("initrd"), NULL);
+  vfs_mount("/dev", vfs_get_filesystem("devfs"), NULL);
 }
 
-struct filesystem_operations *vfs_get_filesystem(const char *name) {
+struct fs_operations *vfs_get_filesystem(const char *name) {
   for (int i = 0; i < vfs_filesystems_count; i++)
     if (strcmp(name, vfs_filesystems[i]->name) == 0)
       return vfs_filesystems[i];
   return NULL;
 }
-void vfs_register_fs(struct filesystem_operations *fs) {
+void vfs_register(struct fs_operations *fs) {
   vfs_filesystems[vfs_filesystems_count++] = fs;
 }
 
-struct mount *vfs_mount(const char *path, struct filesystem_operations *fs,
+struct mount *vfs_mount(const char *path, struct fs_operations *fs,
                         struct device *dev) {
   assert(fs != NULL);
   struct filesystem *fsi;

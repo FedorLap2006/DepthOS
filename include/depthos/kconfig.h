@@ -7,3 +7,7 @@
 #define CONFIG_TRACE_TASK_INFO
 // #define CONFIG_TESTS_ENABLED
 // #define
+
+#ifdef DEBUG
+#define KLOG_ENABLED 1
+#endif

@@ -1,6 +1,23 @@
+### Build ###
+
 build/
+apps/build/
+apps/apps-build/
 *.o
+
+### Binaries ###
+
+*.bin
 DepthOS-*.*
+
+### Generated files ###
+initrd.img
+kernel.map
+
+
+### IDE ###
+.vscode/
+.kateproject
 
 
 # Created by https://www.gitignore.io/api/vim

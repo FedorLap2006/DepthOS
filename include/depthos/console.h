@@ -11,6 +11,7 @@ extern int strs_count;
 extern int cursorx;
 extern int cursory;
 
+// TODO: console_features bitmap
 extern bool console_no_color;
 #define BLACK_COLOR 0
 #define BLUE_COLOR 1
@@ -58,6 +59,16 @@ void print_status(char *buf, int m);
 void register_console(void (*output)(void *context, const char *data,
                                      size_t sz),
                       void *context);
-
+void putk(char c);
 void printk(const char *fmt, ...);
 void vprintk(const char *fmt, va_list ap);
+
+// Console Device implementation
+
+#define CONSOLE_IOCTL_CLEAR 0x1
+#define CONSOLE_IOCTL_MOVECURSOR 0x2
+struct console_ioctl_movecursor {
+  int dx, dy;
+};
+
+extern struct device console_device;

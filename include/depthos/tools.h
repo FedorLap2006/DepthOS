@@ -3,6 +3,8 @@
 #include <depthos/stdtypes.h>
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(*(a)))
+#define MIN(a, b) ((a) > (b) ? b : a)
+#define MAX(a, b) ((a) > (b) ? a : b)
 
 #define __noreturn __attribute__((noreturn))
 #define __unused __attribute__((unused))

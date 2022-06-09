@@ -4,6 +4,7 @@
 #include <depthos/logging.h>
 #include <depthos/pmm.h>
 #include <depthos/syscall.h>
+#include <depthos/ringbuffer.h>
 
 #define TEST(name)                                                             \
   printk("\n\x1B[96;1m%s: Executing %s\x1B[0m\n", __func__, name);
@@ -299,6 +300,43 @@ void test_list() {
   assert(list->length == 1);
 }
 
+void test_ringbuffer() {
+	struct ringbuffer *rb = ringbuffer_create(10);
+	TEST("ringbuffer_create");
+	assert(rb != NULL);
+	assert(rb->data != NULL);
+	TEST("ringbuffer_init");
+	assert(!rb->write_idx);
+	assert(!rb->read_idx);
+	
+	TEST("ringbuffer_size");
+	assert(ringbuffer_size(rb) == 0);
+	TEST("ringbuffer_empty");
+	assert(ringbuffer_empty(rb));
+
+	TEST("ringbuffer_push");
+	ringbuffer_elem_t *rb_p = ringbuffer_push(rb, 0xC0FFEE);
+	assert(rb_p == &rb->data[0]);
+	assert(*rb_p == 0xC0FFEE);
+	assert(rb->write_idx == 1);
+	assert(rb->read_idx == 0);
+	assert(rb->data[0] == 0xC0FFEE);
+	assert(ringbuffer_size(rb) == 1);
+	
+	TEST("ringbuffer_pop");
+	assert(*ringbuffer_pop(rb) == 0xC0FFEE);
+	assert(rb->read_idx == 1);
+	assert(rb->read_idx == rb->write_idx);
+	assert(ringbuffer_size(rb) == 0);
+
+	TEST("ringbuffer_pop on empty ringbuffer");
+	assert(ringbuffer_pop(rb) == NULL);
+	assert(ringbuffer_size(rb) == 0);
+	assert(rb->read_idx == 1);
+	assert(rb->read_idx == rb->write_idx);
+}
+
+
 void tests_init() {}
 
 void tests_run() {
@@ -308,7 +346,10 @@ void tests_run() {
   // test_pmm();
   // test_kheap();
   test_list();
+	test_ringbuffer();
   // preempt_enable();
   idt_enable_hwinterrupts();
-  sys_exit();
+	current_task->state = TASK_DYING;
+	reschedule();
+  // sys_exit();
 }

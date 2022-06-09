@@ -10,7 +10,11 @@ void kloga(const char *file, int line, const char *loc, char *msg, ...) {
   vsprintf(buffer, msg, args);
   va_end(args);
 #if KLOG_ENABLED == 1
+	if (!console_no_color)
+	  printk("\x1B[34m");
   printk("%s (%s:%d): %s\n", loc, file, line, buffer);
+	if (!console_no_color)
+	  printk("\x1B[0m");
 #endif
 }
 

@@ -1,8 +1,10 @@
 #include <depthos/console.h>
+#include <depthos/dev.h>
+#include <depthos/kernel.h>
 #include <depthos/stdarg.h>
 #include <depthos/vformat.h>
 
-unsigned short *videoMemory = (unsigned short *)0xb8000;
+unsigned short *videoMemory = (unsigned short *)ADDR_TO_VIRT(0xb8000);
 
 int strs_count = 25;
 int strs_len = 80;
@@ -181,6 +183,8 @@ void register_console(void (*output)(void *context, const char *data,
   console_context = context;
 }
 
+void putk(char c) { output_console(console_context, &c, 1); }
+
 void vprintk(const char *fmt, va_list ap) {
   vformat(output_console, console_context, fmt, ap);
 }
@@ -192,3 +196,30 @@ void printk(const char *fmt, ...) {
   vprintk(fmt, ap);
   va_end(ap);
 }
+
+void consoledev_write(struct device *dev, char *buffer, size_t nbytes) {
+  for (int i = 0; i < nbytes; i++)
+    console_putchar(buffer[i]);
+}
+
+long consoledev_ioctl(struct device *dev, long request, void *data) {
+  switch (request) {
+  case CONSOLE_IOCTL_CLEAR:
+    console_clear();
+    break;
+  case CONSOLE_IOCTL_MOVECURSOR: {
+    struct console_ioctl_movecursor *d =
+        (struct console_ioctl_movecursor *)data;
+    console_movec(d->dx, d->dy);
+    break;
+  }
+  }
+}
+
+struct device console_device = (struct device){
+    .name = "console",
+    .pos = 0,
+    .write = consoledev_write,
+    .read = NULL, // TODO: ps/2
+    .ioctl = consoledev_ioctl,
+};

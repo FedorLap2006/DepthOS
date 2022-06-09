@@ -2,40 +2,44 @@
 
 #include <depthos/stdtypes.h>
 
-struct filesystem_operations;
+
+struct fs_operations;
 struct filesystem {
-  struct filesystem_operations *ops;
+  struct fs_operations *ops;
   struct device *dev;
   void *impl;
 };
-typedef struct filesystem_operations {
+typedef struct fs_operations {
   char *name;
   struct fs_node *(*open)(struct filesystem *fs, const char *path);
   struct filesystem *(*mount)(struct device *dev);
+	// void (*unmount)(struct device *dev);
 } fs_ops_t;
 
 struct fs_node;
 typedef struct file_operations {
   int (*read)(struct fs_node *file, char *buffer, size_t nbytes);
   int (*write)(struct fs_node *file, char *buffer, size_t nbytes);
+  long (*ioctl)(struct fs_node *file, unsigned long request, void *data);
+	int (*stat)(struct fs_node *file, struct stat *buf);
   void (*close)(struct fs_node *file);
 } file_ops_t;
 
 typedef struct fs_node {
+  char *name;
+  char *path;
+
 #define FS_FILE 0x0001
 #define FS_DIR 0x0002
 #define FS_MOUNT 0x0003
 #define FS_PIPE 0x0004
-
+#define FS_DEV 0x0005
   uint8_t type;
   uint32_t pos;
   bool eof;
-  struct file_operations *ops;
 
+  struct file_operations *ops;
   void *impl;
-  char *name;
-  char *path;
-  // TODO: struct filesystem* / struct mount* ?
 } fs_node_t;
 
 struct mount {
@@ -51,7 +55,7 @@ struct mount {
  * @param dev Device to mount filesystem on
  * @return Created mount, NULL if the filesystem cannot be mounted on the device
  */
-struct mount *vfs_mount(const char *path, struct filesystem_operations *fs,
+struct mount *vfs_mount(const char *path, struct fs_operations *fs,
                         struct device *dev);
 
 #if 0
@@ -99,13 +103,13 @@ void vfs_close(struct fs_node *file);
  * @param name Name of the filesystem
  * @return Filesystem implementation
  */
-struct filesystem_operations *vfs_get_filesystem(const char *name);
+struct fs_operations *vfs_get_filesystem(const char *name);
 /**
  * @brief Register a filesystem
  *
  * @param fs Filesystem
  * @internal
  */
-void vfs_register_fs(struct filesystem_operations *fs);
+void vfs_register(struct fs_operations *fs);
 
 void vfs_init();

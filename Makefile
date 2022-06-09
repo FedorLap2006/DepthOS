@@ -56,18 +56,18 @@ vpath %.asm .:$(subst $(eval) ,:,$(SOURCEDIRS))
 $(BUILDDIR)/%.o: %.c
 	@echo CC $< $@
 ifeq ($(DEBUG),$(filter $(DEBUG),on true))
-	@$(CC) $(CEMU) -std=c$(CSTD) $(CCFLAGS) -g -c $(KCONFIG_DEF) -o $@ $<
+	@$(CC) $(CEMU) -std=c$(CSTD) $(CCFLAGS) -g -c $(BUILDDEFS) -o $@ $<
 else
-	@$(CC) $(CEMU) -std=c$(CSTD) $(CCFLAGS) -c $(KCONFIG_DEF) -o $@ $<
+	@$(CC) $(CEMU) -std=c$(CSTD) $(CCFLAGS) -c $(BUILDDEFS) -o $@ $<
 endif
 	@$(TARGET_PROGRESS)
 
 $(BUILDDIR)/%.o: %.S
 	@echo CC $< $@
 ifeq ($(DEBUG),$(filter $(DEBUG),on true))
-	@$(CC) $(CEMU) -std=c$(CSTD) $(CCFLAGS) -g -c $(KCONFIG_DEF) -o $@ $<
+	@$(CC) $(CEMU) -std=c$(CSTD) $(CCFLAGS) -g -c $(BUILDDEFS) -o $@ $<
 else
-	@$(CC) $(CEMU) -std=c$(CSTD) $(CCFLAGS) -c $(KCONFIG_DEF) -o $@ $<
+	@$(CC) $(CEMU) -std=c$(CSTD) $(CCFLAGS) -c $(BUILDDEFS) -o $@ $<
 endif
 	@$(TARGET_PROGRESS)
 

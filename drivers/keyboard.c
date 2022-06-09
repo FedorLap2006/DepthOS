@@ -1,5 +1,6 @@
 #include <depthos/idt.h>
 #include <depthos/keyboard.h>
+#include <depthos/logging.h>
 #include <depthos/string.h>
 
 // TODO: release scancodes
@@ -94,11 +95,11 @@ static uint32_t scancode_set_1[] = {
 };
 
 unsigned char keycodes_buf[1024 * 5];
-void (*keyboard_event_handler)(uint32_t keycode);
+keyboard_driver_event_handler_t keyboard_current_event_handler;
 
 static int keycodes_pos = 0;
 
-void keyboard_driver_intr_handler(regs_t r) {
+void keyboard_driver_intr_handler(regs_t *r) {
   uint8_t status;
   uint16_t scancode;
 
@@ -111,7 +112,7 @@ void keyboard_driver_intr_handler(regs_t r) {
     scancode = inb(0x60);
     if (scancode >= ARRAY_SIZE(scancode_set_1))
       return;
-    keyboard_event_handler(scancode_set_1[scancode]);
+    keyboard_current_event_handler(scancode_set_1[scancode]);
     //		keycodes_buf[keycodes_pos++] = keycode;
     //		console_write_dec(keycode);
   }
@@ -150,12 +151,13 @@ int keyboard_driver_readkc() {
     return scancode_set_1[keycodes_buf[keycodes_pos--]];
 }
 
+void keyboard_driver_set_handler(keyboard_driver_event_handler_t handler) {
+  if (!handler)
+    return;
+  keyboard_current_event_handler = handler;
+}
+
 void keyboard_driver_init() {
   idt_register_interrupt(0x20 + 0x1, keyboard_driver_intr_handler);
   keyboard_driver_set_handler(standard_keycode_handler);
-}
-void keyboard_driver_set_handler(void (*handler)(int)) {
-  if (!handler)
-    return;
-  keyboard_event_handler = handler;
 }

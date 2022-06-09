@@ -13,25 +13,25 @@ void *copy_userspace_ptr(void *ptr, size_t size) {
   return kptr;
 }
 
-DECL_SYSCALL2(write, long, count, char *, message) {
-  for (int i = 0; i < count; i++) {
-    printk("%c", *(message + i));
-  }
-  // klogf("lmao");
-  // trace(0, -1);
-  return 2;
-}
+// DECL_SYSCALL2(write, long, count, char *, message) {
+//   for (int i = 0; i < count; i++) {
+//     printk("%c", *(message + i));
+//   }
+//   // klogf("lmao");
+//   // trace(0, -1);
+//   return 2;
+// }
 
 static inline uintptr_t resolve_posix_syscall_no(long no) {
   switch (no) {
   case 0x1:
-    return sys_exit;
+    return (uintptr_t)sys_exit;
   case 0x2:
-    return sys_fork;
+    return (uintptr_t)sys_fork;
   case 0x4:
-    return sys_write;
+    return (uintptr_t)sys_write;
   case 0xB:
-    return sys_execve;
+    return (uintptr_t)sys_execve;
   }
   return NULL;
 }

@@ -30,6 +30,8 @@ struct process {
 
   struct list *children;
   struct list *threads;
+#define TASK_FILETABLE_MAX 256
+  struct fs_node **filetable;
 };
 
 struct exec_binary_info {
@@ -39,6 +41,8 @@ typedef uint32_t thid_t;
 struct task {
   char *name;
   task_state_t state;
+  thid_t thid;
+
   uintptr_t kernel_stack, kernel_esp, stack;
   pagedir_t pgd;
   struct registers *regs;
@@ -46,18 +50,20 @@ struct task {
   uint16_t running_time;
   uint16_t running_time_sched;
 
-  thid_t thid;
   struct exec_binary_info binfo;
   struct task *parent;
   struct process *process;
   struct list_entry *sched_entry;
+  struct fs_node **filetable;
 };
 
 struct process *process_spawn(const char *filepath, struct process *parent);
 void process_kill(struct process *);
 
-struct task *create_task(void *entry, pagedir_t pgd, bool do_stack, void *stack);
+struct task *create_task(void *entry, pagedir_t pgd, bool do_stack,
+                         void *stack);
 void bootstrap_user_task(struct task *task, bool do_stack, void *stack);
+void setup_task_filetable(struct fs_node *ft);
 struct task *create_kernel_task(void *entry, bool do_stack);
 struct task *create_task_fork(struct task *original);
 void reschedule_to(struct task *next);
@@ -72,15 +78,14 @@ void preempt_disable();
 
 extern struct task *current_task;
 
-#define PROC_CLONE_MEM 0x1
+#define SC_CLONE_MEM 0x1
 struct sc_clone_params {
   int flags;
 };
 
 struct sc_thcreate_params {
   int flags;
-	bool join;
-	void *stack;
+  bool join;
+  void *stack;
   void *entry;
 };
-

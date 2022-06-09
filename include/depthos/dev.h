@@ -2,24 +2,19 @@
 
 #include <depthos/stdtypes.h>
 
-struct filesystem;
-
-typedef struct device {
+struct device {
 #define DEV_CHAR 1
 #define DEV_BLOCK 2
   uint8_t type;
-
-#define DEV_IFACE_ATA 1
-#define DEV_IFACE_TTY 2
-  uint8_t iface;
+  char *name;
 
   int (*read)(struct device *dev, void *buffer, size_t count);
   int (*write)(struct device *dev, void *buffer, size_t count);
+  long (*ioctl)(struct device *dev, unsigned long request, void *data);
 
   uint32_t pos;
-
-  char *name;
   void *impl;
+};
 
-  struct filesystem *fs;
-} device_t;
+void devfs_init();
+void devfs_register(const char *name, struct device *);

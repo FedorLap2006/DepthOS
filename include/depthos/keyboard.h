@@ -154,4 +154,6 @@ enum KEYCODE {
   KEY_NUMKEYCODES
 };
 
+typedef (*keyboard_driver_event_handler_t)(uint32_t key);
+void keyboard_driver_set_handler(keyboard_driver_event_handler_t handler);
 void keyboard_driver_init();
