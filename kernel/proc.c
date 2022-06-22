@@ -172,8 +172,6 @@ DECL_SYSCALL0(thjoin) {
 }
 
 DECL_SYSCALL1(execve, const char *, file) {
-  idt_disable_hwinterrupts();
-  // printk("AAAAAAAAAAAAAAAAAAAAA");
   bool v = elf_probe(file);
   if (!v) {
     printk("file: %s\n", file);
@@ -181,6 +179,10 @@ DECL_SYSCALL1(execve, const char *, file) {
   }
   extern struct task *current_task;
   // printk("AAAAAAAAAAAAAAAAA\n");
+  setup_task_filetable(current_task->filetable);
   elf_load(current_task, file);
+  struct fs_node *tty_file = vfs_open("/dev/tty0");
+  current_task->filetable[0] = tty_file;
+  current_task->filetable[1] = tty_file;
   elf_exec(current_task);
 }
