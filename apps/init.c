@@ -37,6 +37,8 @@ int read(int fd, const char *data, long n) {
   return _syscall3(0x8, fd, data, n);
 }
 
+int fork() { return _syscall0(0x3); }
+
 // void print(const char *data) { _syscall2(0x2, strlen(data), (long)data); }
 void print(const char *data) { write(1, data, strlen(data)); }
 
@@ -82,6 +84,7 @@ void putc(int c) { write(1, &c, 1); }
 struct cmd_h {
   char *cmd;
   void (*handler)(int argc, char *argv[128]);
+  int nofork;
 };
 
 void uname(int argc, char *argv[128]) {
@@ -110,16 +113,16 @@ void cat(int argc, char *argv[128]) {
 }
 
 void exit_cmd(int argc, char *argv[128]) {
-	*(unsigned long long*)(0x0) = 0xC0FFEE;
+  *(unsigned long long *)(0x0) = 0xC0FFEE;
 }
 
 void clear(int argc, char *argv[128]) {}
 
-struct cmd_h commands[] = {{"uname", uname},
-                           {
-                               "cat",
-                               cat,
-                           }, {"exit", exit_cmd}};
+struct cmd_h commands[] = {
+    {"uname", uname, 0},
+    {"cat", cat, 0},
+    {"exit", exit_cmd, 1},
+};
 
 void dispatch_command(char cmd[256]) {
   char *argv[128];
@@ -142,7 +145,13 @@ void dispatch_command(char cmd[256]) {
         goto next;
       }
     }
-    commands[i].handler(argc, argv);
+    if (!commands[i].nofork) {
+      if (fork() == 0) {
+        commands[i].handler(argc, argv);
+        exit(0);
+      }
+    } else
+      commands[i].handler(argc, argv);
     return;
   next:;
   }
@@ -190,7 +199,9 @@ void _start() {
   // thid += '0';
   //_syscall2(0x2, 1, &thid);
   // print("]");
-  shell();
+  while (1) {
+    shell();
+  }
   // char buf;
   // for (;;) {
   //   read(0, &buf, 1);

@@ -12,6 +12,17 @@ static struct list free_pid;
 
 void proc_manager_init() { list_init(&free_pid); }
 
+pid_t generate_pid() {
+  pid_t pid;
+  if (free_pid.length) {
+    pid = list_item(free_pid.first, pid_t);
+    list_pop_front(&free_pid);
+  } else
+    pid = current_pid++;
+
+  return pid;
+}
+
 struct task *thread_create(void *entry, void *stack, pagedir_t pgd,
                            struct fs_node **filetable) {
   struct task *thread = create_task(entry, pgd, true, stack);
@@ -30,12 +41,7 @@ struct process *process_spawn(const char *filepath, struct process *parent) {
     return NULL;
 
   struct process *process = kmalloc(sizeof(struct process));
-  if (free_pid.length) {
-    process->pid = list_item(free_pid.first, pid_t);
-    list_pop_front(&free_pid);
-  } else
-    process->pid = current_pid++;
-
+  process->pid = generate_pid();
   process->filepath = strdup(filepath);
   process->state = PROCESS_STARTING;
   process->parent = parent;
@@ -96,29 +102,27 @@ void process_kill(struct process *process) {
     reschedule();
 }
 
-DECL_SYSCALL0(exit) {
-  // extern struct task *current_task;
-  // printk("name: %s\n", current_task->name);
-  // dump_tasks();
-  // extern struct task *current_task;
-  // dump_tasks();
-  // current_task->state = TASK_DYING;
-  process_kill(current_task->process);
-  // current_task->state = TASK_DYING;
-  // reschedule();
-  // dump_tasks();
-  // for (;;)
-  //   __asm__ volatile("int $0x30");
-  // for (;;)
-  //   sys_sched_yield();
-  // __asm__ volatile("hlt");
-  // sys_sched_yield();
-}
+DECL_SYSCALL0(exit) { process_kill(current_task->process); }
 DECL_SYSCALL0(fork) {
   idt_disable_hwinterrupts();
-  struct task *tsk = create_task_fork(current_task);
-  sched_add(tsk);
-  reschedule();
+  struct task *main_thread = create_task_fork(current_task);
+  struct process *process = kmalloc(sizeof(struct process));
+  main_thread->process = process;
+  process->pid = generate_pid();
+  process->filetable = main_thread->filetable;
+  process->threads = list_create();
+  list_push(process->threads, main_thread);
+  process->children = list_create();
+
+  process->filepath = strdup(current_task->process->filepath);
+  process->parent = current_task->process;
+  process->parent_entry = list_push(process->parent->children, process);
+  sched_add(main_thread);
+  pagedir_t pgd = get_current_pgd();
+  activate_pgd(main_thread->pgd);
+  main_thread->regs->eax = 0;
+  activate_pgd(pgd);
+  return process->pid;
 }
 
 DECL_SYSCALL1(thcreate, struct sc_thcreate_params *, params) {
