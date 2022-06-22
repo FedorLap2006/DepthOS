@@ -1,5 +1,5 @@
-#include <depthos/elf.h>
 #include <depthos/bitmap.h>
+#include <depthos/elf.h>
 #include <depthos/fs.h>
 #include <depthos/heap.h>
 #include <depthos/kernel.h>
@@ -101,8 +101,10 @@ void elf_loadf(struct task *tsk, struct fs_node *file) {
 
       // klogf("pgd = %d", sizeof(kernel_pgd));
       // tsk->pgd = kmalloc(sizeof(kernel_pgd));
-      if (tsk->pgd)
+      if (tsk->pgd) {
+        activate_pgd(kernel_pgd);
         kfree(tsk->pgd, 4096);
+      }
       tsk->pgd = create_pgd();
       // memset(tsk->pgd, 0, sizeof(kernel_pgd));
       // memcpy(tsk->pgd, kernel_pgd, sizeof(kernel_pgd));
@@ -111,7 +113,6 @@ void elf_loadf(struct task *tsk, struct fs_node *file) {
           continue;
         // tsk->pgd[pde_index(ROUND_DOWN(sections[j].addr, 0x1000))] =
         // 0;
-
         map_addr(tsk->pgd, sections[j].addr, 1, true);
       }
 
@@ -164,7 +165,6 @@ void elf_loadf(struct task *tsk, struct fs_node *file) {
 #endif
 
       map_addr(tsk->pgd, VIRT_BASE - 4096, 1, true);
-
       unsigned char *buf = kmalloc(segments[i].memsz);
       if (!buf)
         panicf("cannot allocate program buffer");
@@ -215,7 +215,7 @@ finish:
 
 void elf_load(struct task *tsk, const char *path) {
   struct fs_node *file = vfs_open(path);
-	elf_loadf(tsk, file);
+  elf_loadf(tsk, file);
 }
 
 void elf_exec(struct task *tsk) {
