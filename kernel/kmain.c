@@ -140,26 +140,22 @@ void init_userspace() {
   __asm__ volatile("int $0x80" ::"a"(1));
 }
 
-void device_init() {
-	devfs_register("txtfb", &console_device);
-}
+void device_init() { devfs_register("txtfb", &console_device); }
 
-#if 0
-void device_test() {
-  idt_enable_hwinterrupts();
-  struct fs_node *console = vfs_open("/dev/console");
-  vfs_write(console, "blobber stop please", strlen("blobber stop please"));
-  char buf[10];
-  struct fs_node *tty = vfs_open("/dev/tty");
+// void device_test() {
+//   idt_enable_hwinterrupts();
+//   struct fs_node *console = vfs_open("/dev/console");
+//   vfs_write(console, "blobber stop please", strlen("blobber stop please"));
+//   char buf[10];
+//   struct fs_node *tty = vfs_open("/dev/tty");
 
-  while (true) {
-    vfs_read(tty, buf, 1);
-    printk("%c", *buf);
-  }
-  vfs_close(console);
-  vfs_close(tty);
-}
-#endif
+//   while (true) {
+//     vfs_read(tty, buf, 1);
+//     printk("%c", *buf);
+//   }
+//   vfs_close(console);
+//   vfs_close(tty);
+// }
 
 void kmain(int magic, struct multiboot_information *boot_ptr) {
   multiboot_init_early(magic, boot_ptr);
@@ -175,7 +171,7 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
   vfs_init();
   ksymbols_load("/kernel.map");
   device_init();
-  keyboard_driver_init();
+  ps2_keyboard_init();
   tty_init();
   // device_test();
   idt_register_interrupt(0x64, syscall_handler);
@@ -206,7 +202,7 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
         */
   // process_spawn("/autoload2-t.bin", NULL);
   struct process *init_proc = process_spawn("/init.bin", NULL);
-	struct fs_node *tty_file = vfs_open("/dev/tty0");
+  struct fs_node *tty_file = vfs_open("/dev/tty0");
   list_item(init_proc->threads->first, struct task *)->filetable[0] = tty_file;
   list_item(init_proc->threads->first, struct task *)->filetable[1] = tty_file;
 

@@ -18,3 +18,4 @@ struct device {
 
 void devfs_init();
 void devfs_register(const char *name, struct device *);
+void devfs_populate();

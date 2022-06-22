@@ -7,7 +7,6 @@
 #include <depthos/ringbuffer.h>
 #include <depthos/string.h>
 
-
 #define TTY_BUFFER_SIZE 100
 
 int tty_write(struct device *dev, char *buffer, size_t nbytes) {
@@ -36,8 +35,7 @@ int tty_read(struct device *dev, char *buffer, size_t nbytes) {
   return tty_read(dev, buffer, nbytes);
 }
 
-long tty_ioctl(struct device *dev, long request, void *data) {}
-
+int tty_ioctl(struct device *dev, int request, void *data) {}
 
 struct device tty_device = {
     .name = "tty",
@@ -47,37 +45,49 @@ struct device tty_device = {
     .impl = NULL,
 };
 
-// TODO: refactor keyboard handling
-void tty_ps2_handler(uint32_t k) {
-  char *str = NULL;
-  static char str_buf[10];
+static bool shift_keycode(struct keyboard_event event) {
+  if (!(event.modifiers & KEYBOARD_MODIFIER_SHIFT) !=
+      !(event.modifiers & KEYBOARD_MODIFIER_CAPSLOCK)) {
+    const char *str = keycode_to_string(event.keycode);
+    return strlen(str) == 1 && str[0] >= 'a' && str[0] <= 'z';
+  }
+  return false;
+}
 
-  switch (k) {
+// TODO: refactor keyboard handling
+void tty_ps2_handler(struct keyboard_event event) {
+  char *str = NULL;
+
+  if (!event.pressed)
+    return;
+  switch (event.keycode) {
   case KEY_KP_8:
     str = "[[^";
     break;
   default:
-    str_buf[0] = (char)k;
-    str_buf[1] = 0;
-    str = str_buf;
+    str = keycode_to_string(event.keycode);
+    if (shift_keycode(event)) {
+      str = strdup(str);
+      str[0] -= 32;
+    }
   }
 
-  while (*str) {
+  while (*str)
     ringbuffer_push(&tty_buffer, (ringbuffer_elem_t)*str++);
-  }
-}
 
+  if (shift_keycode(event))
+    kfree(str, strlen(str));
+}
 
 void tty_init() {
   ringbuffer_init(&tty_buffer, true);
-  keyboard_driver_set_handler(tty_ps2_handler);
+  keyboard_set_handler(tty_ps2_handler);
   // TODO: vcs device and multiple ttys
   devfs_register("console", &tty_device);
-  devfs_register("tty", &tty_device); // Current process TTY
+  devfs_register("tty", &tty_device);  // Current process TTY
   devfs_register("tty0", &tty_device); // Currently opened TTY
   devfs_register("tty1", &tty_device); // First TTY and default TTY
 }
-
 
 #if 0
 
@@ -108,7 +118,6 @@ void tty_init() {
 	}
 }
 */
-
 
 #define MAX_TTY
 struct fs_node tty_files[MAX_TTY];

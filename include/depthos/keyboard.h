@@ -1,159 +1,210 @@
 #pragma once
 
-enum KEYCODE {
+typedef enum KEYCODE {
 
-  // Alphanumeric keys ////////////////
+// Alphanumeric keys ////////////////
 
-  KEY_SPACE = ' ',
-  KEY_0 = '0',
-  KEY_1 = '1',
-  KEY_2 = '2',
-  KEY_3 = '3',
-  KEY_4 = '4',
-  KEY_5 = '5',
-  KEY_6 = '6',
-  KEY_7 = '7',
-  KEY_8 = '8',
-  KEY_9 = '9',
+#define KEYCODES                                                               \
+  _DEFINE_KEYCODE(UNKNOWN, "Unknown")                                          \
+  _DEFINE_KEYCODE(SPACE, " ")                                                  \
+  _DEFINE_KEYCODE(0, "0")                                                      \
+  _DEFINE_KEYCODE(1, "1")                                                      \
+  _DEFINE_KEYCODE(2, "2")                                                      \
+  _DEFINE_KEYCODE(3, "3")                                                      \
+  _DEFINE_KEYCODE(4, "4")                                                      \
+  _DEFINE_KEYCODE(5, "5")                                                      \
+  _DEFINE_KEYCODE(6, "6")                                                      \
+  _DEFINE_KEYCODE(7, "7")                                                      \
+  _DEFINE_KEYCODE(8, "8")                                                      \
+  _DEFINE_KEYCODE(9, "9")                                                      \
+  _DEFINE_KEYCODE(A, "a")                                                      \
+  _DEFINE_KEYCODE(B, "b")                                                      \
+  _DEFINE_KEYCODE(C, "c")                                                      \
+  _DEFINE_KEYCODE(D, "d")                                                      \
+  _DEFINE_KEYCODE(E, "e")                                                      \
+  _DEFINE_KEYCODE(F, "f")                                                      \
+  _DEFINE_KEYCODE(G, "g")                                                      \
+  _DEFINE_KEYCODE(H, "h")                                                      \
+  _DEFINE_KEYCODE(I, "i")                                                      \
+  _DEFINE_KEYCODE(J, "j")                                                      \
+  _DEFINE_KEYCODE(K, "k")                                                      \
+  _DEFINE_KEYCODE(L, "l")                                                      \
+  _DEFINE_KEYCODE(M, "m")                                                      \
+  _DEFINE_KEYCODE(N, "n")                                                      \
+  _DEFINE_KEYCODE(O, "o")                                                      \
+  _DEFINE_KEYCODE(P, "p")                                                      \
+  _DEFINE_KEYCODE(Q, "q")                                                      \
+  _DEFINE_KEYCODE(R, "r")                                                      \
+  _DEFINE_KEYCODE(S, "s")                                                      \
+  _DEFINE_KEYCODE(T, "t")                                                      \
+  _DEFINE_KEYCODE(U, "u")                                                      \
+  _DEFINE_KEYCODE(V, "v")                                                      \
+  _DEFINE_KEYCODE(W, "w")                                                      \
+  _DEFINE_KEYCODE(X, "x")                                                      \
+  _DEFINE_KEYCODE(Y, "y")                                                      \
+  _DEFINE_KEYCODE(Z, "z")                                                      \
+                                                                               \
+  _DEFINE_KEYCODE(DOT, ".")                                                    \
+  _DEFINE_KEYCODE(COMMA, ",")                                                  \
+  _DEFINE_KEYCODE(COLON, ":")                                                  \
+  _DEFINE_KEYCODE(SEMICOLON, ";")                                              \
+  _DEFINE_KEYCODE(SLASH, "/")                                                  \
+  _DEFINE_KEYCODE(BACKSLASH, "\\")                                             \
+  _DEFINE_KEYCODE(PLUS, "+")                                                   \
+  _DEFINE_KEYCODE(MINUS, "-")                                                  \
+  _DEFINE_KEYCODE(ASTERISK, "*")                                               \
+  _DEFINE_KEYCODE(EXCLAMATION, "!")                                            \
+  _DEFINE_KEYCODE(QUESTION, "?")                                               \
+  _DEFINE_KEYCODE(QUOTEDOUBLE, "\"")                                           \
+  _DEFINE_KEYCODE(QUOTE, "'")                                                  \
+  _DEFINE_KEYCODE(EQUAL, "=")                                                  \
+  _DEFINE_KEYCODE(HASH, "#")                                                   \
+  _DEFINE_KEYCODE(PERCENT, "%")                                                \
+  _DEFINE_KEYCODE(AMPERSAND, "&")                                              \
+  _DEFINE_KEYCODE(UNDERSCORE, "_")                                             \
+  _DEFINE_KEYCODE(LEFTPARENTHESIS, "(")                                        \
+  _DEFINE_KEYCODE(RIGHTPARENTHESIS, ")")                                       \
+  _DEFINE_KEYCODE(LEFTBRACKET, "[")                                            \
+  _DEFINE_KEYCODE(RIGHTBRACKET, "]")                                           \
+  _DEFINE_KEYCODE(LEFTCURL, "{")                                               \
+  _DEFINE_KEYCODE(RIGHTCURL, "}")                                              \
+  _DEFINE_KEYCODE(DOLLAR, "$")                                                 \
+  _DEFINE_KEYCODE(POUND, "$")                                                  \
+  _DEFINE_KEYCODE(EURO, "$")                                                   \
+  _DEFINE_KEYCODE(LESS, "<")                                                   \
+  _DEFINE_KEYCODE(GREATER, ">")                                                \
+  _DEFINE_KEYCODE(BAR, "|")                                                    \
+  _DEFINE_KEYCODE(GRAVE, "`")                                                  \
+  _DEFINE_KEYCODE(TILDE, "~")                                                  \
+  _DEFINE_KEYCODE(AT, "@")                                                     \
+  _DEFINE_KEYCODE(CARRET, "^")                                                 \
+                                                                               \
+  _DEFINE_KEYCODE(RETURN, "\n")                                                \
+  _DEFINE_KEYCODE(ESCAPE, "Escape")                                            \
+  _DEFINE_KEYCODE(BACKSPACE, "\b")                                             \
+                                                                               \
+  /* ////////////////// Arrow keys //////////////////  */                      \
+                                                                               \
+  _DEFINE_KEYCODE(UP, "Up")                                                    \
+  _DEFINE_KEYCODE(DOWN, "Down")                                                \
+  _DEFINE_KEYCODE(LEFT, "Left")                                                \
+  _DEFINE_KEYCODE(RIGHT, "Right")                                              \
+                                                                               \
+  /* //////////////////  Function keys //////////////////  */                  \
+                                                                               \
+  _DEFINE_KEYCODE(F1, "F1")                                                    \
+  _DEFINE_KEYCODE(F2, "F2")                                                    \
+  _DEFINE_KEYCODE(F3, "F3")                                                    \
+  _DEFINE_KEYCODE(F4, "F4")                                                    \
+  _DEFINE_KEYCODE(F5, "F5")                                                    \
+  _DEFINE_KEYCODE(F6, "F6")                                                    \
+  _DEFINE_KEYCODE(F7, "F7")                                                    \
+  _DEFINE_KEYCODE(F8, "F8")                                                    \
+  _DEFINE_KEYCODE(F9, "F9")                                                    \
+  _DEFINE_KEYCODE(F10, "F10")                                                  \
+  _DEFINE_KEYCODE(F11, "F11")                                                  \
+  _DEFINE_KEYCODE(F12, "F12")                                                  \
+  _DEFINE_KEYCODE(F13, "F13")                                                  \
+  _DEFINE_KEYCODE(F14, "F14")                                                  \
+  _DEFINE_KEYCODE(F15, "F15")                                                  \
+                                                                               \
+  /* //////////////////  Numpad //////////////////  */                         \
+                                                                               \
+  _DEFINE_KEYCODE(KP_0, "Numpad0")                                             \
+  _DEFINE_KEYCODE(KP_1, "Numpad1")                                             \
+  _DEFINE_KEYCODE(KP_2, "Numpad2")                                             \
+  _DEFINE_KEYCODE(KP_3, "Numpad3")                                             \
+  _DEFINE_KEYCODE(KP_4, "Numpad4")                                             \
+  _DEFINE_KEYCODE(KP_5, "Numpad5")                                             \
+  _DEFINE_KEYCODE(KP_6, "Numpad6")                                             \
+  _DEFINE_KEYCODE(KP_7, "Numpad7")                                             \
+  _DEFINE_KEYCODE(KP_8, "Numpad8")                                             \
+  _DEFINE_KEYCODE(KP_9, "Numpad9")                                             \
+  _DEFINE_KEYCODE(KP_PLUS, "Numpad +")                                         \
+  _DEFINE_KEYCODE(KP_MINUS, "Numpad -")                                        \
+  _DEFINE_KEYCODE(KP_DECIMAL, "Numpad .")                                      \
+  _DEFINE_KEYCODE(KP_DIVIDE, "Numpad /")                                       \
+  _DEFINE_KEYCODE(KP_ASTERISK, "Numpad *")                                     \
+  _DEFINE_KEYCODE(KP_NUMLOCK, "NumLock")                                       \
+  _DEFINE_KEYCODE(KP_ENTER, "Enter")                                           \
+                                                                               \
+  _DEFINE_KEYCODE(TAB, "\t")                                                   \
+  _DEFINE_KEYCODE(CAPSLOCK, "CapsLock")                                        \
+                                                                               \
+  /* //////////////////  Modification keys //////////////////  */              \
+                                                                               \
+  _DEFINE_KEYCODE(LSHIFT, "Shift")                                             \
+  _DEFINE_KEYCODE(LCTRL, "Ctrl")                                               \
+  _DEFINE_KEYCODE(LALT, "Alt")                                                 \
+  _DEFINE_KEYCODE(LSYS, "System")                                              \
+  _DEFINE_KEYCODE(RSHIFT, "RShift")                                            \
+  _DEFINE_KEYCODE(RCTRL, "RCtrl")                                              \
+  _DEFINE_KEYCODE(RALT, "RAlt")                                                \
+  _DEFINE_KEYCODE(RSYS, "RSystem")                                             \
+                                                                               \
+  _DEFINE_KEYCODE(INSERT, "Insert")                                            \
+  _DEFINE_KEYCODE(DELETE, "Delete")                                            \
+  _DEFINE_KEYCODE(HOME, "Home")                                                \
+  _DEFINE_KEYCODE(END, "End")                                                  \
+  _DEFINE_KEYCODE(PAGEUP, "PageUp")                                            \
+  _DEFINE_KEYCODE(PAGEDOWN, "PageDown")                                        \
+  _DEFINE_KEYCODE(SCROLLLOCK, "ScrollLock")                                    \
+  _DEFINE_KEYCODE(PAUSE, "Pause")                                              \
+  // _DEFINE_KEYCODE(KEY_NUMKEYCODES, "Not sure"
 
-  KEY_A = 'a',
-  KEY_B = 'b',
-  KEY_C = 'c',
-  KEY_D = 'd',
-  KEY_E = 'e',
-  KEY_F = 'f',
-  KEY_G = 'g',
-  KEY_H = 'h',
-  KEY_I = 'i',
-  KEY_J = 'j',
-  KEY_K = 'k',
-  KEY_L = 'l',
-  KEY_M = 'm',
-  KEY_N = 'n',
-  KEY_O = 'o',
-  KEY_P = 'p',
-  KEY_Q = 'q',
-  KEY_R = 'r',
-  KEY_S = 's',
-  KEY_T = 't',
-  KEY_U = 'u',
-  KEY_V = 'v',
-  KEY_W = 'w',
-  KEY_X = 'x',
-  KEY_Y = 'y',
-  KEY_Z = 'z',
+#define _DEFINE_KEYCODE(name, repr) KEY_##name,
+  KEYCODES
+#undef _DEFINE_KEYCODE
+} keycode_t;
 
-  KEY_RETURN = '\n',
-  KEY_ESCAPE = 0x1b,
-  KEY_BACKSPACE = 0x7f,
+#define PS2_KEYBOARD_CMD_PORT 0x64
+#define PS2_KEYBOARD_STATUS_PORT 0x64
+#define PS2_KEYBOARD_DATA_PORT 0x60
 
-  // Arrow keys ////////////////////////
+#define KEYBOARD_MODIFIER_CTRL 0x1
+#define KEYBOARD_MODIFIER_ALT 0x2
+#define KEYBOARD_MODIFIER_SHIFT 0x4
+#define KEYBOARD_MODIFIER_CAPSLOCK 0x8
 
-  KEY_UP = 0x1100,
-  KEY_DOWN = 0x1101,
-  KEY_LEFT = 0x1102,
-  KEY_RIGHT = 0x1103,
+/**
+ * @brief Keyboard event modifier bitmap
+ */
+typedef uint8_t keyboard_event_modifiers_t;
 
-  // Function keys /////////////////////
-
-  KEY_F1 = 0x1201,
-  KEY_F2 = 0x1202,
-  KEY_F3 = 0x1203,
-  KEY_F4 = 0x1204,
-  KEY_F5 = 0x1205,
-  KEY_F6 = 0x1206,
-  KEY_F7 = 0x1207,
-  KEY_F8 = 0x1208,
-  KEY_F9 = 0x1209,
-  KEY_F10 = 0x120a,
-  KEY_F11 = 0x120b,
-  KEY_F12 = 0x120b,
-  KEY_F13 = 0x120c,
-  KEY_F14 = 0x120d,
-  KEY_F15 = 0x120e,
-
-  KEY_DOT = '.',
-  KEY_COMMA = ',',
-  KEY_COLON = ':',
-  KEY_SEMICOLON = ';',
-  KEY_SLASH = '/',
-  KEY_BACKSLASH = '\\',
-  KEY_PLUS = '+',
-  KEY_MINUS = '-',
-  KEY_ASTERISK = '*',
-  KEY_EXCLAMATION = '!',
-  KEY_QUESTION = '?',
-  KEY_QUOTEDOUBLE = '\"',
-  KEY_QUOTE = '\'',
-  KEY_EQUAL = '=',
-  KEY_HASH = '#',
-  KEY_PERCENT = '%',
-  KEY_AMPERSAND = '&',
-  KEY_UNDERSCORE = '_',
-  KEY_LEFTPARENTHESIS = '(',
-  KEY_RIGHTPARENTHESIS = ')',
-  KEY_LEFTBRACKET = '[',
-  KEY_RIGHTBRACKET = ']',
-  KEY_LEFTCURL = '{',
-  KEY_RIGHTCURL = '}',
-  KEY_DOLLAR = '$',
-  KEY_POUND = '$',
-  KEY_EURO = '$',
-  KEY_LESS = '<',
-  KEY_GREATER = '>',
-  KEY_BAR = '|',
-  KEY_GRAVE = '`',
-  KEY_TILDE = '~',
-  KEY_AT = '@',
-  KEY_CARRET = '^',
-
-  // Numeric keypad //////////////////////
-
-  KEY_KP_0 = '0',
-  KEY_KP_1 = '1',
-  KEY_KP_2 = '2',
-  KEY_KP_3 = '3',
-  KEY_KP_4 = '4',
-  KEY_KP_5 = '5',
-  KEY_KP_6 = '6',
-  KEY_KP_7 = '7',
-  KEY_KP_8 = '8',
-  KEY_KP_9 = '9',
-  KEY_KP_PLUS = '+',
-  KEY_KP_MINUS = '-',
-  KEY_KP_DECIMAL = '.',
-  KEY_KP_DIVIDE = '/',
-  KEY_KP_ASTERISK = '*',
-  KEY_KP_NUMLOCK = 0x300f,
-  KEY_KP_ENTER = 0x3010,
-
-  KEY_TAB = 0x4000,
-  KEY_CAPSLOCK = 0x4001,
-
-  // Modify keys ////////////////////////////
-
-  KEY_LSHIFT = 0x4002,
-  KEY_LCTRL = 0x4003,
-  KEY_LALT = 0x4004,
-  KEY_LWIN = 0x4005,
-  KEY_RSHIFT = 0x4006,
-  KEY_RCTRL = 0x4007,
-  KEY_RALT = 0x4008,
-  KEY_RWIN = 0x4009,
-
-  KEY_INSERT = 0x400a,
-  KEY_DELETE = 0x400b,
-  KEY_HOME = 0x400c,
-  KEY_END = 0x400d,
-  KEY_PAGEUP = 0x400e,
-  KEY_PAGEDOWN = 0x400f,
-  KEY_SCROLLLOCK = 0x4010,
-  KEY_PAUSE = 0x4011,
-
-  KEY_UNKNOWN,
-  KEY_NUMKEYCODES
+/**
+ * @brief Keyboard event representation
+ */
+struct keyboard_event {
+  keycode_t keycode;
+  bool pressed;
+  keyboard_event_modifiers_t modifiers;
 };
+typedef (*keyboard_event_handler_t)(struct keyboard_event);
 
-typedef (*keyboard_driver_event_handler_t)(uint32_t key);
-void keyboard_driver_set_handler(keyboard_driver_event_handler_t handler);
-void keyboard_driver_init();
+/**
+ * @brief Convert a keycode to a string representation.
+ *
+ * @param keycode Keycode to convert.
+ * @return const char* String representation of the keycode.
+ */
+const char *keycode_to_string(keycode_t keycode);
+
+/**
+ * @brief Construct keycode from a codepoint
+ *
+ * @param codepoint Codepoint to construct the keycode from.
+ * @return keycode_t Constructed keycode.
+ */
+keycode_t keycode_from_codepoint(uint32_t codepoint);
+
+/**
+ * @brief Set current keyboard event handler
+ *
+ * @param handler Handler to set
+ */
+void keyboard_set_handler(keyboard_event_handler_t handler);
+
+/**
+ * @brief Initialize keyboard
+ */
+void ps2_keyboard_init();

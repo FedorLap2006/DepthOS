@@ -118,8 +118,8 @@ out:
   shell_playback_buffer_idx = 0;
 }
 
-extern void standard_keycode_handler(int keycode);
-void shell_keyhandler(int keycode) {
+void shell_keyhandler(struct keyboard_event e) {
+  int keycode = e.keycode;
   if (shell_executing) {
     shell_playback_buffer[shell_playback_buffer_idx++] = keycode;
     standard_keycode_handler(keycode);
@@ -153,6 +153,6 @@ void shell_keyhandler(int keycode) {
 }
 
 void shell_eventloop() {
-  keyboard_driver_set_handler(shell_keyhandler);
+  keyboard_set_handler(shell_keyhandler);
   command_prompt();
 }

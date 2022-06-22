@@ -202,7 +202,7 @@ void consoledev_write(struct device *dev, char *buffer, size_t nbytes) {
     console_putchar(buffer[i]);
 }
 
-long consoledev_ioctl(struct device *dev, long request, void *data) {
+int consoledev_ioctl(struct device *dev, int request, void *data) {
   switch (request) {
   case CONSOLE_IOCTL_CLEAR:
     console_clear();
