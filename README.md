@@ -1,23 +1,45 @@
 # DepthOS
-
-### stable, protected and very simple in usable OS, which don't restrict you
-
 [![Build Status](https://travis-ci.org/FedorLap2006/DepthOS.svg?branch=master)](https://travis-ci.org/FedorLap2006/DepthOS)
 [![Join the chat at https://gitter.im/depthos-dev/community](https://badges.gitter.im/depthos-dev/community.svg)](https://gitter.im/depthos-dev/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 
-___compile___
+
+Stable, flexible and very simple in use Operating System, which doesn't restrict you
+
+## Dependencies
+DepthOS requires GNU Make, GCC and NASM to build. And QEMU to run.
+
+## Build
+Custom toolchain can be configured through environment variables:
+- `BINCPATH` - Root directory of GCC and GNU binutils (defaults to `/bin`)
+- `CC` - Custom C compiler (defaults to `$BINCPATH/gcc`)
+- `LD` - Custom linker (defaults to `$BINCPATH/ld`)
+
+### Kernel
+To just build the kernel, run `make build`. If you also want to test it, run just `make` instead.
+
+### Applications
+All applications can be build using `make apps`.
+
+However, each application has it's build system, and might require additional configuration. See application's README for more details
+
+If you weren't using `make apps`, you would need to manually install applications into `initrd/` folder (currently DepthOS supports only the initrd filesystem) and then rebuild the image file with `make initrd`.
+
+To install the applications manually, you can go into `apps/` directory and execute `make install` there. If you only want to install a particular application, see the it's README for details.
+## Running
+
+To run DepthOS you can use QEMU's `kernel` and `initrd` flags:
 ```
-make build
+qemu-system-i686 -kernel DepthOS-1.0 -initrd initrd.img
 ```
-___dependencies___
+### ISO
+To build an ISO you would first need to install all the binaries into `iso/` folder, that can be done by executing `make iso`.
 
-_runtime_ - grub
-
-_build on linux/mac_ - gnu binutils, gcc/g++, nasm, make 
-
-_build on windows_ - __CROSS*__ gnu binutils, __CROSS*__ gcc/g++, nasm, make 
-
-___
-\* if you don't know what this, read this - https://wiki.osdev.org/GCC_Cross-Compiler
-
+After that you can use `grub-mkrescue` to build the ISO itself:
+```
+grub-mkrescue -o DepthOS.iso iso/
+```
+And run it with QEMU or any other emulator:
+```
+qemu-system-i686 DepthOS.iso
+```
