@@ -36,6 +36,7 @@ int write(int fd, const char *data, long n) {
 int read(int fd, const char *data, long n) {
   return _syscall3(0x8, fd, data, n);
 }
+void execve(const char *filename) { _syscall1(0x4, filename); }
 
 int fork() { return _syscall0(0x3); }
 
@@ -118,10 +119,13 @@ void exit_cmd(int argc, char *argv[128]) {
 
 void clear(int argc, char *argv[128]) {}
 
+void dash(int argc, char *argv[128]) { execve("/init.bin"); }
+
 struct cmd_h commands[] = {
     {"uname", uname, 0},
     {"cat", cat, 0},
     {"exit", exit_cmd, 1},
+    {"dash", dash, 0},
 };
 
 void dispatch_command(char cmd[256]) {
