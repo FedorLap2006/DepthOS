@@ -2,7 +2,6 @@
 
 #include <depthos/stdtypes.h>
 
-
 struct fs_operations;
 struct filesystem {
   struct fs_operations *ops;
@@ -13,15 +12,17 @@ typedef struct fs_operations {
   char *name;
   struct fs_node *(*open)(struct filesystem *fs, const char *path);
   struct filesystem *(*mount)(struct device *dev);
-	// void (*unmount)(struct device *dev);
+  // void (*unmount)(struct device *dev);
 } fs_ops_t;
 
 struct fs_node;
+struct stat;
+
 typedef struct file_operations {
   int (*read)(struct fs_node *file, char *buffer, size_t nbytes);
   int (*write)(struct fs_node *file, char *buffer, size_t nbytes);
-  long (*ioctl)(struct fs_node *file, unsigned long request, void *data);
-	int (*stat)(struct fs_node *file, struct stat *buf);
+  int (*ioctl)(struct fs_node *file, int request, void *data);
+  int (*stat)(struct fs_node *file, struct stat *buf);
   void (*close)(struct fs_node *file);
 } file_ops_t;
 
@@ -41,6 +42,8 @@ typedef struct fs_node {
   struct file_operations *ops;
   void *impl;
 } fs_node_t;
+
+struct stat {};
 
 struct mount {
   char *path;

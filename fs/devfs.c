@@ -22,7 +22,7 @@ int devfs_write(struct fs_node *file, char *buffer, size_t nbytes) {
   return ENIMPL;
 }
 
-long devfs_ioctl(struct fs_node *file, unsigned long request, void *data) {
+int devfs_ioctl(struct fs_node *file, int request, void *data) {
   if (DEV(file)->ioctl)
     return DEV(file)->ioctl(DEV(file), request, data);
   return ENIMPL;
@@ -68,25 +68,21 @@ void devfs_register(const char *name, struct device *dev) {
   };
 }
 
-int null_write(struct device *dev, char *buffer, size_t n) {
-	return 0;
-}
+int null_write(struct device *dev, char *buffer, size_t n) { return 0; }
 
 int null_read(struct device *dev, char *buffer, size_t n) {
-	memset(buffer, 0, n);
-	return n;
+  memset(buffer, 0, n);
+  return n;
 }
 
 static struct device dev_null = {
-	.name = "null",
-	.write = null_write,
-	.read = null_read,
-	.ioctl = NULL,
+    .name = "null",
+    .write = null_write,
+    .read = null_read,
+    .ioctl = NULL,
 };
 
-void devfs_populate() {
-	devfs_register("null", &dev_null);
-}
+void devfs_populate() { devfs_register("null", &dev_null); }
 
 void devfs_init() {
   vfs_register(&devfs_ops);

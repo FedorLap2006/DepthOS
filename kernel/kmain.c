@@ -170,6 +170,7 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
   multiboot_init(boot_ptr);
   vfs_init();
   ksymbols_load("/kernel.map");
+  devfs_populate();
   device_init();
   ps2_keyboard_init();
   tty_init();

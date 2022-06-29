@@ -51,3 +51,12 @@ DECL_SYSCALL1(close, int, fd) {
 
   vfs_close(file);
 }
+
+DECL_SYSCALL3(ioctl, int, fd, int, request, void *, data) {
+  errno = 0;
+  struct fs_node *file = lookup_file(fd);
+  if (!file)
+    return errno;
+
+  return file->ops->ioctl(file, request, data);
+}

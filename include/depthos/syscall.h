@@ -32,8 +32,10 @@ void posix_syscall_handler(regs_t *r);
 
 void *copy_userspace_ptr(void *ptr, size_t size);
 
+// asmlinkage long sys_write(long count, char *message);
 asmlinkage long sys_write(int fd, char *buf, size_t n);
 asmlinkage long sys_read(int fd, char *buf, size_t n);
+asmlinkage long sys_ioctl(int fd, int request, void *data);
 asmlinkage long sys_close(int fd);
 asmlinkage long sys_open(const char *path);
 asmlinkage long sys_exit(void);
