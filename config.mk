@@ -43,9 +43,7 @@ export CEMU=-m32
 CCFLAGS  = -Iinclude -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pic -MP -MD
 CCFLAGS += -W -Wall -Wno-unused-parameter -Wno-attribute-alias -Wno-type-limits -Wno-parentheses -Wno-unused-variable -Wno-maybe-uninitialized -Wno-return-local-addr -Wno-return-type
 ASFLAGS  = -m32
-ifeq ($(BUILDOS),win)
-	export LDEMU=-melf_i386
-endif
+export LDEMU=-melf_i386
 LDFILE=link.ld
 OUTBIN=$(OSNAME)-$(OSVER)
 
@@ -53,7 +51,7 @@ BUILDDEFS=-DOSVER=\"$(OSVER)\"
 ifeq ($(DEBUG), $(call on_check,$(DEBUG)))
 	BUILDDEFS += -DDEBUG
 endif
-APPS=init
+APPS=init test-gcc
 APPS_ROOTPATH=..
 APPS_BUILDDIR=apps-build
 APPS_INSTALLDIR=$(INITRD_ROOT)
