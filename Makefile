@@ -83,7 +83,7 @@ $(BUILDDIR)/:
 
 $(OUTBIN): $(addprefix $(BUILDDIR)/,$(OBJS)) | $(BUILDDIR)/
 	@echo ---------- build kernel -----------
-	$(LD) $(LDEMU) -T$(LDFILE) -O2 -nostdlib -g -ggdb -o $(BUILDDIR)/$(OUTBIN).bin $(BUILDDIR)/*.o --build-id=none
+	$(LD) -o $(BUILDDIR)/$(OUTBIN).bin $(LDEMU) -T$(LDFILE) -O2 -nostdlib -g $(BUILDDIR)/*.o --build-id=none
 	cp build/$(OUTBIN).bin $(OUTBIN)
 
 $(KERNEL_MAP_FILE): $(OUTBIN)
