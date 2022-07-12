@@ -9,7 +9,7 @@ addons:
       - nasm
 
 script:
-  - make kernel
+  - make build -j
 
 after_success:
   - wget https://raw.githubusercontent.com/DiscordHooks/travis-ci-discord-webhook/master/send.sh
