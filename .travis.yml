@@ -10,7 +10,7 @@ addons:
 
 script:
   - mkdir -p build
-  - make build -j
+  - make build
 
 after_success:
   - wget https://raw.githubusercontent.com/DiscordHooks/travis-ci-discord-webhook/master/send.sh
