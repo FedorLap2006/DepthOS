@@ -3,6 +3,7 @@
 #include <depthos/kernel.h>
 #include <depthos/stdtypes.h>
 #include <depthos/tools.h>
+#define PAGE_SIZE 4096
 
 typedef uint32_t page_t;
 typedef uint32_t pde_t;
