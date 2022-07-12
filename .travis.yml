@@ -1,7 +1,7 @@
 sudo: false
 dist: trusty
 
-language: cpp
+language: c
 
 addons:
   apt:
@@ -9,6 +9,7 @@ addons:
       - nasm
 
 script:
+  - mkdir -p build
   - make build -j
 
 after_success:
