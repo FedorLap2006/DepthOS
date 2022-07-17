@@ -12,6 +12,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Set up NASM
+        uses: ilammy/setup-nasm@v1.3.0
       - uses: actions/checkout@v2
       - name: Create build folder
         run: mkdir -p build
