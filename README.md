@@ -1,5 +1,5 @@
 # DepthOS
-[![Build Status](https://travis-ci.org/FedorLap2006/DepthOS.svg?branch=master)](https://travis-ci.org/FedorLap2006/DepthOS)
+![Build Status](https://github.com/FedorLap2006/DepthOS/actions/workflows/kernel.yml/badge.svg)
 [![Join the chat at https://gitter.im/depthos-dev/community](https://badges.gitter.im/depthos-dev/community.svg)](https://gitter.im/depthos-dev/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 
