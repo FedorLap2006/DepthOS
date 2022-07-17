@@ -18,4 +18,4 @@ jobs:
       - name: Create build folder
         run: mkdir -p build
       - name: Build
-        run: make build
+        run: make -j kernel
