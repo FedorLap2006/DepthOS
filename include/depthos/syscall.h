@@ -32,7 +32,7 @@ void posix_syscall_handler(regs_t *r);
 
 void *copy_userspace_ptr(void *ptr, size_t size);
 
-// asmlinkage long sys_write(long count, char *message);
+struct sc_mmap_params;
 asmlinkage long sys_write(int fd, char *buf, size_t n);
 asmlinkage long sys_read(int fd, char *buf, size_t n);
 asmlinkage long sys_ioctl(int fd, int request, void *data);
@@ -43,4 +43,5 @@ asmlinkage long sys_fork(void);
 asmlinkage long sys_execve(const char *file);
 asmlinkage long sys_thcreate(struct sc_thcreate_params *params);
 asmlinkage long sys_thkill(thid_t thid);
+asmlinkage long sys_mmap(struct sc_mmap_params *params);
 asmlinkage long sys_prctl(int option, void *address);

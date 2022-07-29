@@ -321,20 +321,26 @@ DECL_SYSCALL0(thjoin) {
 DECL_SYSCALL1(execve, const char *, file) {
   bool v = elf_probe(file);
   if (!v) {
-    printk("file: %s\n", file);    return -EINVAL;
+    printk("file: %s\n", file);
+    return -EINVAL;
   }
   extern struct task *current_task;
   // printk("AAAAAAAAAAAAAAAAA\n");
   task_setup_filetable(current_task->filetable);
   elf_load(current_task, file);
   current_task->process->filepath = current_task->name;
-  struct fs_node *tty_file = vfs_open("/dev/tty0");
-  current_task->filetable[0] = tty_file;
-  current_task->filetable[1] = tty_file;
   task_setup_stack(current_task, VIRT_BASE - PAGE_SIZE);
   reschedule_to(current_task);
   // map_addr(current_task->pgd, VIRT_BASE - PAGE_SIZE, 1, true, false);
   // elf_exec(current_task);
+}
+
+DECL_SYSCALL2(sleep, unsigned int, seconds, unsigned int, nanos) {
+  current_task->state = TASK_SLEEPING;
+  extern uint32_t tick;
+  current_task->wake_time = tick + seconds * 1e3 + nanos / 1e6;
+  // printk("wake: %d cur: %d\n", current_task->wake_time, tick);
+  reschedule();
 }
 
 #define PRCTL_SET_GS 0x1

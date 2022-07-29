@@ -96,7 +96,7 @@ void sched_init() {
 }
 
 void reschedule_to(struct task *t) {
-  current_task->state = TASK_RUNNING;
+  // current_task->state = TASK_RUNNING;
   current_task = t;
   if (__sched_prof) {
     if (t->process)
@@ -105,6 +105,7 @@ void reschedule_to(struct task *t) {
       printk("switching to %s\n", t->name);
     dump_task(current_task);
   }
+
 #if defined(__i386__) || defined(__x86_64__)
   // x86_gdt_set_base(6, t->gs_base);
   // x86_gdt_set_base(7, t->fs_base);
@@ -121,9 +122,23 @@ void reschedule_to(struct task *t) {
 }
 
 static struct list_entry *pick_next_task() {
-  if (current_entry->next)
-    return current_entry->next;
-  return tasklist->first;
+  struct list_entry *current = current_entry;
+  struct task *task;
+retry:
+  current = current->next;
+
+  if (!current)
+    current = tasklist->first;
+
+  extern uint32_t tick;
+  task = list_item(current, struct task *);
+  if (task->state == TASK_SLEEPING && task->wake_time <= tick) {
+    task->state = TASK_RUNNING;
+    return current;
+  } else if (task->state == TASK_SLEEPING)
+    goto retry;
+
+  return current;
 }
 
 void reschedule(void) {
@@ -160,6 +175,5 @@ void sched_yield(regs_t *r) {
 void sched_ticker(regs_t *r) {
   idt_disable_hwinterrupts();
   current_task->running_time++;
-  current_task->running_time_sched = 0;
   sched_yield(r);
 }

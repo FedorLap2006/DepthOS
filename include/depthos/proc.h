@@ -18,6 +18,7 @@ typedef enum task_state {
   TASK_STARTING,
   TASK_RUNNING,
   TASK_SUSPENDED,
+	TASK_SLEEPING,
   TASK_DYING
 } task_state_t;
 
@@ -48,9 +49,11 @@ struct task {
   struct registers *regs;
   uintptr_t gs_base, fs_base;
 
-
-  uint16_t running_time;
-  uint16_t running_time_sched;
+  size_t running_time;
+	size_t wake_time;
+	
+	
+  // uint16_t running_time_sched;
 
   struct exec_binary_info binfo;
   struct task *parent;
