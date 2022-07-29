@@ -140,9 +140,22 @@ page_t *get_page(pagedir_t pgd, uint32_t vaddr) {
   return (page_t *)pde + pte_index(vaddr);
 }
 
-void map_addr(pagedir_t pgd, uint32_t vaddr, size_t npages, bool user) {
+void map_addr(pagedir_t pgd, uint32_t vaddr, size_t npages, bool user,
+              bool overwrite) {
   // klogf("=================== test ================");
-  map_addr_phys(pgd, vaddr, pmm_alloc(npages), user);
+
+  uintptr_t phys_start = pmm_alloc(npages);
+  if (phys_start < 0) {
+    klogf("cannot allocate %d continous pages", npages);
+    return;
+  }
+
+  for (int i = 0; i < npages; i++) {
+    page_t *page = get_page(pgd, vaddr + i * PAGE_SIZE);
+    if (page && *page && !overwrite) // TODO: free the page
+      continue;
+    map_addr_phys(pgd, vaddr + i * PAGE_SIZE, phys_start + i * PAGE_SIZE, user);
+  }
 #if 0
   for (int i = 0; i <= npages / 1024; i++) {
     klogf("mapping 0x%x table", vaddr + i * 4096 * 1024);

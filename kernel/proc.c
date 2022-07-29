@@ -4,6 +4,7 @@
 #include <depthos/fs.h>
 #include <depthos/heap.h>
 #include <depthos/logging.h>
+#include <depthos/paging.h>
 #include <depthos/proc.h>
 #include <depthos/string.h>
 #include <depthos/syscall.h>
@@ -21,7 +22,7 @@ static struct task *create_dummy_task() {
 }
 
 void task_setup_stack(struct task *task, void *stack) {
-  map_addr(task->pgd, stack, 1, true);
+  map_addr(task->pgd, stack, 1, true, false);
   uint32_t *kstack = task->kernel_esp;
   // memset(task->kernel_stack, 0, 0x1000 - 1);
   uint32_t tmp = stack + 0x1000;
