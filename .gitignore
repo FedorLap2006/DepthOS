@@ -5,10 +5,14 @@ apps/build/
 apps/apps-build/
 *.o
 
+### Docs ###
+docs/generated/
+
 ### Binaries ###
 
 *.bin
 DepthOS-*.*
+DepthOS.iso
 
 ### Generated files ###
 initrd.img
