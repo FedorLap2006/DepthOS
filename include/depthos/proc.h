@@ -46,6 +46,8 @@ struct task {
   uintptr_t kernel_stack, kernel_esp, stack;
   pagedir_t pgd;
   struct registers *regs;
+  uintptr_t gs_base, fs_base;
+
 
   uint16_t running_time;
   uint16_t running_time_sched;
