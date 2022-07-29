@@ -8,6 +8,9 @@
 #include <depthos/string.h>
 #include <depthos/syscall.h>
 #include <depthos/tss.h>
+#if defined(__i386__) || defined(__x86_64__)
+#include <depthos/x86/gsfsbase.h>
+#endif
 
 static struct list *tasklist;
 static struct list_entry *current_entry;
@@ -102,6 +105,12 @@ void reschedule_to(struct task *t) {
       printk("switching to %s\n", t->name);
     dump_task(current_task);
   }
+#if defined(__i386__) || defined(__x86_64__)
+  // x86_gdt_set_base(6, t->gs_base);
+  // x86_gdt_set_base(7, t->fs_base);
+  x86_set_gsbase(t->gs_base);
+  x86_set_fsbase(t->fs_base);
+#endif
   tss_set_stack(t->kernel_esp);
 
   if (t->pgd)
