@@ -80,8 +80,10 @@ higher_loader:
 	finit
 	mov esp, stack_top
 	
-	extern set_up_gdt
-	call set_up_gdt
+	; extern set_up_gdt
+	; call set_up_gdt
+	extern x86_gdt_init
+	call x86_gdt_init
 	push ebx
 	push eax
 	xor ebp, ebp
