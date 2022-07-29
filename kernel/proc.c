@@ -8,6 +8,7 @@
 #include <depthos/proc.h>
 #include <depthos/string.h>
 #include <depthos/syscall.h>
+#include <depthos/x86/asm/gdt.h>
 
 void _task_init_kstack(struct task *task) {
   task->kernel_stack = kmalloc(0x1000);
@@ -17,6 +18,7 @@ void _task_init_kstack(struct task *task) {
 
 static struct task *create_dummy_task() {
   struct task *task = kmalloc(sizeof(struct task));
+  task->gs_base = task->fs_base = 0x0;
   _task_init_kstack(task);
   return task;
 }
