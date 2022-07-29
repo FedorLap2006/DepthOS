@@ -36,18 +36,18 @@ void task_setup_stack(struct task *task, void *stack) {
   PUSH(0);
   PUSH(0);
 
-  PUSH(0x0);  /* eax */
-  PUSH(0x0);  /* ecx */
-  PUSH(0x0);  /* edx */
-  PUSH(0x0);  /* ebx */
-  PUSH(0x0);  /* esp */
-  PUSH(0x0);  /* ebp */
-  PUSH(0x0);  /* esi */
-  PUSH(0x0);  /* edi */
-  PUSH(0x23); /* ds */
-  PUSH(0x23); /* es */
-  PUSH(0x23); /* gs */
-  PUSH(0x23); /* fs */
+  PUSH(0x0);               /* eax */
+  PUSH(0x0);               /* ecx */
+  PUSH(0x0);               /* edx */
+  PUSH(0x0);               /* ebx */
+  PUSH(0x0);               /* esp */
+  PUSH(0x0);               /* ebp */
+  PUSH(0x0);               /* esi */
+  PUSH(0x0);               /* edi */
+  PUSH(GDT_USER_DATA_SEL); /* ds */
+  PUSH(GDT_USER_DATA_SEL); /* es */
+  PUSH(GDT_GSBASE_SEL(3)); /* gs */
+  PUSH(GDT_FSBASE_SEL(3)); /* fs */
 #undef PUSH
   // get_current_pgd()[pde_index(VIRT_BASE - 0x1000)] = 0;
   // activate_pgd(get_current_pgd());
@@ -122,22 +122,23 @@ struct task *create_kernel_task(void *entry, bool do_stack) {
   PUSH(0);   /* int_num */
 
   tmp = stack;
-  PUSH(0x0);  /* eax */
-  PUSH(0x0);  /* ecx */
-  PUSH(0x0);  /* edx */
-  PUSH(0x0);  /* ebx */
-  PUSH(tmp);  /* esp */
-  PUSH(0x0);  /* ebp */
-  PUSH(0x0);  /* esi */
-  PUSH(0x0);  /* edi */
-  PUSH(0x10); /* ds */
-  PUSH(0x10); /* es */
-  PUSH(0x10); /* gs */
-  PUSH(0x10); /* fs */
+  PUSH(0x0);                 /* eax */
+  PUSH(0x0);                 /* ecx */
+  PUSH(0x0);                 /* edx */
+  PUSH(0x0);                 /* ebx */
+  PUSH(tmp);                 /* esp */
+  PUSH(0x0);                 /* ebp */
+  PUSH(0x0);                 /* esi */
+  PUSH(0x0);                 /* edi */
+  PUSH(GDT_KERNEL_DATA_SEL); /* ds */
+  PUSH(GDT_KERNEL_DATA_SEL); /* es */
+  PUSH(GDT_GSBASE_SEL(0));   /* gs */
+  PUSH(GDT_FSBASE_SEL(0));   /* fs */
 
 #undef PUSH
   task->regs = (struct registers *)stack;
   task->stack = stack;
+  task->gs_base = task->fs_base = 0x0;
   task->binfo.entry = entry;
 
   task->filetable = kmalloc(sizeof(struct fs_node *) * TASK_FILETABLE_MAX);
@@ -331,4 +332,17 @@ DECL_SYSCALL1(execve, const char *, file) {
   reschedule_to(current_task);
   // map_addr(current_task->pgd, VIRT_BASE - PAGE_SIZE, 1, true, false);
   // elf_exec(current_task);
+}
+
+#define PRCTL_SET_GS 0x1
+#define PRCTL_SET_FS 0x2
+DECL_SYSCALL2(prctl, int, option, void *, address) {
+  switch (option) {
+  case PRCTL_SET_GS:
+    current_task->gs_base = address;
+    reschedule_to(current_task);
+  case PRCTL_SET_FS:
+    current_task->fs_base = address;
+    reschedule_to(current_task);
+  }
 }

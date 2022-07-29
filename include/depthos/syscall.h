@@ -42,4 +42,5 @@ asmlinkage long sys_exit(void);
 asmlinkage long sys_fork(void);
 asmlinkage long sys_execve(const char *file);
 asmlinkage long sys_thcreate(struct sc_thcreate_params *params);
-asmlinkage long sys_thkill(thid_t thid); // halo
+asmlinkage long sys_thkill(thid_t thid);
+asmlinkage long sys_prctl(int option, void *address);
