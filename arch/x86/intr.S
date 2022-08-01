@@ -1,4 +1,7 @@
 // .intel_syntax noprefix
+
+#include <depthos/x86/asm/gdt.h>
+
 .text
 
 .global idt_flush
@@ -178,11 +181,13 @@ intr_cstub:
 	pushl	%fs
 
 	cld
-	mov	$0x10, %ax
+	mov	$(GDT_KERNEL_DATA_SEL), %ax
 	mov	%ax, %ds
 	mov	%ax, %es
-	mov	%ax, %fs
-	mov	%ax, %gs
+	mov $(GDT_GSBASE_SEL(0)), %ax
+	mov %ax, %gs
+	mov $(GDT_FSBASE_SEL(0)), %ax
+
 	leal 56(%esp), %ebp
 	
 	pushl %esp
@@ -201,11 +206,13 @@ irq_cstub:
 	pushl	%fs
 
 	cld
-	mov	$0x10, %ax
+	mov	$(GDT_KERNEL_DATA_SEL), %ax
 	mov	%ax, %ds
 	mov	%ax, %es
-	mov	%ax, %fs
-	mov	%ax, %gs
+	mov $(GDT_GSBASE_SEL(0)), %ax
+	mov %ax, %gs
+	mov $(GDT_FSBASE_SEL(0)), %ax
+	mov %ax, %fs
 	leal 56(%esp), %ebp
 	
 	pushl %esp
