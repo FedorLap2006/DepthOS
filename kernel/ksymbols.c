@@ -5,8 +5,10 @@
 #include <depthos/string.h>
 
 int parse_hex(int sym) {
-  if (sym < '0' || sym > 'f')
-    return -1;
+  if (sym < '0' || sym > 'f') {
+    errno = EINVAL;
+    return 0;
+  }
 
   return sym >= 'a' ? 10 + sym - 'a' : sym - '0';
 }
@@ -25,16 +27,23 @@ int ksymbols_load(const char *path) {
   do {
     kernel_symbols[kernel_symbols_length].address = 0;
     while (vfs_read(map_file, buffer, 1) && *buffer != ' ') {
+      errno = 0;
       int v = parse_hex(*buffer);
-      if (v < 0)
+      if (errno) {
+        klogf("invalid symbol address");
         goto fail;
-
+      }
       kernel_symbols[kernel_symbols_length].address <<= 4;
       kernel_symbols[kernel_symbols_length].address += v;
     }
-
-    if (!vfs_read(map_file, &kernel_symbols[kernel_symbols_length].type, 1))
+    if (vfs_eof(map_file))
+      break;
+    if (!vfs_read(map_file, &kernel_symbols[kernel_symbols_length].type, 1)) {
+      klogf("cannot read symbol type for %p (%d)",
+            kernel_symbols[kernel_symbols_length].address,
+            kernel_symbols_length);
       goto fail;
+    }
 
     map_file->pos++;
     ptr = buffer;
@@ -47,6 +56,7 @@ int ksymbols_load(const char *path) {
     kernel_symbols_length++;
   } while (!vfs_eof(map_file));
 
+  bootlog("Kernel symbols loaded", LOG_STATUS_SUCCESS);
   return 0;
 
 fail:
@@ -54,6 +64,7 @@ fail:
     kernel_symbols_length--;
   kfree(buffer, 256);
   vfs_close(map_file);
+  bootlog("Could not load kernel symbols", LOG_STATUS_ERROR);
   // symbols_length = 0;
   return -EINVAL;
 }

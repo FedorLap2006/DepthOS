@@ -124,7 +124,9 @@ void kheap_init() {
   kheap_cache_grow(32, true);
   kheap_cache_shrink(slab);
   kheap_cache_grow(16, true);
-  kheap_cache_dump();
+  // kheap_cache_dump();
+
+  bootlog("Kernel heap initialization complete", LOG_STATUS_SUCCESS);
   // kheap_cache_grow(4096, true);
 }
 

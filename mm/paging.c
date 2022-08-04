@@ -304,7 +304,6 @@ void paging_init() {
   activate_pgd(kernel_pgd);
   enable_paging();
   idt_enable_hwinterrupts();
-  print_status("vmem initialized", MOD_OK);
 }
 
 pageinfo_t parse_page(page_t *pg) {

@@ -27,6 +27,7 @@ void pmm_init(size_t memory_size) {
   }
 
   pmm_initialised = true;
+  bootlog("PMM initialization complete", LOG_STATUS_SUCCESS);
 }
 
 uint32_t pmm_alloc(size_t count) {

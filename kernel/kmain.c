@@ -56,6 +56,7 @@ void init_timer(uint32_t tps) {
 
   outb(0x40, l);
   outb(0x40, h);
+  bootlog("PIT initialization complete", LOG_STATUS_SUCCESS);
 }
 
 void sleep(size_t ms) {
@@ -161,7 +162,6 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
   multiboot_init_early(magic, boot_ptr);
   paging_init();
   console_init(25, 80, 0, BGRAY_COLOR);
-  print_status("GDT initialized", MOD_OK);
   idt_init();
   init_timer(1000);
   pmm_init(3 * 1024 * 4096 + 2 * 1024 * 4096);

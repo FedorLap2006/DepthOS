@@ -1,6 +1,8 @@
 #include <depthos/console.h>
+#include <depthos/kconfig.h>
 #include <depthos/kernel.h>
 #include <depthos/logging.h>
+#include <depthos/stdio.h>
 #include <depthos/stdtypes.h>
 
 void kloga(const char *file, int line, const char *loc, char *msg, ...) {
@@ -18,21 +20,21 @@ void kloga(const char *file, int line, const char *loc, char *msg, ...) {
 #endif
 }
 
-void print_status(char *buf, int m) {
+void bootlog(const char *msg, int status) {
   const char *mod;
   uint8_t color;
 
-  switch (m) {
-  case MOD_OK:
-    mod = "OK";
+  switch (status) {
+  case LOG_STATUS_SUCCESS:
+    mod = "OK   ";
     color = WGREEN_COLOR;
     break;
-  case MOD_ERR:
+  case LOG_STATUS_ERROR:
     mod = "ERROR";
     color = PINK_COLOR;
     break;
-  case MOD_WARNING:
-    mod = "WARN";
+  case LOG_STATUS_WARNING:
+    mod = "WARN ";
     color = YELLOW_COLOR;
     break;
   default:
@@ -42,7 +44,7 @@ void print_status(char *buf, int m) {
   console_write("[");
   console_write_color(mod, -1, color);
   console_write("] ");
-  console_write_color(buf, -1, WBLUE_COLOR);
+  console_write_color(msg, -1, WBLUE_COLOR);
   console_write("\n");
 }
 

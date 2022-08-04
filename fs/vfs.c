@@ -17,7 +17,10 @@ void vfs_init() {
   initrdfs_init();
   devfs_init();
 
-  vfs_mount("/", vfs_get_filesystem("initrd"), NULL);
+  bootlog("Mounting initial ramdisk",
+          vfs_mount("/", vfs_get_filesystem("initrd"), NULL)
+              ? LOG_STATUS_SUCCESS
+              : LOG_STATUS_ERROR);
   vfs_mount("/dev", vfs_get_filesystem("devfs"), NULL);
 }
 
