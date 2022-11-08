@@ -33,7 +33,7 @@ QEMU_ARGS += -append "$(QEMU_APPEND)"
 
 CC?=$(BINCPATH)/gcc
 LD?=$(BINCPATH)/ld
-ASM?=nasm -f elf32
+ASM?=nasm
 export CC
 export LD
 export ASM
@@ -43,9 +43,10 @@ export CEMU=-m32
 CCFLAGS  = -Iinclude -ffreestanding -nostdlib -nostdinc -fno-builtin -fno-exceptions -fno-leading-underscore -fno-pic -MP -MD
 CCFLAGS += -W -Wall -Wno-unused-parameter -Wno-attribute-alias -Wno-type-limits -Wno-parentheses -Wno-unused-variable -Wno-maybe-uninitialized -Wno-return-local-addr -Wno-return-type
 ASFLAGS  = -m32
+NASMFLAGS= -f elf32
 export LDEMU=-melf_i386
 LDFILE=link.ld
-OUTBIN=$(OSNAME)-$(OSVER)
+OUTBIN=$(OSNAME)-v$(OSVER)-$(ARCH)
 
 BUILDDEFS=-DOSVER=\"$(OSVER)\"
 ifeq ($(DEBUG), $(call on_check,$(DEBUG)))

@@ -26,10 +26,13 @@ endif
 .PHONY: all hostinfo
 all: hostinfo test
 
+
 hostinfo:
-	@echo Building $(OSNAME) v$(OSVER)
-	@echo Hosted on $(BUILDOS)
-	@echo
+	@echo Target: $(shell $(CC) -dumpmachine)
+	@echo Host: $(shell gcc -dumpmachine)
+	@echo "C compiler for the target: $(CC) $(shell $(CC) -dumpversion)"
+	@echo "NASM compiler for the target: $(ASM) $(shell $(ASM) --version)"
+	@echo "Linker for the target: $(LD) $(shell $(LD) --version | grep ld)"
 
 .PHONY: format clean
 
@@ -73,7 +76,7 @@ endif
 
 $(BUILDDIR)/%.o: %.asm
 	@echo ASM $<
-	@$(ASM) -o $@ $<
+	@$(ASM) $(NASMFLAGS) -o $@ $<
 	@$(TARGET_PROGRESS)
 
 -include $(addprefix $(BUILDDIR)/,$(DEPS))
