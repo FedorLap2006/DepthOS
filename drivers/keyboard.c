@@ -270,6 +270,7 @@ keycode_t keycode_from_codepoint(uint32_t codepoint) {
     MATCH_LETTER(F, 'F')
     MATCH_LETTER(G, 'G')
     MATCH_LETTER(H, 'H')
+    MATCH_LETTER(I, 'I')
     MATCH_LETTER(J, 'J')
     MATCH_LETTER(K, 'K')
     MATCH_LETTER(L, 'L')
@@ -294,7 +295,7 @@ keycode_t keycode_from_codepoint(uint32_t codepoint) {
     MATCH_CHAR(COLON, ':')
     MATCH_CHAR(SEMICOLON, ';')
     MATCH_CHAR(SLASH, '/')
-    MATCH_CHAR(BACKSLASH, '\b')
+    MATCH_CHAR(BACKSLASH, '\\')
     MATCH_CHAR(PLUS, '+')
     MATCH_CHAR(MINUS, '-')
     MATCH_CHAR(ASTERISK, '*')
@@ -323,10 +324,13 @@ keycode_t keycode_from_codepoint(uint32_t codepoint) {
     MATCH_CHAR(CARRET, '^')
 
     MATCH_CHAR(RETURN, '\n')
+    MATCH_CHAR(BACKSPACE, '\b')
+    MATCH_CHAR(CARRIAGE_RETURN, '\r')
   }
+  return KEY_UNKNOWN;
 }
 
-void standard_keycode_handler(struct keyboard_event event) {}
+int standard_keycode_handler(struct keyboard_event event) {}
 
 void keyboard_set_handler(keyboard_event_handler_t handler) {
   if (!handler)

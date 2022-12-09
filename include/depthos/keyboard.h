@@ -1,5 +1,7 @@
 #pragma once
 
+#include <depthos/stdtypes.h>
+
 typedef enum KEYCODE {
 
 // Alphanumeric keys ////////////////
@@ -82,6 +84,7 @@ typedef enum KEYCODE {
   _DEFINE_KEYCODE(RETURN, "\n")                                                \
   _DEFINE_KEYCODE(ESCAPE, "Escape")                                            \
   _DEFINE_KEYCODE(BACKSPACE, "\b")                                             \
+  _DEFINE_KEYCODE(CARRIAGE_RETURN, "\r")                                       \
                                                                                \
   /* ////////////////// Arrow keys //////////////////  */                      \
                                                                                \
@@ -179,7 +182,7 @@ struct keyboard_event {
   bool pressed;
   keyboard_event_modifiers_t modifiers;
 };
-typedef (*keyboard_event_handler_t)(struct keyboard_event);
+typedef int (*keyboard_event_handler_t)(struct keyboard_event);
 
 /**
  * @brief Convert a keycode to a string representation.

@@ -129,40 +129,13 @@ char *resolve_filetype(struct fs_node *file) {
   return "unknown";
 }
 
-void init_userspace() {
-  char *val = "test test";
-  __asm__ volatile("int $0x80" ::"a"(4), "b"(sizeof("test test")), "c"(val));
-  // sys_sched_yield();
-  __asm__ volatile("int $0x80" ::"a"(4), "b"(sizeof("test test")), "c"(val));
-  // for (;;) {
-  // __asm__ volatile("int $0x30");
-  // __asm__ volatile("hlt");
-  // }
-  __asm__ volatile("int $0x80" ::"a"(1));
-}
-
 void device_init() { devfs_register("txtfb", &console_device); }
 
-// void device_test() {
-//   idt_enable_hwinterrupts();
-//   struct fs_node *console = vfs_open("/dev/console");
-//   vfs_write(console, "blobber stop please", strlen("blobber stop please"));
-//   char buf[10];
-//   struct fs_node *tty = vfs_open("/dev/tty");
-
-//   while (true) {
-//     vfs_read(tty, buf, 1);
-//     printk("%c", *buf);
-//   }
-//   vfs_close(console);
-//   vfs_close(tty);
-// }
-
-void kmain(int magic, struct multiboot_information *boot_ptr) {
-  multiboot_init_early(magic, boot_ptr);
-  paging_init();
+__noreturn void kmain(int magic, struct multiboot_information *boot_ptr) {
   console_init(25, 80, 0, BGRAY_COLOR);
-  idt_init();
+  multiboot_init_early(magic, boot_ptr);
+  idt_init(); // TODO: why this was not required before?
+  paging_init();
   init_timer(1000);
   pmm_init(3 * 1024 * 4096 + 2 * 1024 * 4096);
   kheap_init();

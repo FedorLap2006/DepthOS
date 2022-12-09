@@ -1,6 +1,6 @@
 #pragma once
 
-#if (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4)
+#if (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4) || __clang__
 
 #define va_list __builtin_va_list
 #define va_start(ap, last) __builtin_va_start(ap, last)
