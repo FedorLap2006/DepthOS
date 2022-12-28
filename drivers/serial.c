@@ -1,5 +1,10 @@
 #include <depthos/console.h>
+#include <depthos/idt.h>
+#include <depthos/kconfig.h>
+#include <depthos/keyboard.h>
+#include <depthos/logging.h>
 #include <depthos/ports.h>
+#include <depthos/string.h>
 #include <depthos/tools.h>
 
 struct serial_device {
@@ -109,7 +114,7 @@ void serial_console_init(unsigned id) {
     outb(INTR_ENABLE(dev), 0x0);
     outb(LINE_CONTROL(dev),
          LINE_CONTROL_8BIT |
-             LINE_CONTROL_DLAB);
+             LINE_CONTROL_DLAB); // XXX: do we need LINE_CONTROL_8BIT?
     outb(DLAB_LO(dev), 0x1);
     outb(DLAB_HI(dev), 0x0);
     outb(LINE_CONTROL(dev), LINE_CONTROL_8BIT);
