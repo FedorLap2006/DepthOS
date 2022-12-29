@@ -4,6 +4,23 @@
 #include <depthos/logging.h>
 #include <depthos/stdio.h>
 #include <depthos/stdtypes.h>
+#include <depthos/emu.h>
+
+void debug(const char *msg, ...) {
+  static char buffer[1024];
+  va_list ap;
+  va_start(ap, msg);
+  vsnprintf(buffer, 1024, msg, ap);
+  va_end(ap);
+
+#if defined(CONFIG_EMULATOR_QEMU)
+  qemu_debug(buffer);
+#else
+  printk("%s", buffer);
+  // klogf(buffer);
+  // console_write(buffer);
+#endif
+}
 
 void kloga(const char *file, int line, const char *loc, char *msg, ...) {
   static char buffer[1024];
@@ -11,12 +28,14 @@ void kloga(const char *file, int line, const char *loc, char *msg, ...) {
   va_start(args, msg);
   vsprintf(buffer, msg, args);
   va_end(args);
+
 #if KLOG_ENABLED == 1
-	if (!console_no_color)
-	  printk("\x1B[34m");
-  printk("%s (%s:%d): %s\n", loc, file, line, buffer);
-	if (!console_no_color)
-	  printk("\x1B[0m");
+  if (!console_no_color)
+    debug("\x1B[34m");
+
+  debug("%s (%s:%d): %s\n", loc, file, line, buffer);
+  if (!console_no_color)
+    debug("\x1B[0m");
 #endif
 }
 
