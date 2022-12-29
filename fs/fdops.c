@@ -52,6 +52,20 @@ DECL_SYSCALL1(close, int, fd) {
   vfs_close(file);
 }
 
+DECL_SYSCALL3(dup3, int, oldfd, int, newfd, int, flags) {
+  errno = 0;
+  struct fs_node *file = lookup_file(oldfd);
+  if (!file)
+    return errno;
+
+  if (newfd >= TASK_FILETABLE_MAX)
+    return -EINVAL;
+
+  sys_close(newfd);
+  current_task->filetable[newfd] = file;
+  return newfd;
+}
+
 DECL_SYSCALL3(ioctl, int, fd, int, request, void *, data) {
   errno = 0;
   struct fs_node *file = lookup_file(fd);

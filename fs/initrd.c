@@ -1,3 +1,4 @@
+#include <depthos/errno.h>
 #include <depthos/fs.h>
 #include <depthos/heap.h>
 #include <depthos/initrd.h>
