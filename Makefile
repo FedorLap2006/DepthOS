@@ -59,7 +59,7 @@ vpath %.asm .:$(subst $(eval) ,:,$(SOURCEDIRS))
 $(BUILDDIR)/%.o: %.c
 	@echo CC $< $@
 ifeq ($(DEBUG),$(filter $(DEBUG),on true))
-	@$(CC) $(CEMU) -std=c$(CSTD) $(CCFLAGS) -g -c $(BUILDDEFS) -o $@ $<
+	@$(CC) $(CEMU) -std=c$(CSTD) $(CCFLAGS) -gdwarf-2 -c $(BUILDDEFS) -o $@ $<
 else
 	@$(CC) $(CEMU) -std=c$(CSTD) $(CCFLAGS) -c $(BUILDDEFS) -o $@ $<
 endif
@@ -68,7 +68,7 @@ endif
 $(BUILDDIR)/%.o: %.S
 	@echo CC $< $@
 ifeq ($(DEBUG),$(filter $(DEBUG),on true))
-	@$(CC) $(CEMU) -std=c$(CSTD) $(CCFLAGS) -g -c $(BUILDDEFS) -o $@ $<
+	@$(CC) $(CEMU) -std=c$(CSTD) $(CCFLAGS) -gdwarf-2 -c $(BUILDDEFS) -o $@ $<
 else
 	@$(CC) $(CEMU) -std=c$(CSTD) $(CCFLAGS) -c $(BUILDDEFS) -o $@ $<
 endif
