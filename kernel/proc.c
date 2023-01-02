@@ -10,52 +10,117 @@
 #include <depthos/syscall.h>
 #include <depthos/x86/asm/gdt.h>
 
-void _task_init_kstack(struct task *task) {
-  task->kernel_stack = kmalloc(0x1000);
-  printk("kernel stack: %x\n", task->kernel_stack);
-  task->kernel_esp = task->kernel_stack + 0x1000;
+static inline void alloc_kernel_stack(struct task *task) {
+  task->kernel_stack = (uintptr_t)kmalloc(KSTACK_SIZE);
+  task->kernel_esp = task->kernel_stack;
+  task->kernel_esp += KSTACK_SIZE;
+}
+
+static inline void alloc_stack(struct task *task, uintptr_t stack, int size,
+                               bool user) {
+  klogf("allocating stack in region of %p...%p", stack,
+        stack + PG_RND_UP(size));
+  map_addr(task->pgd, stack, PG_RND_UP(size) / PAGE_SIZE, user,
+           true); // TODO: use do_mmap
 }
 
 static struct task *create_dummy_task() {
   struct task *task = kmalloc(sizeof(struct task));
   task->gs_base = task->fs_base = 0x0;
-  _task_init_kstack(task);
+  alloc_kernel_stack(task);
   return task;
 }
 
-void task_setup_stack(struct task *task, void *stack) {
-  map_addr(task->pgd, stack, 1, true, false);
-  uint32_t *kstack = task->kernel_esp;
+void _task_init_kstack(struct task *task, int selcode, int seldata, int selgs,
+                       int selfs, uintptr_t esp) {
+  uint32_t *kstack = (uint32_t *)task->kernel_esp;
   // memset(task->kernel_stack, 0, 0x1000 - 1);
-  uint32_t tmp = stack + 0x1000;
-#define PUSH(v) *--kstack = v
-  PUSH(0x23);              /* ss */
-  PUSH(tmp);               /* useresp */
+#define PUSH(v) *--kstack = (uint32_t)v
+  PUSH(seldata);           /* ss */
+  PUSH(esp);               /* useresp */
   PUSH(0x202);             /* eflags */
-  PUSH(0x1b);              /* cs */
+  PUSH(selcode);           /* cs, 0x1b or 0x08 */
   PUSH(task->binfo.entry); /* eip */
 
   PUSH(0x0);
   PUSH(0);
   PUSH(0);
 
-  PUSH(0x0);               /* eax */
-  PUSH(0x0);               /* ecx */
-  PUSH(0x0);               /* edx */
-  PUSH(0x0);               /* ebx */
-  PUSH(0x0);               /* esp */
-  PUSH(0x0);               /* ebp */
-  PUSH(0x0);               /* esi */
-  PUSH(0x0);               /* edi */
-  PUSH(GDT_USER_DATA_SEL); /* ds */
-  PUSH(GDT_USER_DATA_SEL); /* es */
-  PUSH(GDT_GSBASE_SEL(3)); /* gs */
-  PUSH(GDT_FSBASE_SEL(3)); /* fs */
+  PUSH(0x0);     /* eax */
+  PUSH(0x0);     /* ecx */
+  PUSH(0x0);     /* edx */
+  PUSH(0x0);     /* ebx */
+  PUSH(0x0);     /* esp */
+  PUSH(0x0);     /* ebp */
+  PUSH(0x0);     /* esi */
+  PUSH(0x0);     /* edi */
+  PUSH(seldata); /* ds */
+  PUSH(seldata); /* es */
+  PUSH(selgs);   /* gs */
+  PUSH(selfs);   /* fs */
 #undef PUSH
   // get_current_pgd()[pde_index(VIRT_BASE - 0x1000)] = 0;
   // activate_pgd(get_current_pgd());
   task->regs = (struct registers *)kstack;
-  task->stack = kstack;
+  task->stack = (uintptr_t)kstack;
+}
+
+void task_init_kstack(struct task *task, uintptr_t esp) {
+  _task_init_kstack(task, GDT_USER_CODE_SEL, GDT_USER_DATA_SEL,
+                    GDT_GSBASE_SEL(3), GDT_FSBASE_SEL(3), esp);
+}
+
+void kernel_task_init_kstack(struct task *task, uintptr_t esp) {
+  _task_init_kstack(task, GDT_KERNEL_CODE_SEL, GDT_KERNEL_DATA_SEL,
+                    GDT_GSBASE_SEL(0), GDT_FSBASE_SEL(0), esp);
+}
+
+void task_init_stack(struct task *task, int argc, char **argv, char **envp) {
+  pagedir_t pgd = get_current_pgd();
+  activate_pgd(task->pgd);
+  char *esp = (void *)task->regs->useresp;
+
+#define PUSH(v, t)                                                             \
+  esp -= sizeof(t);                                                            \
+  *(t *)esp = (t)v;
+
+#define PUSHP(p) PUSH(p, uintptr_t)
+#define PUSHI(ip, l)                                                           \
+  esp -= l;                                                                    \
+  memcpy(ip, esp, l);
+  for (int i = 0; envp[i] != NULL; i++) {
+    esp -= strlen(envp[i]) + 1;
+    memcpy(esp, envp[i], strlen(envp[i]) + 1);
+    envp[i] = (char *)esp;
+  }
+
+  for (int i = 0; i < argc; i++) {
+    esp -= strlen(argv[i]) + 1;
+    memcpy(esp, argv[i], strlen(argv[i]) + 1);
+    argv[i] = (char *)esp;
+  }
+
+  PUSH(0, uint64_t);
+  PUSH(0, uint32_t);
+
+  for (int i = 0; envp[i] != NULL; i++) {
+    klogf("env=%s (%p)", envp[i], envp[i]);
+    PUSHP(envp[i]);
+  }
+
+  PUSH(0, uint32_t);
+
+  for (int i = argc - 1; i >= 0; i--) {
+    klogf("argv[i]=%s (%p)", argv[i], argv[i]);
+    PUSHP(argv[i]);
+  }
+
+  PUSH(argc, uint32_t);
+
+  task->regs->useresp = (uint32_t)esp;
+#undef PUSHP
+#undef PUSH
+  activate_pgd(pgd);
 }
 
 void task_setup_filetable(struct fs_node **ft) {
@@ -65,12 +130,21 @@ void task_setup_filetable(struct fs_node **ft) {
   ft[1] = tty_file;
 }
 
-struct task *create_task(void *entry, pagedir_t pgd, bool do_stack,
-                         void *stack) {
+struct task *create_task(void *entry, pagedir_t pgd, bool kernel, uintptr_t esp,
+                         size_t stack_size) {
   struct task *task = create_dummy_task();
   task->pgd = pgd;
   task->binfo.entry = entry;
-  task_setup_stack(task, stack);
+  alloc_stack(task, esp - stack_size, stack_size, !kernel);
+  if (kernel)
+    kernel_task_init_kstack(task, esp);
+  else {
+    char *argv[] = {"argv1", "argv2"};
+    char *envp[] = {"a=b", "c=d", NULL};
+    // TODO: figure out envp and argv
+    task_init_kstack(task, esp); // TODO: finish and refactor other declarations to use esp + size
+    task_init_stack(task, 2, argv, envp);
+  }
   return task;
 }
 
@@ -168,7 +242,8 @@ pid_t generate_pid() {
 
 struct task *thread_create(void *entry, void *stack, pagedir_t pgd,
                            struct fs_node **filetable) {
-  struct task *thread = create_task(entry, pgd, true, stack);
+  struct task *thread =
+      create_task(entry, pgd, false, stack + PAGE_SIZE, STACK_SIZE);
   thread->filetable = filetable;
 
   thread->thid =
@@ -215,11 +290,19 @@ struct process *process_spawn(const char *filepath, struct process *parent) {
   kfree(buffer, 256);
 #endif
   elf_loadf(main_thread, file);
-  task_setup_stack(main_thread, VIRT_BASE - 0x1000);
+  alloc_stack(
+      main_thread, (uintptr_t)(VIRT_BASE - STACK_SIZE), STACK_SIZE,
+      true); // TODO: convert api to work with both kernel and user tasks
+  char *argv[] = {"argv1", "argv2"};
+  char *envp[] = {"a=b", "c=d", NULL};
+
+  // TODO: envp and argv
+  task_init_kstack(main_thread, VIRT_BASE);
+  task_init_stack(main_thread, 2, argv, envp);
   sched_add(main_thread);
 
   process->threads = list_create();
-  list_push(process->threads, main_thread);
+  list_push(process->threads, (list_value_t)main_thread);
   process->children = list_create();
 
   if (parent)
@@ -329,7 +412,22 @@ DECL_SYSCALL1(execve, const char *, file) {
   task_setup_filetable(current_task->filetable);
   elf_load(current_task, file);
   current_task->process->filepath = current_task->name;
-  task_setup_stack(current_task, VIRT_BASE - PAGE_SIZE);
+  task_init_kstack(current_task, (uintptr_t)VIRT_BASE);
+  alloc_stack(current_task, VIRT_BASE - STACK_SIZE, STACK_SIZE, true);
+
+  char **argv = kmalloc(sizeof(char *) * 3);
+  argv[0] = current_task->process->filepath;
+  argv[1] = "-test";
+  argv[2] = "arg";
+  char **envp = kmalloc(sizeof(char *) * 2);
+  envp[0] = "LC_ALL=en_US";
+  envp[1] = NULL;
+
+  for (int i = 0; i < 3; i++) {
+    klogf("REAL %s", argv[i]);
+  }
+  task_init_stack(current_task, 3, argv, envp);
+
   reschedule_to(current_task);
   // map_addr(current_task->pgd, VIRT_BASE - PAGE_SIZE, 1, true, false);
   // elf_exec(current_task);

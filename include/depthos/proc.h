@@ -18,7 +18,7 @@ typedef enum task_state {
   TASK_STARTING,
   TASK_RUNNING,
   TASK_SUSPENDED,
-	TASK_SLEEPING,
+  TASK_SLEEPING,
   TASK_DYING
 } task_state_t;
 
@@ -44,8 +44,13 @@ struct task {
   task_state_t state;
   thid_t thid;
 
-  uintptr_t kernel_stack, kernel_esp, stack;
+#define KSTACK_SIZE PAGE_SIZE
+  uintptr_t kernel_stack;
+  uintptr_t kernel_esp;
+#define STACK_SIZE PAGE_SIZE * 5
+  uintptr_t stack;
   pagedir_t pgd;
+
   struct registers *regs;
   uintptr_t gs_base, fs_base;
 
