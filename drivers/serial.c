@@ -146,6 +146,6 @@ void serial_console_init(unsigned id) {
     outb(INTR_ENABLE(dev), 0x1);
 
     register_console(serial_write, dev);
-    bootlog("Serial console initialised", LOG_STATUS_WARNING);
+    bootlog("Serial console initialised", LOG_STATUS_SUCCESS);
   }
 }
