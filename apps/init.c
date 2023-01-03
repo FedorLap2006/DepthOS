@@ -113,6 +113,11 @@ void cat(int argc, char *argv[128]) {
   _syscall1(0xA, fd);
 }
 
+void exec(int argc, char *argv[128]) {
+  if (argc > 1)
+    execve(argv[1]);
+}
+
 void exit_cmd(int argc, char *argv[128]) {
   *(unsigned long long *)(0x0) = 0xC0FFEE;
 }
@@ -122,10 +127,8 @@ void clear(int argc, char *argv[128]) {}
 void dash(int argc, char *argv[128]) { execve("/init.bin"); }
 
 struct cmd_h commands[] = {
-    {"uname", uname, 0},
-    {"cat", cat, 0},
-    {"exit", exit_cmd, 1},
-    {"dash", dash, 0},
+    {"uname", uname, 0}, {"cat", cat, 0},   {"exit", exit_cmd, 1},
+    {"dash", dash, 0},   {"exec", exec, 0}
 };
 
 void dispatch_command(char cmd[256]) {

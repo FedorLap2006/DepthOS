@@ -52,7 +52,8 @@ BUILDDEFS=-DOSVER=\"$(OSVER)\"
 ifeq ($(DEBUG), $(call on_check,$(DEBUG)))
 	BUILDDEFS += -DDEBUG
 endif
-APPS=init test-gcc
-APPS_ROOTPATH=..
+APPS=init nyancat donut
+
 APPS_BUILDDIR=apps-build
+APPS_ROOTPATH=..
 APPS_INSTALLDIR=$(INITRD_ROOT)
