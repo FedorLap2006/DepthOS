@@ -137,7 +137,8 @@ __noreturn void kmain(int magic, struct multiboot_information *boot_ptr) {
   idt_init(); // TODO: why this was not required before?
   paging_init();
   init_timer(1000);
-  pmm_init(3 * 1024 * 4096 + 2 * 1024 * 4096);
+  // pmm_init(3 * 1024 * 4096 + 2 * 1024 * 4096);
+  pmm_init(0);
   kheap_init();
   // pmm_dump_compact();
   multiboot_init(boot_ptr);
