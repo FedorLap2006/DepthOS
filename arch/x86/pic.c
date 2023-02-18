@@ -1,7 +1,9 @@
+#include <depthos/logging.h>
 #include <depthos/pic.h>
+#include <depthos/ports.h>
 
 #define PIC_PRIMARY_CMD_PORT 0x20
-#define PIC_SECONDARY_CMD_PORT 0x20
+#define PIC_SECONDARY_CMD_PORT 0xA0
 #define PIC_PRIMARY_DATA_PORT 0x21
 #define PIC_SECONDARY_DATA_PORT 0xA1
 
@@ -23,6 +25,8 @@ void pic_init(struct pic_config cfg) {
     primary_mask = ~(cfg.mask & 0xFF);
     secondary_mask = ~(cfg.mask >> 0x8);
   }
+
+  klogf("pic masks: 0x%x 0x%x", primary_mask, secondary_mask);
 
   /**
    * Remaping interrupts table
