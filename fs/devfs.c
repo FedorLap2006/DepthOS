@@ -2,6 +2,7 @@
 #include <depthos/errno.h>
 #include <depthos/fs.h>
 #include <depthos/heap.h>
+#include <depthos/logging.h>
 #include <depthos/string.h>
 
 #define DEVFS_MAX_DEVICES 256
@@ -10,15 +11,17 @@ static int devfs_file_count = 0;
 
 #define DEV(file) ((struct device *)file->impl)
 
-int devfs_read(struct fs_node *file, char *buffer, size_t nbytes) {
+int devfs_read(struct fs_node *file, char *buffer, size_t count,
+               off_t *offset) {
   if (DEV(file)->read)
-    return DEV(file)->read(DEV(file), buffer, nbytes);
+    return DEV(file)->read(DEV(file), buffer, count, offset);
   return ENIMPL;
 }
 
-int devfs_write(struct fs_node *file, char *buffer, size_t nbytes) {
+int devfs_write(struct fs_node *file, char *buffer, size_t count,
+                off_t *offset) {
   if (DEV(file)->write)
-    return DEV(file)->write(DEV(file), buffer, nbytes);
+    return DEV(file)->write(DEV(file), buffer, count, offset);
   return ENIMPL;
 }
 

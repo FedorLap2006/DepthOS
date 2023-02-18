@@ -12,15 +12,21 @@ typedef struct fs_operations {
   char *name;
   struct fs_node *(*open)(struct filesystem *fs, const char *path);
   struct filesystem *(*mount)(struct device *dev);
+
   // void (*unmount)(struct device *dev);
 } fs_ops_t;
 
 struct fs_node;
 struct stat;
 
+#define SEEK_CUR 1
+#define SEEK_END 2
+#define SEEK_SET 3
+
 typedef struct file_operations {
-  int (*read)(struct fs_node *file, char *buffer, size_t nbytes);
-  int (*write)(struct fs_node *file, char *buffer, size_t nbytes);
+  ssize_t (*seek)(struct fs_node *file, off_t pos, int whence);
+  int (*read)(struct fs_node *file, char *buffer, size_t count, off_t *offset);
+  int (*write)(struct fs_node *file, char *buffer, size_t count, off_t *offset);
   int (*ioctl)(struct fs_node *file, int request, void *data);
   int (*stat)(struct fs_node *file, struct stat *buf);
   void (*close)(struct fs_node *file);
@@ -36,7 +42,7 @@ typedef struct fs_node {
 #define FS_PIPE 0x0004
 #define FS_DEV 0x0005
   uint8_t type;
-  uint32_t pos;
+  off_t pos;
   bool eof;
 
   struct file_operations *ops;
@@ -95,10 +101,12 @@ struct fs_node *vfs_open(const char *path);
  */
 void vfs_close(struct fs_node *file);
 
-#define vfs_write(file, buffer, nbytes) file->ops->write(file, buffer, nbytes)
-#define vfs_read(file, buffer, nbytes) file->ops->read(file, buffer, nbytes)
+#define vfs_write(file, buffer, count)                                         \
+  file->ops->write(file, buffer, count, &file->pos)
+#define vfs_read(file, buffer, count)                                          \
+  file->ops->read(file, buffer, count, &file->pos)
+#define vfs_seek(file, offset) file->pos = offset
 #define vfs_eof(file) file->eof
-#define vfs_seek(file, newpos) file->pos = newpos
 
 /**
  * @brief Find filesystem by the name

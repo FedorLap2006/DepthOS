@@ -1,5 +1,7 @@
 #include <depthos/errno.h>
 #include <depthos/fs.h>
+#include <depthos/logging.h>
+#include <depthos/proc.h>
 #include <depthos/syscall.h>
 
 static inline struct fs_node *lookup_file(int fd) {

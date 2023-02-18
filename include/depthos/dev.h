@@ -6,13 +6,16 @@ struct device {
 #define DEV_CHAR 1
 #define DEV_BLOCK 2
   uint8_t type;
+  size_t block_size;
   char *name;
 
-  int (*read)(struct device *dev, void *buffer, size_t count);
-  int (*write)(struct device *dev, void *buffer, size_t count);
+  int (*read)(struct device *dev, void *buffer, size_t count, off_t *offset);
+  int (*seek)(struct device *dev, off_t offset, int whence, off_t *pos);
+  int (*write)(struct device *dev, void *buffer, size_t count, off_t *offset);
   long (*ioctl)(struct device *dev, unsigned long request, void *data);
 
-  uint32_t pos;
+  off_t pos; // NOTE: when device is accessed through an fs_node, its position
+             // is used.
   void *impl;
 };
 
