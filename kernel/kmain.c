@@ -1,3 +1,5 @@
+#include "depthos/ata.h"
+#include "depthos/pic.h"
 #include <depthos/console.h>
 #include <depthos/heap.h>
 #include <depthos/idt.h>
