@@ -12,6 +12,12 @@ struct ata_dev_impl {
   int drive;
 };
 
+#if CONFIG_ATA_LOG_ENABLE == 1
+#define ata_log(...) ata_log(__VA_ARGS__);
+#else
+#define ata_log(...)
+#endif
+
 #define IMPL(dev) ((struct ata_dev_impl *)dev->impl)
 void ata_io_wait(struct ata_port *port,
                  bool alternate) { // XXX: should an IRQ be used?
@@ -21,15 +27,18 @@ void ata_io_wait(struct ata_port *port,
                   : port->io_base + ATA_REG_STAT);
 }
 
-static void ata_wait(struct ata_port *port, bool alternate) {
-  while (1) {
-    uint8_t v = inb(alternate ? port->ctl_base + ATA_REG_ALT_STAT
-                              : port->io_base + ATA_REG_STAT);
-    klogf("wait: 0x%x (rdy=%d bsy=%d)", v, v & ATA_STATUS_RDY != 0,
-          v & ATA_STATUS_BSY != 0);
-    if (v & (ATA_STATUS_RDY | ATA_STATUS_BSY) != ATA_STATUS_RDY)
-      continue;
-    break;
+static void ata_poll(struct ata_port *port, bool alternate, bool data) {
+  uint8_t v;
+  do {
+    v = inb(alternate ? port->ctl_base + ATA_REG_ALT_STAT
+                      : port->io_base + ATA_REG_STAT);
+    // ata_log("ata wait: %x (%d)", v,
+    //       (v & ATA_STATUS_BSY == 0 && v & ATA_STATUS_DRQ != 0));
+  } while (v & ATA_STATUS_BSY || (data && v & ATA_STATUS_DRQ != 0));
+
+  if (v & ATA_STATUS_ERR) {
+    panicf("ATA drive (ctl=%d, io=%d) is not working properly.", port->ctl_base,
+           port->io_base);
   }
 }
 
@@ -49,7 +58,7 @@ void ata_reset(struct ata_port *port) {
         false); // 5us delay.
                 // https://wiki.osdev.org/ATA_PIO_Mode#Device_Control_Register_.28Control_base_.2B_0.29
   outb(port->ctl_base + ATA_REG_DEV_CTL, 0x0);
-  ata_wait(port, false);
+  ata_poll(port, false, false);
 }
 
 void ata_send_command(struct ata_port *port, uint8_t command) {
@@ -77,7 +86,7 @@ ata_identify_data_t *ata_identify(struct ata_port *port, int drive) {
   ata_reset(port);
   ata_io_wait(port, false);
   ata_drive_select(port, drive);
-  ata_wait(port, false);
+  ata_poll(port, false, false);
   outb(port->io_base + ATA_REG_LBA_LOW, 0x0);
   outb(port->io_base + ATA_REG_LBA_MID, 0x0);
   outb(port->io_base + ATA_REG_LBA_HI, 0x0);
@@ -91,30 +100,30 @@ ata_identify_data_t *ata_identify(struct ata_port *port, int drive) {
   uint8_t lba_lo = inb(port->io_base + ATA_REG_LBA_LOW);
   uint8_t lba_hi = inb(port->io_base + ATA_REG_LBA_HI);
   if (lba_lo || lba_hi) {
-    klogf("device is not ata");
+    ata_log("device is not ata");
     kfree(data, 256 * sizeof(uint16_t));
     return NULL;
   }
 
   bool drq = false, err = false;
   status = ata_read_status(port, false);
-  klogf("polling ata status: %d", status);
+  ata_log("polling ata status: %d", status);
   while (!(err = (status & ATA_STATUS_ERR) != 0) &&
          !(drq = (status & ATA_STATUS_DRQ) != 0)) {
-    klogf("polling ata status: %d", status);
+    ata_log("polling ata status: %d", status);
     if (inb(port->io_base + ATA_REG_LBA_MID) ||
         inb(port->io_base + ATA_REG_LBA_HI)) {
-      klogf("device is not ata");
+      ata_log("device is not ata");
       kfree(data, 256 * sizeof(uint16_t));
       return NULL;
     }
     status = ata_read_status(port, false);
   }
 
-  klogf("finished polling ata status: %d (err=%d drq=%d)", status, err, drq);
+  ata_log("finished polling ata status: %d (err=%d drq=%d)", status, err, drq);
 
   if (err) {
-    klogf("error reading ata device: err=%d drq=%d", err, drq);
+    ata_log("error reading ata device: err=%d drq=%d", err, drq);
     return NULL;
   }
 
@@ -143,9 +152,9 @@ void ata_pio_read(struct ata_port *port, uint16_t *buf, size_t lba,
                   uint8_t sector_count) {
 
   ata_pio_prepare_transaction(port, lba, sector_count, false);
-
+  ata_log("ata: reading %ld sectors at %ld", sector_count, lba);
   for (int i = 0; i < sector_count; i++) {
-    ata_wait(port, false);
+    ata_poll(port, false, true);
 
     for (int j = 0; j < 256; j++) {
       buf[i * 256 + j] = inw(port->io_base + ATA_REG_DATA);
@@ -157,7 +166,7 @@ void ata_pio_read(struct ata_port *port, uint16_t *buf, size_t lba,
 void ata_pio_write(struct ata_port *port, uint16_t *buf, size_t lba,
                    uint8_t sector_count) {
   ata_pio_prepare_transaction(port, lba, sector_count, true);
-  ata_wait(port, false);
+  ata_poll(port, false, false);
 
   uint8_t sec = 0;
   for (int i = 0; i < sector_count; i++) {
@@ -166,8 +175,8 @@ void ata_pio_write(struct ata_port *port, uint16_t *buf, size_t lba,
       __asm volatile("nop; nop; nop");
     }
     outb(port->io_base + ATA_REG_CMD, ATA_CMD_FLUSH);
-    ata_wait(port, false);
-    klogf("write status: 0x%x", ata_read_status(port, false));
+    ata_poll(port, false, true);
+    ata_log("write status: 0x%x", ata_read_status(port, false));
   }
 }
 

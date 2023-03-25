@@ -1,6 +1,6 @@
 #pragma once
 
-// TODO: #define CONFIG_ENABLED
+///// General settings /////
 
 #define CONFIG_SYS_LINUX_COMPAT
 // #define CONFIG_SYS_TRACE
