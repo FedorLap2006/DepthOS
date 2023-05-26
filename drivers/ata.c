@@ -1,7 +1,10 @@
-#include "depthos/dev.h"
-#include "depthos/heap.h"
-#include "depthos/idt.h"
+#include <depthos/assert.h>
 #include <depthos/ata.h>
+#include <depthos/bitmap.h>
+#include <depthos/dev.h>
+#include <depthos/errno.h>
+#include <depthos/heap.h>
+#include <depthos/idt.h>
 #include <depthos/logging.h>
 #include <depthos/ports.h>
 #include <depthos/strconv.h>
@@ -9,14 +12,28 @@
 
 struct ata_dev_impl {
   struct ata_port *port;
+  struct ata_identify *info;
   int drive;
 };
 
 #if CONFIG_ATA_LOG_ENABLE == 1
-#define ata_log(...) ata_log(__VA_ARGS__);
+#define ata_log(...) klogf(__VA_ARGS__);
 #else
 #define ata_log(...)
 #endif
+
+#define BOUNDS_CHECK(dev, sector, n)                                           \
+  if (sector >= IMPL(dev)->info->current_sector_capacity) {                    \
+    ata_log("trying to access with out-of-bounds sector: %d >= %d", sector,    \
+            IMPL(dev)->info->current_sector_capacity);                         \
+    return 0;                                                                  \
+  } else if (sector + n >= IMPL(dev)->info->current_sector_capacity) {         \
+    ata_log("trying to access with partially in-bounds sector: %d + %d >= %d", \
+            sector, n, IMPL(dev)->info->current_sector_capacity);              \
+    n = IMPL(dev)->info->current_sector_capacity - sector;                     \
+  }
+// #define BOUNDS_CHECK(dev, sector, n) assert(sector + n <
+// IMPL(dev)->info->current_sector_capacity);
 
 #define IMPL(dev) ((struct ata_dev_impl *)dev->impl)
 void ata_io_wait(struct ata_port *port,
@@ -32,12 +49,15 @@ static void ata_poll(struct ata_port *port, bool alternate, bool data) {
   do {
     v = inb(alternate ? port->ctl_base + ATA_REG_ALT_STAT
                       : port->io_base + ATA_REG_STAT);
-    // ata_log("ata wait: %x (%d)", v,
-    //       (v & ATA_STATUS_BSY == 0 && v & ATA_STATUS_DRQ != 0));
-  } while (v & ATA_STATUS_BSY || (data && v & ATA_STATUS_DRQ != 0));
 
-  if (v & ATA_STATUS_ERR) {
-    panicf("ATA drive (ctl=%d, io=%d) is not working properly.", port->ctl_base,
+    ata_log("ata poll: bsy=%d drq=%d err=%d dfa=%d", (v & ATA_STATUS_BSY) != 0,
+            (v & ATA_STATUS_DRQ) != 0, (v & ATA_STATUS_ERR) != 0,
+            (v & ATA_STATUS_DFA) != 0);
+  } while (((v & ATA_STATUS_BSY) || (data && ((v & ATA_STATUS_DRQ) == 0))) &&
+           ((v & ATA_STATUS_ERR) == 0) && ((v & ATA_STATUS_DFA) == 0));
+  ata_log("stopped polling");
+  if (v & ATA_STATUS_ERR || v & ATA_STATUS_DFA) {
+    panicf("ATA drive (ctl=%x, io=%x) is not working properly.", port->ctl_base,
            port->io_base);
   }
 }
@@ -148,25 +168,29 @@ void ata_pio_prepare_transaction(struct ata_port *port, size_t lba,
   outb(port->io_base + ATA_REG_CMD, write ? ATA_CMD_WRITE : ATA_CMD_READ);
 }
 
-void ata_pio_read(struct ata_port *port, uint16_t *buf, size_t lba,
-                  uint8_t sector_count) {
-
+int ata_pio_read(struct ata_port *port, uint16_t *buf, size_t lba,
+                 uint8_t sector_count) {
+  ata_poll(port, false, false);
   ata_pio_prepare_transaction(port, lba, sector_count, false);
   ata_log("ata: reading %ld sectors at %ld", sector_count, lba);
   for (int i = 0; i < sector_count; i++) {
-    ata_poll(port, false, true);
 
+    ata_poll(port, false, true); // TODO: error logging
+    ata_log("began reading");
     for (int j = 0; j < 256; j++) {
       buf[i * 256 + j] = inw(port->io_base + ATA_REG_DATA);
     }
+    ata_log("stopped reading");
     ata_io_wait(port, false);
   }
+  return 0;
 }
 
-void ata_pio_write(struct ata_port *port, uint16_t *buf, size_t lba,
-                   uint8_t sector_count) {
-  ata_pio_prepare_transaction(port, lba, sector_count, true);
+int ata_pio_write(struct ata_port *port, uint16_t *buf, size_t lba,
+                  uint8_t sector_count) {
   ata_poll(port, false, false);
+  ata_pio_prepare_transaction(port, lba, sector_count, true);
+  ata_poll(port, false, false); // TODO: error logging
 
   uint8_t sec = 0;
   for (int i = 0; i < sector_count; i++) {
@@ -178,10 +202,14 @@ void ata_pio_write(struct ata_port *port, uint16_t *buf, size_t lba,
     ata_poll(port, false, true);
     ata_log("write status: 0x%x", ata_read_status(port, false));
   }
+  return 0;
 }
 
 int ata_write(struct device *dev, void *buf, unsigned long count,
               off_t *offset) {
+  BOUNDS_CHECK(dev, *offset, count);
+  if (count == 0)
+    return 0;
   ata_drive_select(IMPL(dev)->port, IMPL(dev)->drive);
   ata_pio_write(IMPL(dev)->port, buf, *offset, count);
   *offset += count;
@@ -190,9 +218,15 @@ int ata_write(struct device *dev, void *buf, unsigned long count,
 
 int ata_read(struct device *dev, void *buf, unsigned long count,
              off_t *offset) {
+  BOUNDS_CHECK(dev, *offset, count);
+  if (count == 0)
+    return 0;
   ata_drive_select(IMPL(dev)->port, IMPL(dev)->drive);
+  ata_log("attempting to do a pio read. offset: %ld count: %ld", *offset,
+          count);
   ata_pio_read(IMPL(dev)->port, buf, *offset, count);
   *offset += count;
+  ata_log("read successful");
   return count;
 }
 
@@ -224,12 +258,17 @@ void ata_init() {
   ata_primary_port = create_ata_port(0x3F6, 0x1F0);
   ata_secondary_port = create_ata_port(0x376, 0x170);
   int i = 0;
+  struct ata_identify *info;
 #define ATA_REGDEV(P, D)                                                       \
-  if (ata_identify(P, D)) {                                                    \
+  if (info = ata_identify(P, D)) {                                             \
     char *buf = kmalloc(8);                                                    \
+    memset(buf, 0, 8);                                                         \
     itoa(i++, 10, buf + strlen("ata"));                                        \
     memcpy(buf, "ata", strlen("ata"));                                         \
-    devfs_register(buf, create_ata_device(P, D));                              \
+    struct device *dev = create_ata_device(P, D);                              \
+    IMPL(dev)->info = info;                                                    \
+    dev->name = buf;                                                           \
+    register_device(dev);                                                      \
   }
 
   ATA_REGDEV(ata_primary_port, 0);
