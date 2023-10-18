@@ -7,8 +7,8 @@
 
 typedef struct initrd_header {
   char name[INITRD_PATH_LENGTH];
-  uint16_t length;
-  uint16_t offset;
+  uint32_t length;
+  uint32_t offset;
 } initrd_header_t;
 
 void initrdfs_init();

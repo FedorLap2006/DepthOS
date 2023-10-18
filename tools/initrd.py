@@ -15,7 +15,7 @@ class Header:
         self.length = length
         self.offset = offset
     def pack(self, base_offset: int):
-        return struct.pack(f'{PATH_LENGTH}sHH', bytes(self.filepath[:PATH_LENGTH-1], encoding='ascii'), self.length, self.offset + base_offset)
+        return struct.pack(f'={PATH_LENGTH}sLL', bytes(self.filepath[:PATH_LENGTH-1], encoding='ascii'), self.length, self.offset + base_offset)
 
 with open(OUTPUT_FILE, 'wb') as out:
     headers = []
