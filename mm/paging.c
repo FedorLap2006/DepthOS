@@ -1,10 +1,9 @@
-#include <depthos/logging.h>
-#include <depthos/paging.h>
-
 #include <depthos/bitmap.h>
 #include <depthos/heap.h>
 #include <depthos/idt.h>
 #include <depthos/kernel.h>
+#include <depthos/logging.h>
+#include <depthos/paging.h>
 #include <depthos/pmm.h>
 #include <depthos/proc.h>
 #include <depthos/stdbits.h>
@@ -140,21 +139,16 @@ page_t *get_page(pagedir_t pgd, uint32_t vaddr) {
   return (page_t *)pde + pte_index(vaddr);
 }
 
-void map_addr(pagedir_t pgd, uint32_t vaddr, size_t npages, bool user,
-              bool overwrite) {
+void map_addr_fixed(pagedir_t pgd, uintptr_t vaddr, uintptr_t pstart,
+                    size_t npages, bool user, bool overwrite) {
   // klogf("=================== test ================");
-
-  uintptr_t phys_start = pmm_alloc(npages);
-  if (phys_start < 0) {
-    klogf("cannot allocate %d continous pages", npages);
-    return;
-  }
+  vaddr = PG_RND_DOWN(vaddr); // TODO: proper alignment check
 
   for (int i = 0; i < npages; i++) {
     page_t *page = get_page(pgd, vaddr + i * PAGE_SIZE);
     if (page && *page && !overwrite) // TODO: free the page
       continue;
-    map_addr_phys(pgd, vaddr + i * PAGE_SIZE, phys_start + i * PAGE_SIZE, user);
+    map_page(pgd, vaddr + i * PAGE_SIZE, pstart + i * PAGE_SIZE, user);
   }
 #if 0
   for (int i = 0; i <= npages / 1024; i++) {
@@ -176,8 +170,21 @@ void map_addr(pagedir_t pgd, uint32_t vaddr, size_t npages, bool user,
   }
 #endif
 }
+uintptr_t map_addr(pagedir_t pgd, uintptr_t vaddr, size_t npages, bool user,
+                   bool overwrite) {
+  // klogf("mmap: vaddr=%p npages=%d user=%d ow=%d", vaddr, npages, user,
+  //       overwrite);
+  vaddr = PG_RND_DOWN(vaddr); // TODO: proper alignment check
+  uintptr_t phys_start = pmm_alloc(npages);
+  if (phys_start < 0) {
+    klogf("cannot allocate %ld continuous pages", npages);
+    return NULL;
+  }
+  map_addr_fixed(pgd, vaddr, phys_start, npages, user, overwrite);
+  return phys_start;
+}
 
-void map_addr_phys(pagedir_t pgd, uintptr_t vaddr, uintptr_t phys, bool user) {
+void map_page(pagedir_t pgd, uintptr_t vaddr, uintptr_t phys, bool user) {
   if (!(pgd[pde_index(vaddr)] >> PDE_ADDR_SHIFT)) {
     // klogf("hello world");
     pagetb_t tb = kmalloc(0x1000);

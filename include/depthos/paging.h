@@ -79,9 +79,11 @@ pagedir_t get_current_pgd();
 
 page_t *get_page(pagedir_t dir, uint32_t vaddr);
 void *get_paddr(pagedir_t dir, void *vaddr); // get physical addr from virtual
-void map_addr_phys(pagedir_t pgd, uintptr_t vaddr, uintptr_t phys, bool user);
-void map_addr(pagedir_t pgd, uint32_t vaddr, size_t npages, bool user,
-              bool overwrite);
+void map_page(pagedir_t pgd, uintptr_t vaddr, uintptr_t phys, bool user);
+void map_addr_fixed(pagedir_t pgd, uintptr_t vaddr, uintptr_t pstart,
+                    size_t npages, bool user, bool overwrite);
+uintptr_t map_addr(pagedir_t pgd, uintptr_t vaddr, size_t npages, bool user,
+                   bool overwrite);
 
 page_t make_pte(uint32_t paddr, int user, int rw);
 pde_t make_pde(uint32_t paddr, int user, int rw);
