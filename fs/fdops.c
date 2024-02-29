@@ -7,11 +7,13 @@
 static inline struct fs_node *lookup_file(int fd) {
   if (fd >= TASK_FILETABLE_MAX) {
     errno = -EINVAL;
+  if (fd < 0 || fd >= TASK_FILETABLE_MAX) {
+    errno = EBADF;
     return NULL;
   }
   struct fs_node *file = current_task->filetable[fd];
   if (!file)
-    errno = -EINVAL;
+    errno = EBADF;
 
   return file;
 }
