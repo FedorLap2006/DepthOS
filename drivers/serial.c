@@ -103,7 +103,8 @@ void serial_console_irq_handler(regs_t *r) {
   keyboard_current_event_handler((struct keyboard_event){
       .keycode = keycode, // TODO: ctrl, alt and similar modifiers
       .pressed = true,
-      .modifiers = 0,
+      .modifiers =
+          (buf[0] >= 'A' && buf[0] <= 'Z') ? KEYBOARD_MODIFIER_SHIFT : 0,
   });
 }
 
