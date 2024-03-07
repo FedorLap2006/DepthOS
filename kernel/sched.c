@@ -167,13 +167,20 @@ void sched_remove(struct task *task) {
   task->sched_entry = NULL;
 }
 
-void sched_yield(regs_t *r) {
+void _sched_yield(regs_t *r) {
   current_task->regs = r;
   reschedule();
+}
+
+void sched_yield() {
+  if (!sched_initialized)
+    return;
+  // TODO: proper context switch for internal yielding
+  __asm__ volatile("int $0x30");
 }
 
 void sched_ticker(regs_t *r) {
   idt_disable_hwinterrupts();
   current_task->running_time++;
-  sched_yield(r);
+  _sched_yield(r);
 }

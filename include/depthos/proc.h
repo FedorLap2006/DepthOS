@@ -179,6 +179,7 @@ void sched_add(struct task *);
  */
 void sched_remove(struct task *);
 void sched_init(void);
+void sched_yield(void);
 
 void preempt_enable();
 void preempt_disable();
