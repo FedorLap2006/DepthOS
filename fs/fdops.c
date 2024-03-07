@@ -38,6 +38,10 @@ DECL_SYSCALL1(open, const char *, path) {
   if (!current_task->filetable)
     return -ENIMPL;
   struct fs_node *file = vfs_open(path);
+  if (!file) {
+    klogf("enoent");
+    return -ENOENT;
+  }
   for (int i = 0; i < TASK_FILETABLE_MAX; i++) {
     if (current_task->filetable[i] == NULL) {
       current_task->filetable[i] = file;
