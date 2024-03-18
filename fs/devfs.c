@@ -31,10 +31,24 @@ int devfs_ioctl(struct fs_node *file, int request, void *data) {
   return ENIMPL;
 }
 
+soff_t devfs_seek(struct fs_node *file, soff_t pos, int whence) {
+  if (DEV(file)->seek)
+    return DEV(file)->seek(DEV(file), pos, whence,
+                           &file->pos); // XXX: file->pos or something else?
+  return ENIMPL;
+}
+
+int devfs_mmap(struct fs_node *file, struct vm_area *area) {
+  if (DEV(file)->mmap)
+    return DEV(file)->mmap(DEV(file), area);
+  return ENIMPL;
+}
 struct file_operations devfs_fileops = (struct file_operations){
     .read = devfs_read,
     .write = devfs_write,
     .ioctl = devfs_ioctl,
+    .mmap = devfs_mmap,
+    .seek = devfs_seek,
     .close = NULL,
 };
 
