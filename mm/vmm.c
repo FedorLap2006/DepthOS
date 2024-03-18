@@ -160,7 +160,7 @@ int vma_map_file(struct vm_area *area, int fd, off_t offset) {
     return -1;
   }
 
-  struct file *file = area->parent->filetable[fd];
+  struct fs_node *file = area->parent->filetable[fd];
   if (!file) {
     errno = EBADF;
     return -1;
