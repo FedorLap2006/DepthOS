@@ -29,3 +29,5 @@
 #define __MAP2(m, t, a, ...) m(t, a), __MAP1(m, __VA_ARGS__)
 #define __MAP3(m, t, a, ...) m(t, a), __MAP2(m, __VA_ARGS__)
 #define __MAP(x, ...) __MAP##x(__VA_ARGS__)
+#define safe_add(a, b, res) __builtin_add_overflow(a, b, res)
+#define safe_sub(a, b, res) __builtin_sub_overflow(a, b, res)

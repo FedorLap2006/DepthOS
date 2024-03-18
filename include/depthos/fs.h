@@ -1,6 +1,7 @@
 #pragma once
 
 #include <depthos/stdtypes.h>
+#include <depthos/file.h>
 
 struct fs_operations;
 struct filesystem {

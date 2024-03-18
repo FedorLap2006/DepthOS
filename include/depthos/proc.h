@@ -52,7 +52,8 @@ struct task {
 #define STACK_SIZE PAGE_SIZE * 5
   uintptr_t stack;
   pagedir_t pgd;
-
+  size_t mmap_bump_idx;
+  
   struct registers *regs;
   uintptr_t gs_base, fs_base;
 
