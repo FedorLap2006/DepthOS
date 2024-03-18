@@ -177,6 +177,8 @@ struct task *fork_task(struct task *parent) {
   memcpy(task->kernel_stack, parent->kernel_stack, 0x1000);
   task->regs =
       task->kernel_esp - (parent->kernel_esp - (uintptr_t)parent->regs);
+  task->fs_base = parent->fs_base;
+  task->gs_base = parent->gs_base;
   task->regs->eax = 0;
   return task;
 }
