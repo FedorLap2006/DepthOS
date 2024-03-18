@@ -69,7 +69,7 @@ typedef struct vm_area {
   /**
    * File area is mapped to.
    */
-  struct file *file;
+  struct fs_node *file;
   /**
    * Must be divisible by PAGE_SIZE
    */
