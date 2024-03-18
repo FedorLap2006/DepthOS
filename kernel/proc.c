@@ -8,6 +8,7 @@
 #include <depthos/proc.h>
 #include <depthos/string.h>
 #include <depthos/syscall.h>
+#include <depthos/vmm.h>
 #include <depthos/x86/asm/gdt.h>
 
 static inline void alloc_kernel_stack(struct task *task) {
@@ -27,6 +28,8 @@ static inline void alloc_stack(struct task *task, uintptr_t stack, int size,
 static struct task *create_dummy_task() {
   struct task *task = kmalloc(sizeof(struct task));
   task->gs_base = task->fs_base = 0x0;
+  task->vm_areas = list_create();
+  task->mmap_bump_idx = 0;
   alloc_kernel_stack(task);
   return task;
 }
@@ -160,6 +163,7 @@ struct task *fork_task(struct task *parent) {
   task->binfo = parent->binfo;
   task->process = NULL;
   task->sched_entry = NULL;
+  task->vm_areas = parent->vm_areas; // TODO: clone pgd memes
   task->parent = parent;
   task->filetable = kmalloc(sizeof(struct fs_node *) * TASK_FILETABLE_MAX);
   printk("filetable: %p\n", task->filetable);
@@ -414,6 +418,7 @@ DECL_SYSCALL1(execve, const char *, file) {
   current_task->process->filepath = current_task->name;
   task_init_kstack(current_task, (uintptr_t)VIRT_BASE);
   alloc_stack(current_task, VIRT_BASE - STACK_SIZE, STACK_SIZE, true);
+  current_task->vm_areas = list_create();
 
   char **argv = kmalloc(sizeof(char *) * 3);
   argv[0] = current_task->process->filepath;

@@ -64,6 +64,7 @@ struct task {
   // uint16_t running_time_sched;
 
   struct exec_binary_info binfo;
+  struct list *vm_areas;
   struct task *parent;
   struct process *process;
   struct list_entry *sched_entry;
