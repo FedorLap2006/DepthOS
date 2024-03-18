@@ -1,7 +1,11 @@
 #pragma once
 
+#include <depthos/errno.h>
 #include <depthos/stdtypes.h>
+#include <depthos/tools.h>
 #include <depthos/file.h>
+
+struct vm_area;
 
 struct fs_operations;
 struct filesystem {
@@ -9,48 +13,18 @@ struct filesystem {
   struct device *dev;
   void *impl;
 };
+
+
 typedef struct fs_operations {
   char *name;
   struct fs_node *(*open)(struct filesystem *fs, const char *path);
+  struct fs_node *(*iopen)(struct filesystem *fs, inode_t inode);
   struct filesystem *(*mount)(struct device *dev);
 
   // void (*unmount)(struct device *dev);
 } fs_ops_t;
 
-struct fs_node;
-struct stat;
 
-#define SEEK_CUR 1
-#define SEEK_END 2
-#define SEEK_SET 3
-
-typedef struct file_operations {
-  ssize_t (*seek)(struct fs_node *file, off_t pos, int whence);
-  int (*read)(struct fs_node *file, char *buffer, size_t count, off_t *offset);
-  int (*write)(struct fs_node *file, char *buffer, size_t count, off_t *offset);
-  int (*ioctl)(struct fs_node *file, int request, void *data);
-  int (*stat)(struct fs_node *file, struct stat *buf);
-  void (*close)(struct fs_node *file);
-} file_ops_t;
-
-typedef struct fs_node {
-  char *name;
-  char *path;
-
-#define FS_FILE 0x0001
-#define FS_DIR 0x0002
-#define FS_MOUNT 0x0003
-#define FS_PIPE 0x0004
-#define FS_DEV 0x0005
-  uint8_t type;
-  off_t pos;
-  bool eof;
-
-  struct file_operations *ops;
-  void *impl;
-} fs_node_t;
-
-struct stat {};
 
 struct mount {
   char *path;
@@ -88,6 +62,12 @@ struct mount* vfs_try_mount(const char* path, struct device* dev);
  */
 bool vfs_unmount(const char *path);
 
+#define SEEK_CUR 1
+#define SEEK_END 2
+#define SEEK_SET 3
+
+#define O_DIR 0x1
+
 /**
  * @brief Open a file
  *
@@ -102,12 +82,25 @@ struct fs_node *vfs_open(const char *path);
  */
 void vfs_close(struct fs_node *file);
 
+/**
+ * @brief Update the position pointer of a file
+ *
+ * @param pos Desired position
+ * @param max Maximum allowed position (usually file size)
+ * @return Updated position on success, otherwise -EINVAL.
+ */
+soff_t vfs_setpos(struct fs_node *file, soff_t pos, soff_t max);
+
 #define vfs_write(file, buffer, count)                                         \
-  file->ops->write(file, buffer, count, &file->pos)
+  SAFE_FNPTR_CALL(file->ops->write, -EINVAL, file, buffer, count, &file->pos)
 #define vfs_read(file, buffer, count)                                          \
-  file->ops->read(file, buffer, count, &file->pos)
-#define vfs_seek(file, offset) file->pos = offset
+  SAFE_FNPTR_CALL(file->ops->read, -EINVAL, file, buffer, count, &file->pos)
+// #define vfs_seek(file, offset) file->pos = offset
+#define vfs_seek(file, offset, whence)                                         \
+  SAFE_FNPTR_CALL(file->ops->seek, -EINVAL, file, offset, whence)
 #define vfs_eof(file) file->eof
+#define vfs_iter(file, dst, len) file->ops->iter(file, dst, len, &file->pos)
+#define vfs_fimpl(file, t) ((t)(file)->impl)
 
 /**
  * @brief Find filesystem by the name
