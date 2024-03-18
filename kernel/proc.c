@@ -186,6 +186,7 @@ struct task *fork_task(struct task *parent) {
 struct task *create_kernel_task(void *entry, bool do_stack) {
   struct task *task = create_dummy_task();
   task->pgd = kernel_pgd;
+  task->gs_base = task->fs_base = 0x0;
   if (!do_stack)
     return;
   uint32_t *stack = task->kernel_esp;
