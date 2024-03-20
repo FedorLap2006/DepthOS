@@ -21,6 +21,7 @@ struct device {
   uint8_t type;
 #define DEV_C_GENERIC 0
 #define DEV_C_TTY 1
+#define DEV_C_STORAGE 2
   uint16_t class;
   uint16_t idx;
   size_t block_size;

@@ -240,6 +240,7 @@ struct device *create_ata_device(struct ata_port *port, int drive) {
   IMPL(dev)->drive = drive;
   dev->type = DEV_BLOCK;
   dev->block_size = 512;
+  dev->class = DEV_C_STORAGE;
   dev->pos = 0;
 
   return dev;
