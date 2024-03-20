@@ -98,7 +98,7 @@ apps:
 
 
 # kernel-map: $(KERNEL_MAP_FILE)
-$(INITRD_FILE): $(KERNEL_MAP_FILE) $(foreach name,$(APPS),$(APPS_INSTALLDIR)/$(name).bin) $(findstring apps,$(MAKECMDGOALS)) 
+$(INITRD_FILE): $(KERNEL_MAP_FILE)
 	python3 tools/initrd.py $(INITRD_ROOT)
 
 .PHONY: iso
