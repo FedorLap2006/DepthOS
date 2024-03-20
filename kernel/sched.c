@@ -75,8 +75,8 @@ void sched_init() {
   idt_disable_hwinterrupts();
   tasklist = list_create();
 
-  void sched_yield(regs_t * r);
-  idt_register_interrupt(0x30, sched_yield); // yield
+  void _sched_yield(regs_t * r);
+  idt_register_interrupt(0x30, _sched_yield); // yield
   // pagedir_t pgd = kmalloc(0x1000);
   struct task *idle_task = create_kernel_task(__idle_thread, true);
   idle_task->name = "idle";
