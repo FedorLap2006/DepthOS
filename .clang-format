@@ -2,8 +2,11 @@
 Language: Cpp
 BasedOnStyle: LLVM
 IndentWidth: 2
-AllowShortBlocksOnASingleLine: false
-AllowShortIfStatementsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Always
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+AlignAfterOpenBracket: DontAlign
+SkipMacroDefinitionBody: true
+ColumnLimit: 120
 TabWidth: 8
 UseTab: Never
 ---
