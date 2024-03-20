@@ -22,6 +22,7 @@ bool elf_probef(struct fs_node *file) {
 bool elf_probe(const char *path) {
   struct fs_node *file = vfs_open(path);
   if (!file) {
+    errno = ENOENT;
     return false;
   }
   return elf_probef(file);
