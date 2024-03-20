@@ -5,8 +5,6 @@
 #include <depthos/syscall.h>
 
 static inline struct fs_node *lookup_file(int fd) {
-  if (fd >= TASK_FILETABLE_MAX) {
-    errno = -EINVAL;
   if (fd < 0 || fd >= TASK_FILETABLE_MAX) {
     errno = EBADF;
     return NULL;
