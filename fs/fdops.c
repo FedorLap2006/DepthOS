@@ -22,15 +22,15 @@ DECL_SYSCALL3(write, int, fd, char *, buf, size_t, n) {
   errno = 0;
   struct fs_node *file = lookup_file(fd);
   if (!file)
-    return errno;
+    return -errno;
 
   return vfs_write(file, buf, n);
 }
 DECL_SYSCALL3(read, int, fd, char *, buf, size_t, n) {
   errno = 0;
   struct fs_node *file = lookup_file(fd);
-  if (file < 0)
-    return (int)file;
+  if (!file)
+    return -errno;
 
   return vfs_read(file, buf, n);
 }
@@ -55,16 +55,17 @@ DECL_SYSCALL1(close, int, fd) {
   errno = 0;
   struct fs_node *file = lookup_file(fd);
   if (!file)
-    return errno;
+    return -errno;
 
   vfs_close(file);
+  return 0;
 }
 
 DECL_SYSCALL3(dup3, int, oldfd, int, newfd, int, flags) {
   errno = 0;
   struct fs_node *file = lookup_file(oldfd);
   if (!file)
-    return errno;
+    return -errno;
 
   if (newfd >= TASK_FILETABLE_MAX)
     return -EINVAL;
@@ -77,8 +78,9 @@ DECL_SYSCALL3(dup3, int, oldfd, int, newfd, int, flags) {
 DECL_SYSCALL3(ioctl, int, fd, int, request, void *, data) {
   errno = 0;
   struct fs_node *file = lookup_file(fd);
-  if (!file)
-    return errno;
+  if (!file) {
+    return -errno;
+  }
 
   return file->ops->ioctl(file, request, data);
 }
