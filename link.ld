@@ -8,13 +8,18 @@ SECTIONS {
    /* The multiboot data and code will exist in low memory
       starting at 0x100000 */
    . = 0xC0100000;
-    
+ 
+
+  kernel_start = .; _kernel_start = .; __kernel_start = .;
+
    /* The kernel will live at 3GB + 1MB in the virtual
       address space, which will be mapped to 1MB in the
       physical address space. */
- 
+
+
    .text ALIGN(4096) : AT(ADDR(.text) - 0xC0000000) {
        *(.multiboot)
+       *(.bootstrap*)
        *(.text*)
    }
    .rodata ALIGN(4K) : AT(ADDR(.rodata) - 0xC0000000) {

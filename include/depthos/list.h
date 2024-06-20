@@ -17,12 +17,13 @@ struct list {
 };
 
 #define list_item(entry, type) ((type)entry->value)
+#define to_list_item(value) (list_value_t)(value)
 
-#define list_foreachv(list, item)                                               \
+#define list_foreachv(list, item)                                              \
   for (item = list->first; item != NULL; item = item->next)
 
 #define list_foreach(list, item)                                               \
-  for (struct list_entry *item = list->first; item != NULL; item = item->next)
+  for (struct list_entry *item = (list)->first; item != NULL; item = item->next)
 
 void list_init(struct list *list);
 struct list *list_create();

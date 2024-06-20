@@ -1,4 +1,6 @@
 #include <depthos/assert.h>
+#include <depthos/dev.h>
+#include <depthos/errno.h>
 #include <depthos/fs.h>
 #include <depthos/heap.h>
 #include <depthos/initrd.h>
@@ -17,10 +19,6 @@ void vfs_init() {
   initrdfs_init();
   devfs_init();
 
-  bootlog("Mounting initial ramdisk",
-          vfs_mount("/", vfs_get_filesystem("initrd"), NULL)
-              ? LOG_STATUS_SUCCESS
-              : LOG_STATUS_ERROR);
   vfs_mount("/dev", vfs_get_filesystem("devfs"), NULL);
 }
 
@@ -122,6 +120,7 @@ out:
   return ret;
 }
 
+// TODO: path cleanup
 struct fs_node *vfs_open(const char *path) {
   struct mount *mountpoint = find_mount(path);
   if (!mountpoint)
@@ -131,13 +130,56 @@ struct fs_node *vfs_open(const char *path) {
     relpath = "/";
   else if (strcmp(mountpoint->path, "/"))
     relpath = path + strlen(mountpoint->path);
-  struct fs_node *node = mountpoint->fsi->ops->open(mountpoint->fsi, relpath);
+  struct fs_node *node = mountpoint->fsi->ops->open(
+      mountpoint->fsi, relpath); // TODO: maybe set default operation callbacks?
   if (!node)
     return NULL;
   node->path = strdup(path);
-  node->name = strdup(strrchr(path, PATH_SEPARATOR) + 1);
+  int pl = strlen(node->path);
+  if (pl > 1 && path[pl - 1] == '/')
+    node->path[pl - 1] = 0;
+
+  node->name = strdup(strrchr(node->path, PATH_SEPARATOR) + 1);
   node->eof = false;
+  node->pos = 0; // TODO: put that into seek?
+  node->fs = mountpoint->fsi;
+
+  struct device *dev = mountpoint->fsi->dev;
+  node->dev = dev ? make_devid(dev->class, dev->idx) : 0;
+  
   return node;
+}
+
+char* vfs_resolve(const char *path, const char *cwd) {
+  if (!path || !cwd)
+    return NULL;
+  if (path[0] == '/') {
+    return strdup(path);
+  }
+
+  int pl = strlen(path);
+  klogf("path: %s %p %d", path, path, pl);
+  klogf("cwd: %p", cwd, cwd);
+ 
+  char *res = (char*)kmalloc(pl + strlen(cwd) + 2);
+  if (!res) return NULL;
+
+  strcpy(res, cwd);
+  res[pl] = '/';
+  strcpy(res + pl + 1, path);
+  
+  return res;
+}
+
+soff_t vfs_setpos(struct fs_node *file, soff_t off, soff_t max) {
+  if (off < 0) // XXX: unsigned offset check, like in linux?
+    return -EINVAL;
+
+  if (off > max)
+    return -EINVAL;
+
+  file->pos = off;
+  return off;
 }
 
 void vfs_close(struct fs_node *file) {

@@ -1,11 +1,14 @@
 #pragma once
 
+#include <depthos/signal.h>
 #include <depthos/idt.h>
 #include <depthos/list.h>
 #include <depthos/paging.h>
 #include <depthos/stdtypes.h>
+#include <depthos/vmm.h>
+#include <depthos/proc-ids.h>
 
-typedef uint32_t pid_t;
+struct signal_handler;
 
 typedef enum process_state {
   PROCESS_STARTING,
@@ -25,6 +28,7 @@ typedef enum task_state {
 struct process {
   pid_t pid;
   char *filepath;
+  char const *cwd;
   char const **argv;
   char const **envp;
   process_state_t state;
@@ -40,16 +44,20 @@ struct process {
 struct exec_binary_info {
   void (*entry)(void);
 };
-typedef uint32_t thid_t;
+
+struct waiter_info;
+
 struct task {
   char *name;
   task_state_t state;
-  thid_t thid;
+  thid_t thid; // FIXME: can be problematic to work with, since threads are usually referenced using a pid
 
-#define KSTACK_SIZE PAGE_SIZE
+#define KSTACK_SIZE                                                            \
+  PAGE_SIZE * 10 // FIXME: for kernel environment in userspace applications a
+                 // couple of pages might not be enough.
   uintptr_t kernel_stack;
   uintptr_t kernel_esp;
-#define STACK_SIZE PAGE_SIZE * 5
+#define STACK_SIZE PAGE_SIZE * 100 // TODO: on demand stack
   uintptr_t stack;
   pagedir_t pgd;
   size_t mmap_bump_idx;
@@ -58,19 +66,32 @@ struct task {
   uintptr_t gs_base, fs_base;
 
   size_t running_time;
-	size_t wake_time;
-	
-	
+  size_t wake_time;
+
   // uint16_t running_time_sched;
 
   struct exec_binary_info binfo;
+  struct fs_node **filetable;
+  struct list *waiters;
   struct list *vm_areas;
+
+  struct signal_handler *signal_handlers;
+  signal_mask_t signal_mask_current; // ORed thread mask and current signal handler mask
+  signal_mask_t signal_mask;
+#define SIGNAL_MAX_QUEUE_SIZE 1024
+  struct list *signal_queue;
+
+
   struct task *parent;
   struct process *process;
+
   struct list_entry *sched_entry;
-  struct fs_node **filetable;
 };
 
+struct waiter_info {
+  struct task *task;
+  int status;
+};
 
 /**
  * @brief Spawn a process from the given parent process.
@@ -180,11 +201,13 @@ void sched_add(struct task *);
  * @param task Task to remove.
  */
 void sched_remove(struct task *);
+
 void sched_init(void);
 void sched_yield(void);
 
 void preempt_enable();
 void preempt_disable();
+
 
 /**
  * @brief Task that is currently being executed.
@@ -193,6 +216,7 @@ void preempt_disable();
 extern struct task *current_task;
 
 #define SC_CLONE_MEM 0x1
+#define SC_CLONE_FD 0x2
 struct sc_clone_params {
   int flags;
 };
@@ -207,3 +231,4 @@ struct sc_thcreate_params {
   void *stack;
   void *entry;
 };
+

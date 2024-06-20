@@ -1,10 +1,12 @@
 #include <depthos/console.h>
+#include <depthos/emu.h>
 #include <depthos/kconfig.h>
 #include <depthos/kernel.h>
 #include <depthos/logging.h>
 #include <depthos/stdio.h>
 #include <depthos/stdtypes.h>
-#include <depthos/emu.h>
+#include <depthos/tools.h>
+
 
 void debug(const char *msg, ...) {
   static char buffer[1024];
@@ -22,7 +24,7 @@ void debug(const char *msg, ...) {
 #endif
 }
 
-void kloga(const char *file, int line, const char *loc, char *msg, ...) {
+void klogv(const char *file, int line, const char *loc, char *msg, ...) {
   static char buffer[1024];
   va_list args;
   va_start(args, msg);
@@ -33,10 +35,14 @@ void kloga(const char *file, int line, const char *loc, char *msg, ...) {
   if (!console_no_color)
     debug("\x1B[34m");
 
-  debug("%s (%s:%d): %s\n", loc, file, line, buffer);
+#if KLOG_PRINT_LOC == 1
+  debug("%s (%s:%d): ", loc, file, line);
+#endif /* KLOG_PRINT_LOC == 1 */
+
+  debug("%s\n", buffer);
   if (!console_no_color)
     debug("\x1B[0m");
-#endif
+#endif /* KLOG_ENABLED == 1 */
 }
 
 void bootlog(const char *msg, int status) {
@@ -76,8 +82,10 @@ void dump_registers(regs_t r) {
          r.edi, r.esi, r.ebp, r.esp, r.ebx, r.edx, r.ecx, r.eax);
 }
 
-void panic(const char *file, int line, const char *loc, const char *format,
-           ...) {
+bool shutdown_on_panic = false;
+
+__noreturn void panic(const char *file, int line, const char *loc,
+                      const char *format, ...) {
   static char buffer[1024];
   va_list args;
   va_start(args, format);
@@ -85,11 +93,16 @@ void panic(const char *file, int line, const char *loc, const char *format,
   va_end(args);
   if (!console_no_color)
     printk("\x1B[31;1m");
-  printk("Kernel panic: %s (%s:%d): %s\n", loc, file, line, buffer);
+  printk("%s (%s:%d): kernel panic: %s\n", loc, file, line, buffer);
   if (!console_no_color)
     printk("\x1B[0m");
+
+  trace(1, 20);
+
   // dump_registers(); // TODO
   idt_disable_hwinterrupts(); // TODO
   while (1)
     __asm__ volatile("hlt");
+
+  __builtin_unreachable();
 }

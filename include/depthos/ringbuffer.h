@@ -1,19 +1,32 @@
 #pragma once
 
 #include <depthos/stdtypes.h>
+#include <depthos/logging.h>
 
-typedef uint64_t ringbuffer_elem_t;
 typedef struct ringbuffer {
-	ringbuffer_elem_t *data;
+	void* data;
+  size_t elem_size;
 	size_t max_size;
 	size_t read_idx;
 	size_t write_idx;
+  size_t size;
 }ringbuffer_t;
 
-struct ringbuffer *ringbuffer_create(size_t max_size);
-void ringbuffer_init(struct ringbuffer *rb, bool zero);
-size_t ringbuffer_size(struct ringbuffer *rb);
-bool ringbuffer_empty(struct ringbuffer *rb);
+#define ringbuffer_at(rb, idx) ((rb)->data + (idx) * rb->elem_size)
+#define ringbuffer_size(rb) ((rb)->size)
+#define ringbuffer_empty(rb) (ringbuffer_size(rb) == 0)
+#define ringbuffer_full(rb) (ringbuffer_size(rb) == (rb)->max_size)
 
-ringbuffer_elem_t *ringbuffer_push(struct ringbuffer *rb, ringbuffer_elem_t v);
-ringbuffer_elem_t *ringbuffer_pop(struct ringbuffer *rb);
+struct ringbuffer *ringbuffer_create(size_t max_size, size_t elem_size);
+void ringbuffer_init(struct ringbuffer *rb, bool zero);
+
+void *ringbuffer_push(struct ringbuffer *rb, void *v);
+static inline void ringbuffer_pushn(struct ringbuffer *rb, void *data, size_t n) {
+  void *end = data + n * rb->elem_size;
+  while (data < end) {
+    ringbuffer_push(rb, data);
+    data += rb->elem_size;
+  }
+}
+
+void *ringbuffer_pop(struct ringbuffer *rb);

@@ -1,3 +1,5 @@
+#include "depthos/signal.h"
+#include "depthos/tools.h"
 #include <depthos/bitmap.h>
 #include <depthos/heap.h>
 #include <depthos/idt.h>
@@ -8,6 +10,8 @@
 #include <depthos/proc.h>
 #include <depthos/stdbits.h>
 #include <depthos/string.h>
+#include <depthos/syscall.h>
+#include <depthos/vmm.h>
 
 int paging_enabled = 0;
 
@@ -16,13 +20,38 @@ pde_t *current_pgd __align(4096);
 
 page_t kernel_pgt[1024] __align(4096); /* 768 */
 page_t heap_1_pgt[1024] __align(4096);
+page_t heap_2_pgt[1024] __align(4096);
 
-#define page_offset(a) (((uint32_t)a) & 0xfff)
-#define page_index(a) ((((uint32_t)a) >> 12) & 0x3ff)
-#define table_index(a) (((uint32_t)a) >> 22)
+pagetable_t get_pagetable(pagedir_t pgd, uintptr_t vaddr) {
+  pde_t pde = pgd[pde_index(vaddr)];
+  uintptr_t addr = PDE_EXTRACT_ADDR(pde);
+  if (!addr)
+    return NULL;
+  return (pagetable_t)ADDR_TO_VIRT(addr);
+}
 
-int pde_index(uint32_t addr) { return addr >> 22; }
-uintptr_t pte_index(uint32_t addr) { return (uintptr_t)((addr / 4096) % 1024); }
+page_t *get_page(pagedir_t pgd, uintptr_t vaddr) {
+  if (pde_index(vaddr) > 1024 || pte_index(vaddr) > 1024)
+    return NULL;
+
+  pagetable_t pde = get_pagetable(pgd, vaddr);
+  if (!pde)
+    return NULL;
+
+  return &pde[pte_index(vaddr)];
+}
+
+uintptr_t get_phys_addr(pagedir_t pgd, uintptr_t vaddr) {
+  if (!paging_enabled)
+    return ADDR_TO_PHYS(vaddr);
+  page_t *pte = get_page(pgd, vaddr);
+  if (!pte)
+    return INVALID_ADDR;
+  uintptr_t addr = PTE_EXTRACT_ADDR(*pte);
+  addr += PG_OFFSET(vaddr);
+
+  return addr;
+}
 
 void activate_pgd(pagedir_t pgd) {
   __asm__ __volatile("mov %0, %%cr3" ::"r"(ADDR_TO_PHYS(pgd)));
@@ -37,6 +66,7 @@ pagedir_t get_current_pgd(void) {
 
 pagedir_t create_pgd() {
   pagedir_t pgd = kmalloc(4096);
+  klogf("create_pgd: %p", pgd);
   memset(pgd, 0, sizeof(kernel_pgd));
   memcpy(&pgd[pde_index(VIRT_BASE)], &kernel_pgd[pde_index(VIRT_BASE)],
          sizeof(kernel_pgd) - pde_index(VIRT_BASE) * sizeof(pde_t));
@@ -58,22 +88,28 @@ pagedir_t clone_pgd(pagedir_t original) {
   for (int i = 0; i < 1024; i++) {
     if (!original[i] || i * 1024 * 4096 >= VIRT_BASE)
       continue;
-    pagetb_t table = kmalloc(4096);
+    klogf("copying %d pagetable", i);
+    pagetable_t table = kmalloc(4096);
     memset(table, 0, 4096);
-    pgd[i] = make_pde(ADDR_TO_PHYS(table), (original[i] >> PDE_USER_SHIFT) != 0,
-                      (original[i] >> PDE_RW_SHIFT) != 0);
+    pgd[i] =
+        make_pde(ADDR_TO_PHYS(table), (original[i] & (1 << PDE_RW_SHIFT)) != 0,
+                 (original[i] & (1 << PDE_USER_SHIFT)) != 0);
     for (int j = 0; j < 1024; j++) {
       if (!*get_page(original, i * 1024 * 4096 + j * 4096))
         continue;
       page_t *page = get_page(original, i * 1024 * 4096 + j * 4096);
-      table[j] = make_pte(pmm_alloc(1), getbit(*page, PTE_USER_SHIFT),
-                          getbit(*page, PTE_RW_SHIFT));
+      table[j] = make_pte(pmm_alloc(1), getbit(*page, PTE_RW_SHIFT),
+                          getbit(*page, PTE_USER_SHIFT));
       activate_pgd(original);
       // printk("booya 0x%x\n", i * 1024 * 4096 + j * 4096);
-      memcpy(buffer, i * 1024 * 4096 + j * 4096, 4096);
+      // klogf("one %p..%p", (void *)(i * 1024 * 4096 + j * 4096),
+      //       (void *)(i * 1024 * 4096 + j * 4096) + 4096);
+      memcpy(buffer, (void *)(i * 1024 * 4096 + j * 4096), 4096);
       activate_pgd(pgd);
       // printk("yahoo\n");
-      memcpy(i * 1024 * 4096 + j * 4096, buffer, 4096);
+      // klogf("two %p..%p", (void *)(i * 1024 * 4096 + j * 4096),
+      //       (void *)(i * 1024 * 4096 + j * 4096) + 4096);
+      memcpy((void *)(i * 1024 * 4096 + j * 4096), buffer, 4096);
       activate_pgd(current_pgd);
       // setbit(&table[j], PTE_COW_SHIFT, true);
       // setbit(page, PTE_RW_SHIFT, 0);
@@ -83,60 +119,8 @@ pagedir_t clone_pgd(pagedir_t original) {
   return pgd;
 }
 
-void *get_paddr(pagedir_t dir, void *virtual_address) {
-  if (!paging_enabled)
-    return (void *)ADDR_TO_PHYS(virtual_address);
-  pde_t *pdes = dir, pde;
-  page_t *ptes;
-  page_t page;
-  uint32_t addr;
-  int pdi = pde_index((uint32_t)virtual_address);
-  int pti = pte_index((uint32_t)virtual_address);
-
-  pde = pdes[pdi];
-  pde >>= PDE_ADDR_SHIFT;
-  pde <<= 12;
-  if (pde == 0)
-    return NULL;
-  pde += VIRT_BASE;
-  ptes = (page_t *)pde;
-  page = ptes[pti];
-
-  page >>= PTE_ADDR_SHIFT;
-  page <<= 12;
-
-  if (page == 0)
-    return NULL;
-  addr = page;
-  addr += page_offset(virtual_address);
-
-  return (void *)addr;
-}
-
-#undef page_offset
-#undef page_index
-#undef table_index
-
 void turn_page(page_t *p) {
   *p &= ((!(*p << PTE_PRESENT_SHIFT)) << PTE_PRESENT_SHIFT);
-}
-
-page_t *get_page(pagedir_t pgd, uint32_t vaddr) {
-  int ipde, ipte;
-
-  pde_t *pdes = pgd, pde;
-
-  page_t *ptes;
-
-  pde = pgd[pde_index(vaddr)];
-  pde >>= PDE_ADDR_SHIFT;
-  pde <<= 12;
-  if (!pde)
-    return NULL;
-
-  pde += VIRT_BASE;
-
-  return (page_t *)pde + pte_index(vaddr);
 }
 
 void map_addr_fixed(pagedir_t pgd, uintptr_t vaddr, uintptr_t pstart,
@@ -158,14 +142,14 @@ void map_addr_fixed(pagedir_t pgd, uintptr_t vaddr, uintptr_t pstart,
       pagetb_t tb = kmalloc(4096);
       memset(tb, 0, 4096);
       pgd[pde_index(vaddr + i * 4096 * 1024)] =
-          make_pde(ADDR_TO_PHYS(tb), user, rw);
+          make_pde(ADDR_TO_PHYS(tb), rw, user);
     }
     klogf("a %d %d %d %d", npages, 0 < 4096, 0 < npages,
           0 < 4096 && 0 < npages);
     for (int j = 0; j < 4096 && j < npages; j++) {
       klogf("mapping 0x%x", vaddr + i * 4096 * 1024 + j * 4096);
       *get_page(pgd, vaddr + i * 4096 * 1024 + j * 4096) =
-          make_pte(pmm_alloc(1), user, rw);
+          make_pte(pmm_alloc(1), rw, user);
     }
   }
 #endif
@@ -180,20 +164,64 @@ uintptr_t map_addr(pagedir_t pgd, uintptr_t vaddr, size_t npages, bool user,
     klogf("cannot allocate %ld continuous pages", npages);
     return NULL;
   }
+
+  if (vaddr == 0x8000000) {
+    klogf("phys start: %x", phys_start);
+  }
   map_addr_fixed(pgd, vaddr, phys_start, npages, user, overwrite);
   return phys_start;
 }
 
-void map_page(pagedir_t pgd, uintptr_t vaddr, uintptr_t phys, bool user) {
-  if (!(pgd[pde_index(vaddr)] >> PDE_ADDR_SHIFT)) {
-    // klogf("hello world");
-    pagetb_t tb = kmalloc(0x1000);
-    memset(tb, 0, 0x1000);
-    // klogf("bye world");
-    pgd[pde_index(vaddr)] = make_pde(ADDR_TO_PHYS(tb), user, true);
-  }
+void unmap_table(pagedir_t pgd, uintptr_t vaddr) {
+  if (pde_index(vaddr) >= 1024)
+    return;
+  pagetable_t taddr = (pagetable_t)((pgd[pde_index(vaddr)] >> PDE_ADDR_SHIFT)
+                                    << PDE_ADDR_SHIFT);
+  if (!taddr)
+    return;
+  taddr = (pagetable_t)ADDR_TO_VIRT(taddr);
+  pgd[pde_index(vaddr)] = 0;
+  kfree(taddr, PAGE_SIZE);
+}
 
-  *get_page(pgd, vaddr) = make_pte(phys, user, true);
+void unmap_addr(pagedir_t pgd, uintptr_t vaddr, size_t npages,
+                bool freetbl) { // TODO: test
+  // TODO: pmm_free
+  uintptr_t cur = vaddr, end = vaddr + npages * PAGE_SIZE;
+  if (freetbl) {
+    for (; cur < ROUND_UP(vaddr, PAGE_TABLE_SIZE * PAGE_SIZE) && cur < end;
+         cur += PAGE_SIZE) {
+      unmap_page(pgd, cur);
+    }
+    for (; cur < ROUND_DOWN(end, PAGE_TABLE_SIZE * PAGE_SIZE) && cur < end;
+         cur += PAGE_SIZE * PAGE_TABLE_SIZE) {
+      unmap_table(pgd, cur);
+    }
+  }
+  for (; cur < end; cur += PAGE_SIZE) {
+    unmap_page(pgd, cur);
+  }
+}
+
+void unmap_page(pagedir_t pgd, uintptr_t vaddr) {
+  if (!get_page(pgd, vaddr))
+    return;
+  *get_page(pgd, vaddr) = 0;
+}
+
+void map_page(pagedir_t pgd, uintptr_t vaddr, uintptr_t phys, bool user) {
+  int ti = pde_index(vaddr);
+  if (ti != 0 && PDE_EXTRACT_ADDR(pgd[ti]) == 0) {
+    // klogf("hello world");
+    pagetable_t tb = kmalloc(PAGE_SIZE);
+    if (!tb)
+      panicf("out of memory");
+    memset(tb, 0, PAGE_SIZE);
+    // klogf("bye world");
+    pgd[pde_index(vaddr)] = make_pde(ADDR_TO_PHYS(tb), true, user);
+  }
+  page_t *pg = get_page(pgd, vaddr);
+  *pg = make_pte(phys, true, user);
 }
 
 // 0000100 << 2
@@ -201,21 +229,21 @@ void map_page(pagedir_t pgd, uintptr_t vaddr, uintptr_t phys, bool user) {
 // i = 0000100;
 // i >>= 2;
 
-page_t make_pte(uint32_t paddr, int user, int rw) {
-  return 0x0 | (1 << PTE_PRESENT_SHIFT) | (rw << PTE_RW_SHIFT) |
-         (user << PTE_USER_SHIFT) | (1 << PTE_WRITETHRU_SHIFT) |
-         (0 << PTE_CACHE_SHIFT) | (0 << PTE_ACCESS_SHIFT) |
-         (0 << PTE_DIRTY_SHIFT) & (PTE_ZERO_MASK) |
-         (0 << PTE_GLOB_SHIFT) & (PTE_AVAIL_MASK) | paddr;
-}
+// page_t make_pte(uint32_t paddr, int user, int rw) {
+//   return 0x0 | (1 << PTE_PRESENT_SHIFT) | (rw << PTE_RW_SHIFT) |
+//          (user << PTE_USER_SHIFT) | (1 << PTE_WRITETHRU_SHIFT) |
+//          (0 << PTE_CACHE_SHIFT) | (0 << PTE_ACCESS_SHIFT) |
+//          (0 << PTE_DIRTY_SHIFT) & (PTE_ZERO_MASK) |
+//          (0 << PTE_GLOB_SHIFT) & (PTE_AVAIL_MASK) | paddr;
+// }
 
-pde_t make_pde(uint32_t paddr, int user, int rw) {
-  return 0x0 | (1 << PDE_PRESENT_SHIFT) | (rw << PDE_RW_SHIFT) |
-         (user << PDE_USER_SHIFT) | (1 << PDE_WRITETHRU_SHIFT) |
-         (0 << PDE_CACHE_SHIFT) | (0 << PDE_ACCESS_SHIFT) |
-         (0 << PDE_ZERO_SHIFT) | (0 << PDE_SIZE_SHIFT) |
-         (0 << PDE_IGNORE_SHIFT) & (PDE_AVAIL_MASK) | paddr;
-}
+// pde_t make_pde(uint32_t paddr, int user, int rw) {
+//   return 0x0 | (1 << PDE_PRESENT_SHIFT) | (rw << PDE_RW_SHIFT) |
+//          (user << PDE_USER_SHIFT) | (1 << PDE_WRITETHRU_SHIFT) |
+//          (0 << PDE_CACHE_SHIFT) | (0 << PDE_ACCESS_SHIFT) |
+//          (0 << PDE_ZERO_SHIFT) | (0 << PDE_SIZE_SHIFT) |
+//          (0 << PDE_IGNORE_SHIFT) & (PDE_AVAIL_MASK) | paddr;
+// }
 
 void enable_paging() {
   uint32_t cr0, cr4;
@@ -229,17 +257,7 @@ void enable_paging() {
 
   paging_enabled = 1;
 }
-
-#define PAGEFAULT_STATE(r)                                                     \
-  int present = (r->err_code & 0x1) != 0;                                      \
-  int rw = (r->err_code & 0x2) != 0;                                           \
-  int us = (r->err_code & 0x4) != 0;                                           \
-  int reserved = (r->err_code & 0x8) != 0;                                     \
-  int id = (r->err_code & 0x10) != 0;
-
-__noreturn void _do_kernel_pgf(regs_t *r, uintptr_t cr2) {
-  panicf("Kernel panic");
-}
+void _do_kernel_pgf(regs_t *r, uintptr_t cr2) { panicf("kernel pagefault"); }
 
 // void _do_cow(uintptr_t cr2) {
 //   void *buffer = kmalloc(4096);
@@ -253,24 +271,55 @@ __noreturn void _do_kernel_pgf(regs_t *r, uintptr_t cr2) {
 //     setbit(get_page(current_task->parent->pgd, cr2), 1, 1);
 // }
 
+int vma_pagefault_handler(regs_t *r, uintptr_t cr2);
+
 void _do_user_pgf(regs_t *r, uintptr_t cr2) {
   // if (getbit(*get_page(get_current_pgd(), cr2), PTE_COW_SHIFT)) {
   //   _do_cow(cr2);
   //   return;
   // }
-
-  sys_exit();
+  signal_send(current_task, (struct signal) {
+    .pid = current_task->thid, // TODO: thid
+    .number = SIGSEGV,
+    .errno = 0xDEAD,
+    .fault_addr = cr2,
+  });
+  // sys_exit(1); // TODO: proper status
 }
 
 void pagefault_handler(regs_t *r) {
   uint32_t cr2;
   __asm__ volatile("mov %%cr2, %0" : "=r"(cr2));
+
+  int status = VM_FAULT_CRASH; // TODO: handle buserror
+  if (current_task && current_task->vm_areas) {
+    int res = vma_pagefault_handler(r, cr2);
+    if (res == VM_FAULT_IGNORE)
+      return;
+  }
+
   PAGEFAULT_STATE(r);
-  printk("Page fault [0x%x] at 0x%x: ", cr2, r->eip);
+  if (!console_no_color)
+    printk("\x1B[31;1m");
+
+  const char *kind = "";
+  switch (status) {
+  case VM_FAULT_BUSERROR:
+    kind = "bus error";
+    break;
+  }
+
+  if (strlen(kind))
+    printk("page fault (%s) at %p for accessing %p: ", kind, r->eip, cr2);
+  else
+    printk("page fault at %p for accessing %p: ", r->eip, cr2);
   printk("0x%x (pres=%d rw=%d super=%d reserved=%d id=%d)\n", r->err_code,
          present, rw, us, reserved, id);
+  if (!console_no_color)
+    printk("\x1B[0m");
+
   dump_registers(*r);
-  trace(1, -1);
+  trace(3, -1);
 #if 0
   extern bitmap_t kheap_bitmap;
   bitmap_dump_compact(&kheap_bitmap, 0, -1, 32);
@@ -286,75 +335,59 @@ void pagefault_handler(regs_t *r) {
 void paging_init() {
   size_t i, j;
 
+  // TODO: protect null page
+
   idt_disable_hwinterrupts();
-  for (i = 0 * 1024 * 1024; i < 4 * 1024 * 1024; i += 4096) {
-    page_t pg = make_pte(i, 0, 1);
+
+  extern char _kernel_start;
+  uintptr_t kernel_start_addr = ADDR_TO_PHYS((uintptr_t)&_kernel_start);
+  extern char _kernel_end;
+  uintptr_t kernel_end_addr = ADDR_TO_PHYS((uintptr_t)&_kernel_end);
+
+  klogf("kernel address range is: %p..%p", (void *)kernel_start_addr,
+        (void *)kernel_end_addr);
+  klogf("mapping kernel pgt: %p..%p", (void *)0,
+        (void *)(PAGE_SIZE * PAGE_TABLE_SIZE));
+
+  for (i = 0; i < PAGE_SIZE * PAGE_TABLE_SIZE; i += PAGE_SIZE) {
+    page_t pg = make_pte(i, false, false);
     kernel_pgt[pte_index(i)] = pg;
   }
-  for (i = 0 * 1024 * 1024; i < 4 * 1024 * 1024; i += 4096) {
-    page_t pg = make_pte(i + 1 * 1024 * 4096, 0, 1);
-    heap_1_pgt[pte_index(i)] = pg;
+
+  klogf("mapping heap pgt[0]: %p..%p", (void *)ADDR_TO_PHYS(HEAP_BASE),
+        (void *)ADDR_TO_PHYS(HEAP_BASE + PAGE_SIZE * PAGE_TABLE_SIZE));
+  klogf("mapping heap pgt[1]: %p..%p",
+        (void *)ADDR_TO_PHYS(HEAP_BASE + PAGE_SIZE * PAGE_TABLE_SIZE),
+        (void *)ADDR_TO_PHYS(HEAP_BASE + PAGE_SIZE * PAGE_TABLE_SIZE * 2));
+
+  for (i = 0; i < PAGE_TABLE_SIZE; i++) {
+    uintptr_t offset = i * PAGE_SIZE;
+    page_t pg = make_pte(ADDR_TO_PHYS(HEAP_BASE) + offset, true, false);
+    heap_1_pgt[pte_index(HEAP_BASE + offset)] = pg;
   }
+  for (i = 0; i < PAGE_TABLE_SIZE; i++) {
+    uintptr_t offset = (PAGE_TABLE_SIZE + i) * PAGE_SIZE;
+    page_t pg = make_pte(i + ADDR_TO_PHYS(HEAP_BASE) + offset, true, false);
+    heap_2_pgt[pte_index(HEAP_BASE + offset)] = pg;
+  }
+
+  kernel_pgt[pte_index(0)] = make_pte(0, false, false);
 
   // change_page(&kernel_pgt[0],0,0,1);
 
   //	printk("%x || %x - %x = %x\n",
   //(int)kernel_pgt,(int)kernel_pgt,(int)VIRT_BASE,(uint32_t)((int)kernel_pgt
   //- (int)VIRT_BASE));
-  uint32_t kernel_pgd_entry = make_pde(ADDR_TO_PHYS(kernel_pgt), 0, 1);
+  uint32_t kernel_pgd_entry = make_pde(ADDR_TO_PHYS(kernel_pgt), true, false);
   kernel_pgd[pde_index(VIRT_BASE)] = kernel_pgd_entry;
-  kernel_pgd[pde_index(0)] = kernel_pgd_entry; // TODO: remove when not needed
+  // kernel_pgd[pde_index(0)] = kernel_pgd_entry; // TODO: remove when not needed
   kernel_pgd[pde_index(VIRT_BASE + 1 * 1024 * 4096)] =
-      make_pde(ADDR_TO_PHYS(heap_1_pgt), 0, 1);
+      make_pde(ADDR_TO_PHYS(heap_1_pgt), true, false);
+  kernel_pgd[pde_index(VIRT_BASE + 2 * 1024 * 4096)] =
+      make_pde(ADDR_TO_PHYS(heap_2_pgt), true, false);
 
   idt_register_interrupt(14, pagefault_handler);
   activate_pgd(kernel_pgd);
   enable_paging();
-  idt_enable_hwinterrupts();
-}
-
-pageinfo_t parse_page(page_t *pg) {
-  pageinfo_t pgi;
-
-  pgi.pg = pg;
-
-  //	printk("0x%x,0x%x\n",pgi.pg,pg);
-
-  //
-  // >> 6 = 101000000
-
-  pgi.pres = getbit(*pg, PTE_PRESENT_SHIFT);    // & 0x1;
-  pgi.rw = getbit(*pg, PTE_RW_SHIFT);           //& 0x2;
-  pgi.us = getbit(*pg, PTE_USER_SHIFT);         //& 0x4;
-  pgi.pwt = getbit(*pg, PTE_WRITETHRU_SHIFT);   //& 0x8;
-  pgi.pcd = getbit(*pg, PTE_CACHE_SHIFT);       //& 0x10;
-  pgi.accessed = getbit(*pg, PTE_ACCESS_SHIFT); //& 0x20;
-  pgi.dirty = getbit(*pg, PTE_DIRTY_SHIFT);     //& 0x40;
-  pgi.pat = getbit(*pg, PTE_ZERO_SHIFT);        //& 80;
-  pgi.glob = getbit(*pg, PTE_GLOB_SHIFT);       //& 0x100;
-  pgi.frame = *pg & 0xFFFFF000;
-
-  return pgi;
-}
-
-void change_page(page_t *pg, int pres, int rw, int us) {
-  //	printk("vals - %d,%d,%d\n",pgi.pres,pgi.rw,pgi.us);
-  //	printk("old - %d - %d -
-  //%d\n",getbit(*pgi.pg,PTE_PRESENT_SHIFT),getbit(*pgi.pg,PTE_RW_SHIFT),getbit(*pgi.pg,PTE_USER_SHIFT));
-  setbit(pg, PTE_PRESENT_SHIFT, pres);
-  setbit(pg, PTE_RW_SHIFT, rw);
-  setbit(pg, PTE_USER_SHIFT, us);
-
-  //	*pgi.pg = (pgi.pres	 << PTE_PRESENT_SHIFT)	| (*pgi.pg & (~(1 <<
-  // PTE_PRESENT_SHIFT)));
-  // 	*pgi.pg = (pgi.rw	 << PTE_RW_SHIFT)		| (*pgi.pg &
-  // (~(1
-  // << PTE_RW_SHIFT)));
-  //	*pgi.pg = (pgi.us	 << PTE_USER_SHIFT)		| (*pgi.pg &
-  //(~(1
-  //<< PTE_USER_SHIFT)));
-
-  //	printk("new - %d - %d -
-  //%d\n",getbit(*pgi.pg,PTE_PRESENT_SHIFT),getbit(*pgi.pg,PTE_RW_SHIFT),getbit(*pgi.pg,PTE_USER_SHIFT));
-  //	printk("%d",pg);
+  // idt_enable_hwinterrupts();
 }

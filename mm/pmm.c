@@ -1,3 +1,4 @@
+#include "depthos/paging.h"
 #include <depthos/bitmap.h>
 #include <depthos/console.h>
 #include <depthos/logging.h>
@@ -9,10 +10,16 @@ extern void *kimalloc(size_t);
 extern pagedir_t current_pgd;
 struct bitmap pmm_bitmap;
 bool pmm_initialised = false;
+size_t __total_memory;
 
 void pmm_init(size_t memory_size) {
+  if (memory_size == 0)
+    memory_size = __total_memory;
+  // klogf("memory size: %llu",
+  //       (__total_memory / 4096 + (__total_memory % 409 != 0)) / 4096);
   pmm_bitmap.size = memory_size / 4096 + (memory_size % 4096 != 0);
-  klogf("initialising page manager for %d pages", pmm_bitmap.size);
+  klogf("initialising page manager for %d pages (%luMB)", pmm_bitmap.size,
+        pmm_bitmap.size * 4096 / 1024 / 1024);
   klogf("estimated page manager bitmap size is %d bytes",
         bitmap_byte_size(&pmm_bitmap));
   pmm_bitmap.bits = (bitmap_elem_t *)kimalloc(bitmap_byte_size(&pmm_bitmap));
@@ -43,7 +50,7 @@ void pmm_free(uint32_t frame, size_t count) {
 }
 
 void pmm_free_desc(page_t *pg, size_t count) {
-  return pmm_free(parse_page(pg).frame, count);
+  return pmm_free(PAGE_EXTRACT_ADDR(*pg), count);
 }
 
 void pmm_set(uint32_t frame, size_t count, bool avail) {

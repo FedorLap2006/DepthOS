@@ -1,9 +1,11 @@
 
-#include "depthos/heap.h"
 #include <depthos/bitmap.h>
+#include <depthos/heap.h>
 #include <depthos/logging.h>
+#include <depthos/math.h>
 #include <depthos/paging.h>
 #include <depthos/pmm.h>
+#include <depthos/trace.h>
 
 // page_t *free_pages = NULL;
 // size_t total_page_count = 0;
@@ -15,7 +17,7 @@
 #endif
 
 extern uint32_t _kernel_end;
-uintptr_t imalloc_ptr = (uint32_t)&_kernel_end;
+uintptr_t imalloc_ptr = ADDR_TO_VIRT((uint32_t)&_kernel_end);
 
 void *kimalloc(size_t count) {
   if (count < 0)
@@ -39,16 +41,24 @@ static bool slab_has_addr(heap_slab_t *slab, void *addr) {
 }
 
 struct heap_slab *kheap_cache_grow(uint16_t size, bool large) {
+  if (heap_cache_size == 256)
+    return NULL;
+
   heap_log("allocating new slab");
 
   uint32_t slab_size = (!large ? HEAP_SLAB_PAGES : HEAP_LGSLAB_PAGES);
-  uint16_t page = bitmap_scan_flip(&kheap_bitmap, 0, slab_size, false);
-  void *start = HEAP_BASE + (page << 12);
+  ssize_t page = bitmap_scan_flip(&kheap_bitmap, 0, slab_size, false);
+  if (page < 0) {
+    return NULL;
+  }
+  void *start = HEAP_BASE + ((uint16_t)page << 12);
   heap_log("allocated new slab at 0x%x (size=%d large=%d)", start, size, large);
   // bitmap_dump_compact(&kheap_bitmap, 0, -1, 32);
   heap_slab_freelist_t *first = (heap_slab_freelist_t *)start, *current;
 
   current = first;
+  if (large)
+    size = PG_RND_UP(size);
   slab_size *= 4096;
   heap_log("freelist size is %d", slab_size / size);
   for (int i = 1; i < slab_size / size; i++) {
@@ -110,14 +120,15 @@ void kheap_cache_dump() {
 
 void kheap_init() {
   // heap_metacache = allocate_slab(sizeof(heap_slab_t), true);
+  size_t total_page_count = ceil_div(HEAP_SIZE, PAGE_SIZE);
   kheap_bitmap.bits =
-      (bitmap_elem_t *)kimalloc(sizeof(bitmap_elem_t) * 2 * 1024);
+      (bitmap_elem_t *)kimalloc(sizeof(bitmap_elem_t) * total_page_count);
   heap_log("0x%x", kheap_bitmap.bits);
-  kheap_bitmap.size = 2 * 1024;
+  kheap_bitmap.size = total_page_count;
   bitmap_init(&kheap_bitmap);
   // heap_log("dumping pmm before allocation of heap pages");
   // pmm_dump_compact();
-  pmm_set(ADDR_TO_PHYS(HEAP_BASE), 2 * 1024, false);
+  pmm_set(ADDR_TO_PHYS(HEAP_BASE), total_page_count, false);
   // heap_log("dumping pmm after allocation of heap pages");
   // pmm_dump_compact();
   for (uintptr_t ptr = HEAP_BASE; ptr < imalloc_ptr; ptr += 4096) {
@@ -138,14 +149,23 @@ void kheap_init() {
 }
 
 void *kmalloc(int size) {
-  if (size < sizeof(heap_slab_freelist_t))
-    return NULL; // TODO: implement allocation of object smaller than freelist
-                 // entry
+  if (!size || size > (HEAP_LGSLAB_PAGES * PAGE_SIZE))
+    return NULL;
+  if (size <
+      sizeof(heap_slab_freelist_t)) { // TODO: large aligned slabs, sometimes
+                                      // object is bigger than 4096 and is not
+                                      // going to be %4096 = 0
+    size = sizeof(heap_slab_freelist_t); // NOTE: doing the same in free lets us
+                                         // free these too
+  }
   // else (size > HEAP_LGSLAB_PAGES*4096)
   //   return NULL;
   int fit = 0, fit_idx = -1;
   heap_slab_t *slab;
   heap_log("searching for slabs (object_size=%d)", size);
+#if CONFIG_HEAP_LOG_ENABLE == 1
+  trace(1, 5);
+#endif
   for (int i = 0; i < heap_cache_size; i++) {
     slab = heap_cache + i;
 
@@ -169,18 +189,29 @@ void *kmalloc(int size) {
   // bitmap_dump_compact(&kheap_bitmap, 0, -1, 32);
   slab = fit ? heap_cache + fit_idx : kheap_cache_grow(size, size >= 1024);
 
-  heap_log("slab at 0x%x (inuse=%d first={addr=0x%x next=0x%x})", slab,
-           slab->inuse, slab->first, slab->first ? slab->first->next : NULL);
+  if (!slab)     // kheap_cache_grow returns NULL
+    return NULL; // We're out of memory to fit this object.
+
+  heap_log("slab at 0x%x (inuse=%d first={addr=0x%x (0x%x) next=0x%x (0x%x)})",
+           slab, slab->inuse, slab->first, &slab->first,
+           slab->first ? slab->first->next : NULL, &slab->first->next);
   slab->inuse++;
   void *ret = slab->first;
   slab->first = slab->first->next;
 
-  heap_log("updated slab at 0x%x (inuse=%d first={addr=0x%x next=0x%x})", slab,
-           slab->inuse, slab->first, slab->first ? slab->first->next : NULL);
+  heap_log("updated slab at 0x%x (inuse=%d first={addr=0x%x (0x%x) next=0x%x "
+           "(0x%x)})",
+           slab, slab->inuse, slab->first, &slab->first,
+           slab->first ? slab->first->next : NULL, &slab->first->next);
   return ret;
 }
 
 void kfree(void *addr, size_t size) {
+  if (!size)
+    return;
+  if (size < sizeof(heap_slab_freelist_t))
+    size = sizeof(heap_slab_freelist_t);
+
   int i = 0;
   heap_slab_t *slab;
   for (int i = 0; i < heap_cache_size; i++) {

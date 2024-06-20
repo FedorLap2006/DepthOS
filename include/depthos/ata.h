@@ -26,19 +26,30 @@
 #define ATA_REG_DEV_CTL 0
 #define ATA_REG_ALT_STAT 0
 
-#define ATA_STATUS_BSY 1 << 7 // Busy, prepating to send or receive data.
-#define ATA_STATUS_RDY 1 << 6 // Drive is on
-#define ATA_STATUS_DFA 1 << 5 // Drive fault
-#define ATA_STATUS_SRV 1 << 4 // Overlapped mode service request
-#define ATA_STATUS_DRQ 1 << 3 // Data is ready
-#define ATA_STATUS_COR 1 << 2 // Corrected data. Always 0
-#define ATA_STATUS_IDX 1 << 1 // Index. Always 0
-#define ATA_STATUS_ERR 1 << 0 // Error
+#define ATA_REG_BM_CMD 0x0
+#define ATA_REG_BM_STATUS 0x2
+#define ATA_REG_BM_PRDT 0x4
+
+#define ATA_BM_SECONDARY_OFFSET 0x8
+
+#define ATA_BM_STATUS_INTR (1 << 2)
+#define ATA_BM_STATUS_ERR (1 << 1)
+
+#define ATA_STATUS_BSY (1 << 7) // Busy, prepating to send or receive data.
+#define ATA_STATUS_RDY (1 << 6) // Drive is on
+#define ATA_STATUS_DFA (1 << 5) // Drive fault
+#define ATA_STATUS_SRV (1 << 4) // Overlapped mode service request
+#define ATA_STATUS_DRQ (1 << 3) // Data is ready
+#define ATA_STATUS_COR (1 << 2) // Corrected data. Always 0
+#define ATA_STATUS_IDX (1 << 1) // Index. Always 0
+#define ATA_STATUS_ERR (1 << 0) // Error
 
 #define ATA_CMD_IDENTIFY 0xEC
 #define ATA_CMD_FLUSH 0xE7
 #define ATA_CMD_READ 0x20
 #define ATA_CMD_WRITE 0x30
+#define ATA_CMD_READ_DMA 0xC8
+#define ATA_CMD_WRITE_DMA 0xCA
 
 struct ata_identify {
   struct {
@@ -99,9 +110,20 @@ struct ata_identify {
 
 typedef struct ata_identify ata_identify_data_t;
 
+struct __pack ata_prd_entry {
+  uint32_t phys_addr;
+  uint16_t nbytes;
+  uint16_t : 15;
+  uint16_t is_end : 1;
+};
+
 struct ata_port {
   uint16_t io_base, ctl_base;
   uint8_t current_drive_head;
+  bool dma;
+  uint16_t busmaster;
+  void *dma_region;
+  struct ata_prd_entry *prdt;
 };
 
 ata_identify_data_t *ata_identify(struct ata_port *dev, int drive);

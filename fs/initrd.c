@@ -1,4 +1,5 @@
 #include <depthos/errno.h>
+#include <depthos/file.h>
 #include <depthos/fs.h>
 #include <depthos/heap.h>
 #include <depthos/initrd.h>
@@ -17,6 +18,8 @@ void initrd_init(struct multiboot_module *module) {
   initrd_nheaders = *(uint16_t *)start;
   initrd_headers = (initrd_header_t *)(start + sizeof(initrd_nheaders));
   initrd_data = &initrd_headers[initrd_nheaders];
+  klogf("initrd: %d headers\n", initrd_nheaders);
+  klogf("initrd: %p..%p\n", initrd_headers, module->end);
 }
 
 int initrdfs_read(struct fs_node *file, char *buffer, size_t nbytes,
@@ -24,16 +27,47 @@ int initrdfs_read(struct fs_node *file, char *buffer, size_t nbytes,
   initrd_header_t header = initrd_headers[INODE(file->impl)];
   int i;
   // klogf("offset=%d", header.offset);
+  // klogf("header length: %ld offset: %ld nbytes: %ld i=%ld offset_nbytes=%ld",
+  // header.length, *offset, nbytes, header.length - *offset,
+  // *offset + nbytes);
   for (i = 0; i < header.length - *offset && i < nbytes; i++) {
     // klogf("buffer[%d]: base=0x%x index=%d src=0x%x dst=0x%x", i, initrd_data,
     //       header.offset + i + file->pos,
     //       initrd_data + header.offset + i + file->pos, buffer + i);
     buffer[i] = ((char *)initrd_data)[header.offset + i + *offset];
   }
+  // klogf("i: %ld", i);
   *offset += i;
   if (!i)
     file->eof = true;
   return i;
+}
+
+// int initrdfs_seek(struct fs_node *file, off_t offset, int whence) {
+//   initrd_header_t header = initrd_headers[INODE(file->impl)];
+//   switch (whence) {
+//   case SEEK_SET:
+//     file->pos = offset;
+//     break;
+//   case SEEK_CUR:
+//     file->pos += offset;
+//     break;
+//   case SEEK_END:
+//     file->pos = header.length + offset;
+//     break;
+//   default:
+//     return -EINVAL;
+//   }
+//   if (file->pos < 0)
+//     file->pos = 0;
+//   if (file->pos > header.length)
+//     file->pos = header.length;
+//   return file->pos;
+// }
+
+soff_t initrdfs_seek(struct fs_node *file, soff_t pos, int whence) {
+  return generic_file_seek_size(
+      file, pos, initrd_headers[INODE(file->impl)].length - 1, whence);
 }
 
 void initrdfs_close(struct fs_node *file) {
@@ -44,6 +78,7 @@ file_ops_t initrdfs_fileops = (file_ops_t){
     .read = initrdfs_read,
     .write = NULL,
     .close = initrdfs_close,
+    .seek = initrdfs_seek,
 };
 
 struct fs_node *initrdfs_open(struct filesystem *fs, const char *path) {

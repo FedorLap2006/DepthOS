@@ -1,5 +1,6 @@
 #pragma once
 
+#include <depthos/fs.h>
 #include <depthos/stdtypes.h>
 
 struct kernel_symbol {
@@ -8,5 +9,5 @@ struct kernel_symbol {
   const char *name;
 };
 
-int ksymbols_load(const char *path);
+int ksymbols_load_file(const char *path);
 struct kernel_symbol *ksymbols_lookup(uintptr_t addr, bool precise);

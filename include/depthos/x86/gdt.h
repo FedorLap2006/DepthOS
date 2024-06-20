@@ -36,7 +36,7 @@ static inline int make_gdt_flags64(bool g) {
   return make_gdt_flags(true, false, g);
 }
 
-#ifdef __i686__
+#if defined(__i686__) || defined(__i386__)
 #define arch_make_gdt_flags(...) make_gdt_flags32(__VA_ARGS__)
 #else
 #error "Unsupported architecture"
@@ -71,6 +71,6 @@ static inline struct gdt_entry make_gdt_entry_tss(uintptr_t addr, int dpl) {
 }
 
 void x86_gdt_init();
-void x86_gdt_reload();
+__always_inline void x86_gdt_reload();
 void x86_gdt_set_base(off_t idx, uintptr_t base);
 void x86_gdt_set_entry(off_t idx, struct gdt_entry entry);

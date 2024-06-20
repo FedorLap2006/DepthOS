@@ -20,7 +20,7 @@ typedef unsigned short int uint16_t;
 typedef unsigned long int uint32_t;
 typedef unsigned long long int uint64_t;
 
-typedef unsigned int uintptr_t;
+typedef uint32_t uintptr_t;
 
 typedef uint8_t bool;
 

@@ -82,16 +82,16 @@ typedef enum KEYCODE {
   _DEFINE_KEYCODE(CARRET, "^")                                                 \
                                                                                \
   _DEFINE_KEYCODE(RETURN, "\n")                                                \
-  _DEFINE_KEYCODE(ESCAPE, "Escape")                                            \
+  _DEFINE_KEYCODE(ESCAPE, "\033")                                              \
   _DEFINE_KEYCODE(BACKSPACE, "\b")                                             \
   _DEFINE_KEYCODE(CARRIAGE_RETURN, "\r")                                       \
                                                                                \
   /* ////////////////// Arrow keys //////////////////  */                      \
                                                                                \
-  _DEFINE_KEYCODE(UP, "Up")                                                    \
-  _DEFINE_KEYCODE(DOWN, "Down")                                                \
-  _DEFINE_KEYCODE(LEFT, "Left")                                                \
-  _DEFINE_KEYCODE(RIGHT, "Right")                                              \
+  _DEFINE_KEYCODE(UP, "\033[1A")                                               \
+  _DEFINE_KEYCODE(DOWN, "\033[1B")                                             \
+  _DEFINE_KEYCODE(LEFT, "\033[1C")                                             \
+  _DEFINE_KEYCODE(RIGHT, "\033[1D")                                            \
                                                                                \
   /* //////////////////  Function keys //////////////////  */                  \
                                                                                \
@@ -160,15 +160,6 @@ typedef enum KEYCODE {
 #undef _DEFINE_KEYCODE
 } keycode_t;
 
-#define PS2_KEYBOARD_CMD_PORT 0x64
-#define PS2_KEYBOARD_STATUS_PORT 0x64
-#define PS2_KEYBOARD_DATA_PORT 0x60
-
-#define KEYBOARD_MODIFIER_CTRL 0x1
-#define KEYBOARD_MODIFIER_ALT 0x2
-#define KEYBOARD_MODIFIER_SHIFT 0x4
-#define KEYBOARD_MODIFIER_CAPSLOCK 0x8
-
 /**
  * @brief Keyboard event modifier bitmap
  */
@@ -180,6 +171,11 @@ typedef uint8_t keyboard_event_modifiers_t;
 struct keyboard_event {
   keycode_t keycode;
   bool pressed;
+
+#define KEYBOARD_MODIFIER_CTRL 0x1
+#define KEYBOARD_MODIFIER_ALT 0x2
+#define KEYBOARD_MODIFIER_SHIFT 0x4
+#define KEYBOARD_MODIFIER_CAPSLOCK 0x8
   keyboard_event_modifiers_t modifiers;
 };
 typedef int (*keyboard_event_handler_t)(struct keyboard_event);

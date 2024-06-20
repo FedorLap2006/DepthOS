@@ -42,7 +42,7 @@ intr_handler_t intrs[INTERRUPTS_COUNT];
 #define IRQC13 (1 << 13)
 #define IRQC14 (1 << 14)
 #define IRQC15 (1 << 15)
-#define IRQC16 (1 << 16)
+// #define IRQC16 (1 << 16)
 #define IRQCALL 0xFFFF
 #define IRQCDALL 0x0000
 
@@ -58,7 +58,8 @@ struct pic_config default_pic_config = {
     .secondary_offset = 0x28,
     .sec_irq_line_num = 0x2,
     .sconn_irq_line = 0x4,
-    .mask = (uint16_t)IRQCALL, // IRQ0 (PIT)
+    .mask = (uint16_t)(IRQCALL | IRQC0 | IRQC1 | IRQC9 | IRQC14 |
+                       IRQC12 | IRQC15), // IRQC0 | IRQC1 | IRQC3 | IRQC4, // IRQ0 (PIT)
 };
 
 void idt_register_llhandler(uint8_t i, uint8_t type, uint8_t dpl, uint32_t cb) {
@@ -73,64 +74,80 @@ void idt_register_llhandler(uint8_t i, uint8_t type, uint8_t dpl, uint32_t cb) {
 }
 
 void _idt_unregistered_interrupt_llhandler() {}
+#define EXCEPTION_INTR_PANIC_HANDLER(msg, ...)                                 \
+  { panicf(msg, ##__VA_ARGS__); }
+
+void except_gpf_handler(regs_t *r) {
+  if (r->err_code)
+    panicf("General Protection Fault at %p for selector %x", r->eip,
+           r->err_code);
+  panicf("General Protection Fault at %p (%x)", r->eip, r->err_code);
+}
+void except_zero_handler(regs_t *r) {
+  printk("ZERO!=============================\n");
+  EXCEPTION_INTR_PANIC_HANDLER("Zero devision");
+}
+void except_non_maskable_interrupt(regs_t *r)
+    EXCEPTION_INTR_PANIC_HANDLER("Non-maskable interrupt");
+void except_breakpoint_handler(regs_t *r)
+    EXCEPTION_INTR_PANIC_HANDLER("Breakpoint");
+
+void except_invalid_op(regs_t *r) EXCEPTION_INTR_PANIC_HANDLER(
+    "Invalid opcode"); // TODO: kill the application
 
 void idt_init() {
+
   __init_idt = 1;
   idt_ptr.size = (sizeof(struct __idt_entry) * IDT_SIZE) - 1;
   idt_ptr.addr = (uint32_t)&idt;
-
+  memset(idt, 0, sizeof(struct __idt_entry) * IDT_SIZE);
   pic_init(default_pic_config);
 
 #include "idt_handlers.h"
 
-  extern void intr128();
-  idt_register_llhandler(0x64, 0xE, 3, (uint32_t)intr100);
-  idt_register_llhandler(0x80, 0xE, 3, (uint32_t)intr128);
-  idt_register_llhandler(0x30, 0xE, 3, (uint32_t)intr48);
   for (int i = INTERRUPTS_COUNT; i < IDT_SIZE; i++) {
     idt_register_llhandler(i, 0xE, 0,
                            (uint32_t)_idt_unregistered_interrupt_llhandler);
   }
-  void gpf_handler(regs_t *);
-  idt_register_interrupt(13, gpf_handler);
+  idt_register_llhandler(0x64, 0xE, 3, (uint32_t)intr100);
+  idt_register_llhandler(0x80, 0xE, 3, (uint32_t)intr128);
+  idt_register_llhandler(0x30, 0xE, 3, (uint32_t)intr48);
+  idt_register_interrupt(13, except_gpf_handler);
+  idt_register_interrupt(6, except_invalid_op);
+  idt_register_interrupt(0, except_zero_handler);
+  idt_register_interrupt(2, except_non_maskable_interrupt);
   idt_flush();
-  print_status("IDT initialized", MOD_OK);
-}
-
-void idt_hwinterrupt_handler(regs_t *r) {
-  // klogf("interrupt received %d", r.int_num);
-  idt_interrupt_handler(r);
-  pic_eoi(r->int_num);
 }
 
 void idt_interrupt_handler(regs_t *r) {
   /*if (r.int_num == 0x20 || r.int_num == 0x21)*/
   /*klogf("interrupt received %d", r.int_num);*/
-  // printk("interrupt: %d\n", r.int_num);
+#ifdef CONFIG_INTERRUPTS_DEBUG
+#ifdef CONFIG_SPECIFIC_INTERRUPTS_DEBUG
+  if (CONFIG_SPECIFIC_INTERRUPTS_DEBUG(r->int_num))
+#endif
+    klogf("received %d interrupt", r->int_num);
+#endif
+
   if (intrs[r->int_num] != 0) {
-    // klogf("(%x) registers at 0x%x", r.int_num, &r);
     intr_handler_t h = intrs[r->int_num];
     h(r);
   }
 }
 
-void gpf_handler(regs_t *r) {
-  printk("GP fault: 0x%x\n", r->err_code);
-  dump_registers(*r);
-  trace(0, -1);
+void idt_hwinterrupt_handler(regs_t *r) {
+  idt_interrupt_handler(r);
+  pic_eoi(r->int_num);
 }
 
 void idt_register_interrupt(uint32_t i, intr_handler_t f) {
-  // trace(1, 5);
   if (i >= INTERRUPTS_COUNT) {
-    print_status("cannot register interrupt: interrupt vector is out of range",
-                 MOD_ERR);
+    klogf("cannot register interrupt %d: interrupt vector is out of range", i);
     return;
   }
-  if (intrs[i] != 0) {
-    print_status("warning: overwriting existing interrupt handler",
-                 MOD_WARNING);
-  }
+  if (intrs[i] != 0)
+    klogf("warning: overwriting existing interrupt handler: %d", i);
+
   intrs[i] = f;
 }
 
@@ -144,4 +161,6 @@ void idt_dump() {
 }
 
 void idt_disable_hwinterrupts() { __asm__ volatile("cli"); }
-void idt_enable_hwinterrupts() { __asm__ volatile("sti"); }
+void idt_enable_hwinterrupts() {
+  __asm__ volatile("sti");
+}

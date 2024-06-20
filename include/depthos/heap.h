@@ -3,10 +3,11 @@
 #include <depthos/stddef.h>
 #include <depthos/stdtypes.h>
 
-#define HEAP_SLAB_PAGES 2
-#define HEAP_LGSLAB_PAGES 4
+#define HEAP_SLAB_PAGES 4
+#define HEAP_LGSLAB_PAGES 10
 
 #define HEAP_BASE (VIRT_BASE + 1 * 1024 * 4096)
+#define HEAP_SIZE 2 * 1024 * 4096
 
 typedef struct heap_slab_freelist {
   struct heap_slab_freelist *next;

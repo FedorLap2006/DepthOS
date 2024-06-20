@@ -1,14 +1,16 @@
 #include <depthos/bitmap.h>
 #include <depthos/elf.h>
 #include <depthos/errno.h>
+#include <depthos/heap.h>
 #include <depthos/kconfig.h>
 #include <depthos/logging.h>
 #include <depthos/proc.h>
+#include <depthos/string.h>
 #include <depthos/syscall.h>
 #include <depthos/tools.h>
 
 void *copy_userspace_ptr(void *ptr, size_t size) {
-  void *kptr = kmalloc(size);
+  void *kptr = (void *)kmalloc(size);
   memcpy(kptr, ptr, size);
   return kptr;
 }
@@ -36,8 +38,10 @@ static inline uintptr_t resolve_posix_syscall_no(long no) {
   return NULL;
 }
 
+void exec_syscall(regs_t *r, uintptr_t function);
+
 __noinline void posix_syscall_handler(regs_t *r) {
-#ifdef CONFIG_SYS_TRACE
+#ifdef CONFIG_SYS_DEBUG
   printk("\nposix syscall %d\n", r->eax);
   trace(0, -1);
 #endif
@@ -46,14 +50,27 @@ __noinline void posix_syscall_handler(regs_t *r) {
 }
 
 __noinline void syscall_handler(regs_t *r) {
+#ifdef CONFIG_SYS_DEBUG
+  if (CONFIG_SYS_DEBUG(r)) {
+    printk("\nsyscall %d\n", r->eax);
 #ifdef CONFIG_SYS_TRACE
-  printk("\nsyscall %d\n", r->eax);
-  trace(0, -1);
+   trace(0, -1);
+#endif
+  }
 #endif
   extern void _syscall_entries;
   static uintptr_t *syscall_entries = &_syscall_entries;
+  extern int syscall_entries_len;
+  if (r->eax >= (uint32_t)syscall_entries_len || !syscall_entries[r->eax]) {
+    r->eax = -ENOSYS;
+    return;
+  }
+
+  errno = 0; // TODO: here or somewhere else?
+
   exec_syscall(r, syscall_entries[r->eax]);
 }
+
 void exec_syscall(regs_t *r, uintptr_t function) {
   // uintptr_t esp;
   // if (r->eax != 5) {

@@ -7,10 +7,10 @@
 #include <depthos/string.h>
 #include <depthos/tools.h>
 
+// TODO: migrate to device struct and register it in devfs
 struct serial_device {
   unsigned long base;
 };
-
 #define TX(dev) ((dev)->base + 0)
 #define DLAB_LO(dev) ((dev)->base + 0)
 #define DLAB_HI(dev) ((dev)->base + 1)
@@ -146,7 +146,7 @@ void serial_console_init(unsigned id) {
     idt_register_interrupt(0x24, serial_console_irq_handler);
     outb(INTR_ENABLE(dev), 0x1);
 
-    register_console(serial_write, dev);
+    switch_console_provider(serial_write, dev);
     bootlog("Serial console initialised", LOG_STATUS_SUCCESS);
   }
 }

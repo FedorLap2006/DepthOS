@@ -1,47 +1,95 @@
 #include <depthos/bitmap.h>
 #include <depthos/console.h>
 #include <depthos/dev.h>
+#include <depthos/file.h>
 #include <depthos/heap.h>
 #include <depthos/keyboard.h>
+#include <depthos/logging.h>
 #include <depthos/proc.h>
 #include <depthos/ringbuffer.h>
 #include <depthos/string.h>
 
 #define TTY_BUFFER_SIZE 100
 
-int tty_write(struct device *dev, char *buffer, size_t nbytes) {
-  for (int i = 0; i < nbytes; i++) {
-    console_putchar(*buffer++);
+// TODO: how do we deal with seeking and offsets
+// TODO: modifiers
+
+int tty_write(struct device *dev, void *rbuffer, size_t nbytes, off_t *offset) {
+  /*char *tmp = kmalloc(MAX(nbytes + 1, 8));*/
+  /*if (!tmp) {*/
+  /*panicf("Cannot allocate %d", nbytes+1);*/
+  /*}*/
+  /*memcpy(tmp, buffer, nbytes);*/
+  /*tmp[nbytes] = 0;*/
+  char *buffer = rbuffer;
+  if (nbytes >= 3 && buffer[0] == 0x1b && buffer[1] == '[' &&
+      buffer[2] == ']') {
+    // Cannot be yet used, since it uses video memory and we can boot into
+    // graphical mode.
+    // TODO: backend independent console
+    // console_clear(); // TODO: implement escape codes
+  } else {
+    for (int i = 0; i < nbytes; i++) {
+      putk(*buffer++);
+    }
   }
+  // kfree(tmp, MAX(nbytes + 1, 8));
   return nbytes;
 }
 
-static ringbuffer_elem_t data[TTY_BUFFER_SIZE];
+static char data[TTY_BUFFER_SIZE];
 static struct ringbuffer tty_buffer = (struct ringbuffer){
     .data = data,
+    .elem_size = 1,
     .max_size = TTY_BUFFER_SIZE,
 };
 
-int tty_read(struct device *dev, char *buffer, size_t nbytes) {
-  ringbuffer_elem_t *rbe = ringbuffer_pop(&tty_buffer);
+int tty_read(struct device *dev, void *rbuffer, size_t nbytes, off_t *offset) {
+  // klogf("reading...");
+  if (!nbytes)
+    return 0;
+  int r = 0;
+  char *buffer = rbuffer;
+
+read_more:;
+  char *rbe = ringbuffer_pop(&tty_buffer);
   if (rbe) {
     buffer[0] = *rbe;
-    return 1;
+    nbytes--;
+    buffer++;
+    r++;
+    // klogf("debug");
+    if (nbytes) {
+      // klogf("debug 2");
+      goto read_more;
+    }
+    // klogf("debug 3");
+    return r;
+  } else if (r > 0) { // TODO: r > 1, what's the correct way?
+    // klogf("debug 4");
+    // klogf("debug");
+    return r;
   }
-  while (ringbuffer_empty(&tty_buffer))
-    __asm__ volatile("int $0x30");
 
+  // klogf("debug");
+  while (ringbuffer_empty(&tty_buffer)) { // TODO: open flag for non-blocking
+    // klogf("debug 5");
+    sched_yield();
+    // __asm__ volatile("int $0x30");
+  }
   // TODO: write remaining bytes into the buffer
-  return tty_read(dev, buffer, nbytes);
+  return tty_read(dev, buffer, nbytes, offset);
 }
 
-int tty_ioctl(struct device *dev, int request, void *data) {}
+long tty_ioctl(struct device *dev, unsigned long request, void *data) {}
 
 struct device tty_device = {
     .name = "tty",
+    .class = DEV_C_TTY,
     .write = tty_write,
     .read = tty_read,
     .ioctl = tty_ioctl,
+    .seek = dev_impl_seek_zero,
     .impl = NULL,
 };
 
@@ -54,10 +102,11 @@ static bool shift_keycode(struct keyboard_event event) {
   return false;
 }
 
-// TODO: refactor keyboard handling
-void tty_ps2_handler(struct keyboard_event event) {
-  char *str = NULL;
+static struct device *current_ps2_tty_dev;
 
+// TODO: refactor keyboard handling
+int tty_keyboard_handler(struct keyboard_event event) {
+  char *str = NULL;
   if (!event.pressed)
     return;
   switch (event.keycode) {
@@ -65,23 +114,32 @@ void tty_ps2_handler(struct keyboard_event event) {
     str = "[[^";
     break;
   default:
-    str = keycode_to_string(event.keycode);
+    str = strdup(keycode_to_string(event.keycode));
     if (shift_keycode(event)) {
-      str = strdup(str);
       str[0] -= 32;
     }
+    // if (event.modifiers & KEYBOARD_MODIFIER_CTRL != 0) {
+    //   char *str2 = kmalloc(strlen(str) + 2);
+    //   str2[0] = '^';
+    //   strcpy(str2 + 1, str);
+    //   kfree(str, strlen(str) + 1);
+    //   str = str2;
+    // }
   }
-
+  off_t off;
+  if (str[0] == '\b') {
+    tty_write(current_ps2_tty_dev, "\b \b", 3, &off);
+  } else
+    tty_write(current_ps2_tty_dev, str, strlen(str), &off);
   while (*str)
-    ringbuffer_push(&tty_buffer, (ringbuffer_elem_t)*str++);
-
+    ringbuffer_push(&tty_buffer, str++);
   if (shift_keycode(event))
     kfree(str, strlen(str));
 }
 
 void tty_init() {
   ringbuffer_init(&tty_buffer, true);
-  keyboard_set_handler(tty_ps2_handler);
+  keyboard_set_handler(tty_keyboard_handler);
   // TODO: vcs device and multiple ttys
   devfs_register("console", &tty_device);
   devfs_register("tty", &tty_device);  // Current process TTY

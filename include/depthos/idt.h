@@ -9,6 +9,8 @@
 
 typedef void (*intr_handler_t)(regs_t *);
 
+#define IRQ(o) (0x20 + (o))
+
 void idt_init();
 extern void idt_flush();
 

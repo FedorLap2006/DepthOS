@@ -1,5 +1,6 @@
 #include <depthos/bitmap.h>
 #include <depthos/elf.h>
+#include <depthos/errno.h>
 #include <depthos/fs.h>
 #include <depthos/heap.h>
 #include <depthos/kernel.h>
@@ -10,7 +11,8 @@
 #include <depthos/string.h>
 
 bool elf_probef(struct fs_node *file) {
-  vfs_seek(file, 0);
+  // klogf("probing elf...");
+  vfs_seek(file, 0, SEEK_SET);
   char magic[4];
   int b = vfs_read(file, magic, 4);
   magic[b] = 0;
@@ -19,10 +21,12 @@ bool elf_probef(struct fs_node *file) {
   return magic[0] == 0x7f && strcmp(magic + 1, "ELF") == 0;
 }
 
-bool elf_probe(const char *path) {
+bool elf_probe(const char *path) { // TODO: errno
   struct fs_node *file = vfs_open(path);
   if (!file) {
+    klogf("`%s`", path);
     errno = ENOENT;
+    // klogf("could not find file");
     return false;
   }
   return elf_probef(file);
@@ -38,13 +42,15 @@ void elf_load_segment(struct task *task, struct fs_node *file,
           "skipping");
     return;
   }
-  vfs_seek(file, segment->offset);
+  // klogf("file size: %d", file-)
+  vfs_seek(file, segment->offset, SEEK_SET);
   for (int i = 0; i < PG_RND_UP(segment->memsz) / PAGE_SIZE; i++)
     map_addr(task->pgd, segment->vaddr + i * PAGE_SIZE, 1, true, false);
   void *addr = (void *)segment->vaddr;
   int b = vfs_read(file, addr, segment->filesz);
   if (b != segment->filesz) {
-    printk("elf: failed to read segment\n");
+    panicf("elf: failed to read segment, read %d instead of %d\n", b,
+           segment->filesz);
     return;
   }
   if (segment->memsz > segment->filesz) {
@@ -54,9 +60,11 @@ void elf_load_segment(struct task *task, struct fs_node *file,
 
 void elf_loadf(struct task *tsk, struct fs_node *file) {
   if (!elf_probef(file)) {
-    klogf("cannot load elf, invalid magic") return;
+    klogf("cannot load elf, invalid magic");
+    return;
   }
-  vfs_seek(file, 0);
+  klogf("loading elf...");
+  vfs_seek(file, 0, SEEK_SET);
   struct elf_header header;
   vfs_read(file, &header, sizeof(struct elf_header));
 
@@ -64,7 +72,7 @@ void elf_loadf(struct task *tsk, struct fs_node *file) {
   memcpy(elf, header.ident.magic + 1, 3);
   elf[3] = 0;
 
-  vfs_seek(file, header.pheader_offset);
+  vfs_seek(file, header.pheader_offset, SEEK_SET);
   struct elf_program_header *segments =
       kmalloc(header.phentry_size *
               header.pheader_num); // should this address be modified?
@@ -83,13 +91,19 @@ void elf_loadf(struct task *tsk, struct fs_node *file) {
         header.shentry_size, sizeof(struct elf_section_header),
         header.sheader_num, header.shstrndx);
 
-  vfs_seek(file, header.sheader_offset);
+  klogf("reading sheaders");
+  klogf("seeking to %d", header.sheader_offset);
+  vfs_seek(file, header.sheader_offset, SEEK_SET);
   struct elf_section_header *sections =
       kmalloc(header.shentry_size * header.sheader_num);
   vfs_read(file, sections, header.shentry_size * header.sheader_num);
 
   for (int i = 0; i < header.sheader_num; i++) {
-    vfs_seek(file, sections[header.shstrndx].offset + sections[i].name);
+    vfs_seek(file, sections[header.shstrndx].offset + sections[i].name,
+             SEEK_SET);
+    klogf("seeking to %ld (%ld + %ld)",
+          sections[header.shstrndx].offset + sections[i].name,
+          sections[header.shstrndx].offset, sections[i].name);
     char name[50];
     vfs_read(file, name, 50);
     klogf("sections[%d]: name=%s type=%d flags=%x addr=0x%x offset=0x%x "
@@ -104,8 +118,12 @@ void elf_loadf(struct task *tsk, struct fs_node *file) {
   tsk->pgd = create_pgd();
   pagedir_t pgd = get_current_pgd();
   activate_pgd(tsk->pgd);
+  off_t tmp = vfs_seek(file, 0, SEEK_CUR);
+  off_t max_pos = vfs_seek(file, 0, SEEK_END);
+  vfs_seek(file, tmp, SEEK_SET);
 
   struct elf_program_header *pheader_load = NULL;
+
   for (int i = 0; i < header.pheader_num; i++) {
     klogf("segments[%d]: type=%d offset=0x%x addr=0x%x vaddr=0x%x filesz=%d "
           "memsz=%d "
@@ -113,12 +131,14 @@ void elf_loadf(struct task *tsk, struct fs_node *file) {
           i, segments[i].type, segments[i].offset, segments[i].paddr,
           segments[i].vaddr, segments[i].filesz, segments[i].memsz,
           segments[i].flags, segments[i].align);
+    klogf("file size: %ld", max_pos);
     elf_load_segment(tsk, file, &segments[i]);
   }
 
   activate_pgd(pgd);
   tsk->binfo.entry = header.entry;
   tsk->name = strdup(file->path);
+  klogf("task old: %s new: %s", file->path, tsk->name);
 
 cleanup:
   kfree(segments, header.phentry_size * header.pheader_num);

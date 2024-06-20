@@ -31,8 +31,6 @@ extern bool console_no_color;
 #define YELLOW_COLOR WBROWN_COLOR
 #define WHITE_COLOR 15
 
-enum { MOD_OK, MOD_ERR, MOD_WARNING };
-
 void console_init(int s, int l, int b, int f);
 void console_movec(int x, int y);
 void console_flushc();
@@ -53,15 +51,11 @@ void console_read();
 void console_write_color(const char *buf, int8_t b, int8_t f);
 void console_putchar_color(unsigned char c, int8_t b, int8_t f);
 
-void print_status(char *buf, int m);
 // char *mlog_s;
 
-void register_console(void (*output)(void *context, const char *data,
-                                     size_t sz),
-                      void *context);
-void putk(char c);
-void printk(const char *fmt, ...);
-void vprintk(const char *fmt, va_list ap);
+void switch_console_provider(void (*output)(void *context, const char *data,
+                                            size_t sz),
+                             void *context);
 
 // Console Device implementation
 

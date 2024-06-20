@@ -24,7 +24,8 @@
 	intr\num:
 		cli
 		pushl (%esp) # error code
-		movl $0, 4(%esp) # XXX: ebp, could be polluted, set to zero to prevent further frame jumps
+		# movl $0, 4(%esp) # XXX: ebp, could be polluted, set to zero to prevent further frame jumps
+		movl %ebp, 4(%esp)
 		pushl $\num
 		jmp intr_cstub
 .endm
@@ -40,37 +41,37 @@
 .endm
 
 
-INTR_NOERRCODE 0
-INTR_NOERRCODE 1
-INTR_NOERRCODE 2
-INTR_NOERRCODE 3
-INTR_NOERRCODE 4
-INTR_NOERRCODE 5
-INTR_NOERRCODE 6
-INTR_NOERRCODE 7
-INTR_ERRCODE   8
-INTR_NOERRCODE 9
-INTR_ERRCODE   10
-INTR_ERRCODE   11
-INTR_ERRCODE   12
-INTR_ERRCODE   13
-INTR_ERRCODE   14
+INTR_NOERRCODE 0 # Division error
+INTR_NOERRCODE 1 # Debug
+INTR_NOERRCODE 2 # Non-maskable interrupt
+INTR_NOERRCODE 3 # Breakpoint
+INTR_NOERRCODE 4 # Overflow
+INTR_NOERRCODE 5 # Bound range exceeded
+INTR_NOERRCODE 6 # Invalid opcode
+INTR_NOERRCODE 7 # Device not available
+INTR_ERRCODE   8 # Double fault
+INTR_NOERRCODE 9 # Coprocessor segment overrun
+INTR_ERRCODE   10 # Invalid TSS
+INTR_ERRCODE   11 # Segment not present
+INTR_ERRCODE   12 # Stack-segment fault
+INTR_ERRCODE   13 # General protection fault
+INTR_ERRCODE   14 # Page fault
 INTR_NOERRCODE 15
-INTR_NOERRCODE 16
-INTR_NOERRCODE 17
-INTR_NOERRCODE 18
-INTR_NOERRCODE 19
-INTR_NOERRCODE 20
-INTR_NOERRCODE 21
+INTR_NOERRCODE 16 # X87 floating-point exception
+INTR_ERRCODE 17 # Alignment check
+INTR_NOERRCODE 18 # Machine check
+INTR_NOERRCODE 19 # SIMD floating-point exception
+INTR_NOERRCODE 20 # Virtualization exception
+INTR_NOERRCODE 21 # Control protection exception
 INTR_NOERRCODE 22
 INTR_NOERRCODE 23
 INTR_NOERRCODE 24
 INTR_NOERRCODE 25
 INTR_NOERRCODE 26
 INTR_NOERRCODE 27
-INTR_NOERRCODE 28
-INTR_NOERRCODE 29
-INTR_NOERRCODE 30
+INTR_NOERRCODE 28 # Hypervisor injection exception
+INTR_ERRCODE 29 # VMM communication exception
+INTR_NOERRCODE 30 # Security exception
 INTR_NOERRCODE 31
 # IRQ HANDLERS
 IRQ_NOERRCODE 32

@@ -1,3 +1,4 @@
+#include "depthos/ps2.h"
 #include <depthos/idt.h>
 #include <depthos/keyboard.h>
 #include <depthos/logging.h>
@@ -92,7 +93,7 @@ static keycode_t scancode_set_1[] = {
     KEY_KP_3,       // 0x51
     KEY_KP_0,       // 0x52
     KEY_KP_DECIMAL, // 0x53
-#if 0
+#if 0               // FIXME: why?
     KEY_HOME,         // 0x47
     KEY_KP_8,         // 0x48 //keypad up arrow
     KEY_PAGEUP,       // 0x49
@@ -236,9 +237,9 @@ void ps2_keyboard_handle_scancode(uint8_t payload) {
 }
 
 void ps2_keyboard_irq_handler(regs_t *r) {
-  uint8_t status = inb(PS2_KEYBOARD_STATUS_PORT);
+  uint8_t status = ps2_get_status();
   if (status & 0x01)
-    ps2_keyboard_handle_scancode(inb(PS2_KEYBOARD_DATA_PORT));
+    ps2_keyboard_handle_scancode(ps2_read());
 
   return;
 }
@@ -349,6 +350,6 @@ void keyboard_set_handler(keyboard_event_handler_t handler) {
 }
 
 void ps2_keyboard_init() {
-  idt_register_interrupt(0x20 + 0x1, ps2_keyboard_irq_handler);
+  idt_register_interrupt(IRQ(1), ps2_keyboard_irq_handler);
   keyboard_set_handler(standard_keycode_handler);
 }

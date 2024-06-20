@@ -21,5 +21,6 @@
 #define ENOEXEC 14
 #define EEXIST 15
 #define ENOMEM 16
+#define ERANGE 17
 
 extern int errno;

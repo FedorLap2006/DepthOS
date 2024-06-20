@@ -37,6 +37,15 @@ void *memcpy(void *dst, const void *src, size_t n) {
   return dst;
 }
 
+void *memcpy2(void *dst, const void *src, size_t n) {
+  unsigned char *d = dst;
+  const unsigned char *s = src;
+
+  while (n-- > 0)
+    *d++ = *s++;
+  return dst;
+}
+
 void *memset(void *p, int c, size_t n) {
   unsigned char *p1 = p;
 

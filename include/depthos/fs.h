@@ -91,13 +91,17 @@ void vfs_close(struct fs_node *file);
  */
 soff_t vfs_setpos(struct fs_node *file, soff_t pos, soff_t max);
 
+char *vfs_resolve(const char *path, const char *cwd);
+
+// FIXME: EBADF?
+
 #define vfs_write(file, buffer, count)                                         \
-  SAFE_FNPTR_CALL(file->ops->write, -EINVAL, file, buffer, count, &file->pos)
+  SAFE_FNPTR_CALL(file->ops->write, -ENOSYS, file, buffer, count, &file->pos)
 #define vfs_read(file, buffer, count)                                          \
-  SAFE_FNPTR_CALL(file->ops->read, -EINVAL, file, buffer, count, &file->pos)
+  SAFE_FNPTR_CALL(file->ops->read, -ENOSYS, file, buffer, count, &file->pos)
 // #define vfs_seek(file, offset) file->pos = offset
 #define vfs_seek(file, offset, whence)                                         \
-  SAFE_FNPTR_CALL(file->ops->seek, -EINVAL, file, offset, whence)
+  SAFE_FNPTR_CALL(file->ops->seek, -ENOSYS, file, offset, whence)
 #define vfs_eof(file) file->eof
 #define vfs_iter(file, dst, len) file->ops->iter(file, dst, len, &file->pos)
 #define vfs_fimpl(file, t) ((t)(file)->impl)

@@ -79,10 +79,11 @@ void execute_command() {
       strcpy(hostname, command_argv[1]);
 
   } else if (!strcmp(command_argv[0], "time")) {
-    extern uint32_t tick;
+    extern uint32_t pit_ticks;
 
     printk("%dh %dm %ds %dms have passed since OS started\n",
-           tick / 1000 / 60 / 60, tick / 1000 / 60, tick / 1000, tick % 1000);
+           pit_ticks / 1000 / 60 / 60, pit_ticks / 1000 / 60, pit_ticks / 1000,
+           pit_ticks % 1000);
   } else if (!strcmp(command_argv[0], "cat")) {
     if (command_argc < 2)
       console_write_color("No file specified", BLACK_COLOR, RED_COLOR);

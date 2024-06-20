@@ -1,37 +1,39 @@
+#include <depthos/heap.h>
 #include <depthos/ringbuffer.h>
 #include <depthos/string.h>
 
-struct ringbuffer *ringbuffer_create(size_t max_size) {
-	struct ringbuffer *rb = kmalloc(sizeof(struct ringbuffer));
-	if (!rb) return NULL;
-	printk("hello");
-	rb->data = kmalloc(sizeof(ringbuffer_elem_t) * max_size); // TODO: use void*
-	rb->max_size = max_size;
-	ringbuffer_init(rb, true);
-	return rb;
+struct ringbuffer *ringbuffer_create(size_t max_size, size_t elem_size) {
+  struct ringbuffer *rb = (struct ringbuffer *)kmalloc(sizeof(struct ringbuffer));
+  if (!rb) return NULL;
+  // printk("hello");
+  rb->data = kmalloc(elem_size * max_size);
+  rb->max_size = max_size;
+  rb->elem_size = elem_size;
+  ringbuffer_init(rb, true);
+  return rb;
 }
+
 void ringbuffer_init(struct ringbuffer *rb, bool zero) {
-	rb->read_idx = rb->write_idx = 0;
-	if (zero) memset(rb->data, 0, sizeof(ringbuffer_elem_t)*rb->max_size);
+  rb->read_idx = rb->write_idx = 0;
+  rb->size = 0;
+  if (rb->elem_size == 0)
+    rb->elem_size = 1;
+  if (zero) memset(rb->data, 0, rb->elem_size * rb->max_size);
 }
 
-size_t ringbuffer_size(struct ringbuffer *rb) {
-	return rb->write_idx - rb->read_idx;
-}
-bool ringbuffer_empty(struct ringbuffer *rb) {
-	return ringbuffer_size(rb) == 0;
-}
-
-ringbuffer_elem_t *ringbuffer_push(struct ringbuffer *rb, ringbuffer_elem_t v) {
-	ringbuffer_elem_t *e = &rb->data[rb->write_idx++];
-	*e = v;
-	rb->write_idx %= rb->max_size;
-	return e;
+void *ringbuffer_push(struct ringbuffer *rb, void *v) {
+  void *e = ringbuffer_at(rb, rb->write_idx++);
+  memcpy(e, v, rb->elem_size);
+  rb->write_idx %= rb->max_size;
+  rb->size++;
+  rb->size %= rb->max_size + 1;
+  return e;
 }
 
-ringbuffer_elem_t *ringbuffer_pop(struct ringbuffer *rb) {
-	if (ringbuffer_empty(rb)) return NULL;
-	ringbuffer_elem_t *e = &rb->data[rb->read_idx++];
-	rb->read_idx %= rb->max_size;
-	return e;
+void *ringbuffer_pop(struct ringbuffer *rb) {
+  if (ringbuffer_empty(rb)) return NULL;
+  void *e = ringbuffer_at(rb, rb->read_idx++);
+  rb->read_idx %= rb->max_size;
+  rb->size--;
+  return e;
 }

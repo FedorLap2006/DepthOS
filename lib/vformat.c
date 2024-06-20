@@ -381,7 +381,14 @@ void vformat(void (*output)(void *context, const char *data, size_t sz),
         break;
       case 's':
         pchar = va_arg(ap, void *);
-        if (flags.precision) {
+        if (!pchar) {
+          if ((flags.precision && (unsigned)flags.precision_value >= sizeof("(null)")))
+            pchar = "(null)";
+          else if (!flags.precision) {
+            pchar = "(null)";
+            flags.precision_value = sizeof("(null)")-1;
+          }
+        } else if (flags.precision) {
           p = memchr(pchar, 0, flags.precision_value);
           if (p)
             flags.precision_value = p - pchar;

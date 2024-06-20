@@ -13,10 +13,10 @@
 
 // Descriptor flags.
 
-#define GDT_FLAGS_LONG 0x01
-#define GDT_FLAGS_32 0x02
+#define GDT_FLAGS_LONG 0x02
+#define GDT_FLAGS_32 0x04
 #define GDT_FLAGS_DB GDT_FLAGS_32
-#define GDT_FLAGS_G 0x04
+#define GDT_FLAGS_G 0x08
 
 // Full descriptor definitions.
 
@@ -37,15 +37,15 @@
 
 #define GDT_DESC_LIMIT_HIGH_MASK 0x000f0000
 #define GDT_DESC_LIMIT_HIGH(v) ((v)&GDT_DESC_LIMIT_HIGH_MASK)
-#define GDT_DESC_BASE_HIGH_MASK 0xff0000ff
-#define GDT_DESC_BASE_HIGH(v) (((v)&0xff000000) | (((v)&0x00ff0000) >> 16))
+#define GDT_DESC_BASE_MIDHIGH_MASK 0xff0000ff
+#define GDT_DESC_BASE_MIDHIGH(v) (((v)&0xff000000) | (((v)&0x00ff0000) >> 16))
 #define GDT_DESC_ACCESS(v) ((v & 0xFF) << 8)
 #define GDT_DESC_FLAGS(v) ((v & 0xF) << 20)
 #ifdef __x86_64__
 #define GDT_DESC_BASE_EXTRA(v) (v >> 32)
 #endif
 
-#ifdef __i686__
+#if defined(__i686__) || defined(__i386__)
 #define KERNEL_CODE_BASE 0
 #define KERNEL_CODE_LIMIT 0xfffff
 

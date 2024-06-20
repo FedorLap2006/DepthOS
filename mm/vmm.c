@@ -13,7 +13,7 @@
 #include <depthos/syscall.h>
 #include <depthos/vmm.h>
 
-#ifdef CONFIG_VMM_LOG_ENABLE
+#if defined(CONFIG_VMM_LOG_ENABLE)
 #define vmm_log(...) klogf(__VA_ARGS__)
 #else
 #define vmm_log(...)
@@ -33,6 +33,7 @@ DECL_SYSCALL1(mmap, struct sc_mmap_params *, params) {
     }
     addr = MMAP_BASE;
     addr += current_task->mmap_bump_idx * PAGE_SIZE;
+    klogf("mmap bump idx: 0x%lx (%ld, %ld)", current_task->mmap_bump_idx, current_task->process->pid, current_task->thid);
     current_task->mmap_bump_idx += PG_RND_UP(params->length) / PAGE_SIZE;
   }
 

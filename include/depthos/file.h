@@ -31,20 +31,41 @@ typedef struct fs_node {
 
 #define FS_FILE 0x0001
 #define FS_DIR 0x0002
-#define FS_MOUNT 0x0003
+// #define FS_MOUNT 0x0004
 #define FS_PIPE 0x0004
-#define FS_DEV 0x0005
+#define FS_DEV 0x0008
   uint8_t type;
   fmode_t mode;
   off_t pos;
   bool eof;
   size_t size;
   devid_t dev;
+  inode_t inode_num;
+  bool rdonly; // TODO: file descriptor
 
   struct file_operations *ops;
   void *impl;
+  struct pipe *pipe;
   struct filesystem *fs;
 } fs_node_t;
+
+struct file_descriptor {
+  bool present;
+  struct fs_node *node;
+#define FD_EXEC 1
+#define FD_RDONLY 2
+#define FD_RDWR 3
+#define FD_WRONLY 5
+  int flags;
+};
+
+static inline struct file_descriptor make_fd(struct fs_node* node, int flags) {
+  return (struct file_descriptor) {
+    .present = true,
+    .node = node,
+    .flags = flags,
+  };
+}
 
 struct dentry {
   uint8_t type;

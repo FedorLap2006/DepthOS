@@ -28,19 +28,19 @@ something:
   // movl $7, %ecx
   movl $(hello_end - hello), %ebx
   movl $hello, %ecx
-  movl $4, %eax
-  int $0x80
+  movl $2, %eax
+  int $0x64
 
   int $0x30
   
   movl $(after_end - after), %ebx
   movl $after, %ecx
-  movl $4, %eax
-  int $0x80
+  movl $2, %eax
+  int $0x64
   movl $(after_end2 - after2), %ebx
   movl $after2, %ecx
-  movl $4, %eax
-  int $0x80
+  movl $2, %eax
+  int $0x64
 
   // movl $4, %eax
   // int $0x80
@@ -65,4 +65,4 @@ _start:
 // a:
 //   jmp a
   movl $1, %eax # sys_exit
-  int $0x80
+  int $0x64

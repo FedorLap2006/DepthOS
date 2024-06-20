@@ -25,8 +25,8 @@ void console_init(int s, int l, int b, int f) {
     dbcolor = b;
   if (f > 0)
     dfcolor = f;
-  console_clear();
-  print_status("console initialized", MOD_OK);
+  console_getcursor(&cursorx, &cursory);
+  console_flushc();
 }
 
 void console_movec(int x, int y) {
@@ -35,6 +35,16 @@ void console_movec(int x, int y) {
   if (cursory + y >= 0)
     cursory += y;
   console_flushc();
+}
+void console_getcursor(int *x, int *y) {
+  uint16_t pos = 0;
+  outb(0x3D4, 0x0F);
+  pos |= inb(0x3D5);
+  outb(0x3D4, 0x0E);
+  pos |= ((uint16_t)inb(0x3D5)) << 8;
+
+  *y = pos / strs_len;
+  *x = pos % strs_len;
 }
 
 void console_flushc() {
@@ -83,6 +93,11 @@ void console_putchara(unsigned char c, uint8_t a) {
   } else if (c == '\n') {
     cursorx = 0;
     ++cursory;
+  }
+  if (c == '\033') { // TODO: properly implement escape codes
+    console_putchara('^', a);
+    console_putchara('[', a);
+    return;
   } else if (c >= ' ') {
     loc = videoMemory + (cursory * strs_len + cursorx);
     *loc = c | attr;
@@ -167,7 +182,7 @@ void console_putchar_color(unsigned char c, int8_t b, int8_t f) {
   console_putchara(c, (b << 4) | (f & 0x0F));
 }
 
-static void console_output(void *context, const char *data, size_t sz) {
+void console_output(void *context, const char *data, size_t sz) {
   while (sz-- > 0)
     console_putchar(*data++);
 }
@@ -176,9 +191,9 @@ static void (*output_console)(void *context, const char *data,
                               size_t sz) = console_output;
 static void *console_context;
 
-void register_console(void (*output)(void *context, const char *data,
-                                     size_t sz),
-                      void *context) {
+void switch_console_provider(void (*output)(void *context, const char *data,
+                                            size_t sz),
+                             void *context) {
   output_console = output;
   console_context = context;
 }
@@ -197,12 +212,16 @@ void printk(const char *fmt, ...) {
   va_end(ap);
 }
 
-void consoledev_write(struct device *dev, char *buffer, size_t nbytes) {
+int consoledev_write(struct device *dev, void *buffer, size_t nbytes,
+                     off_t *off) {
+  // TODO: offsets
   for (int i = 0; i < nbytes; i++)
-    console_putchar(buffer[i]);
+    console_putchar(((unsigned char *)buffer)[i]);
+  *off += nbytes;
+  return nbytes;
 }
 
-int consoledev_ioctl(struct device *dev, int request, void *data) {
+long consoledev_ioctl(struct device *dev, unsigned long request, void *data) {
   switch (request) {
   case CONSOLE_IOCTL_CLEAR:
     console_clear();
@@ -217,7 +236,7 @@ int consoledev_ioctl(struct device *dev, int request, void *data) {
 }
 
 struct device console_device = (struct device){
-    .name = "console",
+    .name = "textvga",
     .pos = 0,
     .write = consoledev_write,
     .read = NULL, // TODO: ps/2

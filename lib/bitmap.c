@@ -1,4 +1,6 @@
 #include <depthos/bitmap.h>
+#include <depthos/errno.h>
+#include <depthos/heap.h>
 #include <depthos/logging.h>
 #include <depthos/string.h>
 
@@ -58,7 +60,7 @@ void bitmap_setmulti(bitmap_t *bm, bool v, size_t idx, size_t c) {
     bitmap_set(bm, v, idx + i);
 }
 
-size_t bitmap_scan(bitmap_t *bm, size_t s, size_t n, bool v) {
+ssize_t bitmap_scan(bitmap_t *bm, size_t s, size_t n, bool v) {
   size_t r, rc = 0;
 
   for (size_t i = 0; i < bm->size; i++) {
@@ -74,10 +76,11 @@ size_t bitmap_scan(bitmap_t *bm, size_t s, size_t n, bool v) {
   return -EBITMAP;
 }
 
-size_t bitmap_scan_flip(bitmap_t *bm, size_t s, size_t n, bool v) {
+ssize_t bitmap_scan_flip(bitmap_t *bm, size_t s, size_t n, bool v) {
   size_t idx = bitmap_scan(bm, s, n, v);
-  if (idx < 0)
+  if (idx < 0) {
     return idx;
+  }
 
   for (int i = 0; i < n; i++)
     bitmap_flip(bm, idx + i);

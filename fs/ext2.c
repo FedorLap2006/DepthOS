@@ -44,6 +44,7 @@ int ext2_read_block(struct filesystem *fs, void *buf, off_t block) {
   //          ceil_div(IMPL(fs)->block_size, fs->dev->block_size));
   return read_sectors == n_sectors;
 }
+
 struct ext2_inode *ext2_get_inode(struct filesystem *fs, uint32_t inode) {
   inode--;
   uint32_t group_idx = inode / IMPL(fs)->super->inodes_per_blk_group;
@@ -53,11 +54,12 @@ struct ext2_inode *ext2_get_inode(struct filesystem *fs, uint32_t inode) {
   // uint32_t block = (index % IMPL(fs)->super->inode_size) /
   // IMPL(fs)->block_size;
   ext2_log("found %lu inode in %ld group [%ld]", inode + 1, group_idx, index);
-  off_t block = group.inode_table_addr +
-                (index * IMPL(fs)->super->inode_size) / IMPL(fs)->block_size;
-  off_t offset = (index * IMPL(fs)->super->inode_size) % IMPL(fs)->block_size;
-  ext2_log("block: %lx offset=%lx", block, offset);
-  off_t lba = (block * IMPL(fs)->block_size + offset) / fs->dev->block_size;
+  assert(IMPL(fs)->super->inode_size == 512); // Otherwise it doesn't work, for some reason.
+  uint32_t block = group.inode_table_addr +
+                ((index * IMPL(fs)->super->inode_size) / IMPL(fs)->block_size);
+  uint32_t offset = (index * IMPL(fs)->super->inode_size) % IMPL(fs)->block_size;
+  ext2_log("block: %ld (%ld + %ld) offset=%lx", block, group.inode_table_addr, (index * IMPL(fs)->super->inode_size) / IMPL(fs)->block_size,  offset);
+  uint32_t lba = (block * IMPL(fs)->block_size + offset) / fs->dev->block_size;
   // off_t lba =
   //     (((group.inode_table_addr +
   //        (index * IMPL(fs)->super->inode_size) / IMPL(fs)->block_size)) *
@@ -65,7 +67,7 @@ struct ext2_inode *ext2_get_inode(struct filesystem *fs, uint32_t inode) {
   //      (index * IMPL(fs)->super->inode_size) % IMPL(fs)->block_size) /
   //     fs->dev->block_size;
 
-  size_t sectors = ceil_div(IMPL(fs)->super->inode_size, fs->dev->block_size);
+  size_t sectors = CEIL_DIV(IMPL(fs)->super->inode_size, fs->dev->block_size);
   char *buf = kmalloc(sectors * fs->dev->block_size);
   ext2_log("allocating buf with size of %d: %p", sectors * fs->dev->block_size,
            buf);
@@ -419,8 +421,8 @@ int ext2_read_dentries(struct filesystem *fs, struct ext2_inode *inode,
   struct ext2_dentry *raw_dentries = (struct ext2_dentry *)blkbuf;
 
   size_t j = 0;
-  ext2_log("block size=%d dentry_size=%d name_length=%d j=%d n=%d",
-           IMPL(fs)->block_size, raw_dentries->size,
+  ext2_log("block_size=%d inode=%ld dentry_size=%d name_length=%d j=%d n=%d",
+           IMPL(fs)->block_size, raw_dentries->inode, raw_dentries->size,
            raw_dentries->name_length_lo, j, n);
   for (size_t i = 0; i < IMPL(fs)->block_size && j < n &&
                      (raw_dentries->size || raw_dentries->name_length_lo);
@@ -497,9 +499,19 @@ struct fs_node *ext2_open(struct filesystem *fs, const char *path) {
 
   struct fs_node *node = kmalloc(sizeof(struct fs_node));
   memset(node, 0, sizeof(struct fs_node));
-  node->type = curr->type_permissions & EXT2_INODE_T_DIR
-                   ? FS_DIR
-                   : FS_FILE; // TODO: other fs types
+
+#define DEFINE_NODE_TYPE(N, E2N) \
+  if (curr->type_permissions & EXT2_INODE_T_##E2N) { \
+    node->type = FS_##N; \
+  }
+  DEFINE_NODE_TYPE(DIR, DIR);
+  DEFINE_NODE_TYPE(FILE, FILE);
+  DEFINE_NODE_TYPE(PIPE, FIFO);
+
+#undef DEFINE_NODE_TYPE
+  // node->type = curr->type_permissions & EXT2_INODE_T_DIR
+  //                  ? FS_DIR
+  //                  : FS_FILE; // TODO: other fs types
   node->ops = &ext2_file_ops;
   node->impl = kmalloc(sizeof(struct ext2_file_private));
   ext2_log("icurr=%d", icurr);
@@ -507,6 +519,7 @@ struct fs_node *ext2_open(struct filesystem *fs, const char *path) {
   FILE_IMPL(node)->cached = inode;
   FILE_IMPL(node)->inode = icurr;
   node->size = ext2_inode_size(inode);
+  node->inode_num = icurr;
 
   return node;
 }
@@ -569,7 +582,7 @@ struct filesystem *ext2_mount(struct device *dev) {
   fs->impl = priv;
   fs->ops = &ext2_fs;
   fs->dev = dev;
-  ext2_get_inode(fs, EXT2_ROOT_INODE);
+  // ext2_get_inode(fs, EXT2_ROOT_INODE);
   struct ext2_inode *root_inode = ext2_get_inode(fs, EXT2_ROOT_INODE);
   priv->root = root_inode;
   return fs;

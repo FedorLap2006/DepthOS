@@ -78,7 +78,7 @@ void bitmap_setmulti(bitmap_t *bm, bool v, size_t idx, size_t n);
  * @param v Value to scan bits for
  * @return Index of the first bit, otherwise -EBITMAP
  */
-size_t bitmap_scan(bitmap_t *bm, size_t s, size_t n, bool v);
+ssize_t bitmap_scan(bitmap_t *bm, size_t s, size_t n, bool v);
 /**
  * @brief Scan the bitmap for a given value and flip bits afterwards
  *
@@ -88,7 +88,7 @@ size_t bitmap_scan(bitmap_t *bm, size_t s, size_t n, bool v);
  * @param v Value to scan bits for
  * @return Index of the first bit, otherwise -EBITMAP
  */
-size_t bitmap_scan_flip(bitmap_t *bm, size_t s, size_t n, bool v);
+ssize_t bitmap_scan_flip(bitmap_t *bm, size_t s, size_t n, bool v);
 /**
  * @brief Print bitmap to the console
  *

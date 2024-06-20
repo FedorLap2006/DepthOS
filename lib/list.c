@@ -7,6 +7,8 @@ void list_init(struct list *list) {
   list->length = 0;
 }
 
+// XXX: create list automatically on push
+
 struct list *list_create() {
   struct list *list = (struct list *)kmalloc(sizeof(struct list));
   list_init(list);

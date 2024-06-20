@@ -14,7 +14,9 @@
 struct multiboot_mmap_entry {
   uint32_t size;
   uint64_t addr;
+  // uint32_t addr_hi;
   uint64_t length;
+  // uint32_t length_hi;
 #define MULTIBOOT_MMAP_AREA_AVAILABLE 1
 #define MULTIBOOT_MMAP_AREA_RESERVED 2
 #define MULTIBOOT_MMAP_AREA_ACPI_RECLAIMABLE 3
