@@ -26,11 +26,7 @@ DepthOS requires GNU Make, GCC and NASM to build. And QEMU to run.
 
 ## Build
 Kernel and userland requires a custom toolchain compiled for the platform.
-To use it, set `CC` and `LD` environment variables.
-```
-export CC=/path/to/cross-gcc
-export LD=/path/to/cross-ld
-```
+To use it, set `CC` and `LD` environment variables when running `make`.
 
 ### Kernel
 To just build the kernel, run `make build`.
