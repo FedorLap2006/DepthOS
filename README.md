@@ -25,36 +25,33 @@ Stable, flexible and very simple in use Operating System, which doesn't restrict
 DepthOS requires GNU Make, GCC and NASM to build. And QEMU to run.
 
 ## Build
-Custom toolchain can be configured through environment variables:
-- `BINCPATH` - Root directory of GCC and GNU binutils (defaults to `/bin`)
-- `CC` - Custom C compiler (defaults to `$BINCPATH/gcc`)
-- `LD` - Custom linker (defaults to `$BINCPATH/ld`)
+Kernel and userland requires a custom toolchain compiled for the platform.
+To use it, set `CC` and `LD` environment variables.
+```
+export CC=/path/to/cross-gcc
+export LD=/path/to/cross-ld
+```
 
 ### Kernel
-To just build the kernel, run `make build`. If you also want to test it, run just `make` instead.
+To just build the kernel, run `make build`.
 
 ### Applications
 All applications can be build using `make apps`.
 
 However, each application has it's build system, and might require additional configuration. See application's README for more details
 
-If you weren't using `make apps`, you would need to manually install applications into `initrd/` folder (currently DepthOS supports only the initrd filesystem) and then rebuild the image file with `make initrd`.
+## Generating the image
 
-To install the applications manually, you can go into `apps/` directory and execute `make install` there. If you only want to install a particular application, see the it's README for details.
+DepthOS requires a hard drive image to run, it contains all the necessary data and programs.
+To generate it, you can use `tools/sync.sh` script. It will copy everything from `disk-fs` folder (which is automatically created when you build applications).
+If `SYSROOT` environment variable is set, it will also copy all files from there.
+
+The resulting image is located in the `_disk_image.raw` file.
+
+### ISO
+Before running DepthOS, you will also need to build an ISO. You can do so by using `tools/iso.sh` script.
+
 ## Running
 
-To run DepthOS you can use QEMU's `kernel` and `initrd` flags:
-```
-qemu-system-i686 -kernel DepthOS-1.0 -initrd initrd.img
-```
-### ISO
-To build an ISO you would first need to install all the binaries into `iso/` folder, that can be done by executing `make iso`.
-
-After that you can use `grub-mkrescue` to build the ISO itself:
-```
-grub-mkrescue -o DepthOS.iso iso/
-```
-And run it with QEMU or any other emulator:
-```
-qemu-system-i686 DepthOS.iso
-```
+To run DepthOS you can use `tools/qemu.sh` script, it provides all necessary kernel parameters.
+Although currently you will also need to pass `-audiodev pa,id=pa -device sb16,audiodev=pa` to it. This will be fixed soon.
