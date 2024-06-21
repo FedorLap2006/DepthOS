@@ -2,9 +2,24 @@
 [![Build Status](https://github.com/FedorLap2006/DepthOS/actions/workflows/kernel.yml/badge.svg)](https://github.com/FedorLap2006/DepthOS/actions/workflows/kernel.yml)
 [![Join the chat at https://gitter.im/depthos-dev/community](https://badges.gitter.im/depthos-dev/community.svg)](https://gitter.im/depthos-dev/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-
-
 Stable, flexible and very simple in use Operating System, which doesn't restrict you
+
+## Notable features
+- ATA support (with DMA)
+- SB16 support
+- PC speaker support
+- Ext2 (readonly)
+- Virtual memory management
+- Userland
+
+## Ports
+- GCC compiler
+- Binutils suite
+- Coreutils (only some)
+- GNUGo
+- libpng
+- zlib
+- bash
 
 ## Dependencies
 DepthOS requires GNU Make, GCC and NASM to build. And QEMU to run.
