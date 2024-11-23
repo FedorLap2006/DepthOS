@@ -35,27 +35,9 @@ Like this: `CC=$PORTS_BUILDDIR/tools/cross-gcc/bin/i686-depthos-gcc LD=$PORTS_BU
 ### Kernel
 To just build the kernel, run `make build`.
 
-### Applications
-### Meson applications
-Meson based application will require you to use meson cross-file's functionality.
-A typical meson cross-file for DepthOS will look like this:
-```
-[binaries]
-c = '/home/lapfed/code/DepthOS/ports-build/tools/cross-gcc/bin/i686-depthos-gcc'
-cpp = '/home/lapfed/code/DepthOS/ports-build/tools/cross-gcc/bin/i686-depthos-g++'
-# exe_wrapper = 'qemu-i386'
+## Applications
 
-[host_machine]
-system = 'depthos'
-cpu_family = 'x86'
-cpu = 'i386'
-endian = 'little'
-
-```
-When configuring a build folder, use `--prefix` option, and set it to path of `disk-fs` directory.
-
-### Makefile applications
-These will require `CC`, `LD` and `DESTDIR` options. `DESTDIR`, like in meson, should point to `disk-fs` directory.
+To select the apps you want to build and install, edit the `APPS` variable in `apps/Makefile`.
 
 ## Working with ports
 

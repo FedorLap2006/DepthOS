@@ -11,5 +11,8 @@ $(BUILDDIR)/init: mdinit.c
 $(DESTDIR)/bin/init: $(BUILDDIR)/init
 	install -p $(BUILDDIR)/init $(DESTDIR)/bin
 
-install: $(DESTDIR)/bin/init
+.PHONY: init
+init: $(DESTDIR)/bin/init
+
+install: $(APPS)
 
