@@ -8,8 +8,8 @@ APPS=init
 $(BUILDDIR)/init: mdinit.c
 	$(CC) $(CEMU) -std=c11 -ggdb -o $(BUILDDIR)/init mdinit.c
 
-$(DESTDIR)/init: $(BUILDDIR)/init
+$(DESTDIR)/bin/init: $(BUILDDIR)/init
 	install -p $(BUILDDIR)/init $(DESTDIR)/bin
 
-install: $(foreach app,$(APPS),$(DESTDIR)/$(app))
+install: $(DESTDIR)/bin/init
 

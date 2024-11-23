@@ -16,12 +16,12 @@
 
 #define MIN(a, b) ((a) > (b) ? b : a)
 #define SERVICE_DIR "/etc/init.d/"
-#define DEFAULT_SYSTEM_SHELL "/bin/bash"
-#define BUILTIN_SYSTEM_SHELL "/bin/bash"
+#define DEFAULT_SYSTEM_SHELL "/usr/bin/bash"
+#define BUILTIN_SYSTEM_SHELL "/usr/bin/bash"
 
-#define BASH_TESTING_BIN "/bin/bash"
+#define BASH_TESTING_BIN "/usr/bin/bash"
 #define BASH_TESTING_ARGS                                                      \
-  { "/bin/bash", "-i", NULL }
+  { "/usr/bin/bash", "-i", NULL }
 
 
 #define _GENERIC_TESTING_ARGS                                                  \
