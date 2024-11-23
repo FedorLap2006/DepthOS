@@ -1,0 +1,252 @@
+general:
+  patch_author: Fedor lapshin
+  everything_by_default: false
+
+declare_options:
+  - name: arch
+    default: x86
+  - name: arch-triple
+    default: i686-depthos
+
+
+sources:
+  - name: gnuconfig
+    subdir: 'sources'
+    git: 'https://git.savannah.gnu.org/git/config.git'
+    branch: 'master'
+    commit: '63acb96f92473ceb5e21d873d7c0aee266b3d6d3'
+    version: '20230121'
+  
+  - name: binutils
+    subdir: 'sources'
+    git: "https://sourceware.org/git/binutils-gdb.git"
+    commit: 'd0975d800285f61d60cd7c3f47b185304a09a052'
+    branch: 'master'
+    # commit: '58098eb627985f481495424665a913c9e519583c'
+    # tag: 'binutils-2_42'
+    version: '2.42'
+    sources_required: ['gnuconfig']
+    tools_required: ['host-autoconf-2.69']
+    regenerate:
+      - args: ['aclocal']
+        workdir: '@THIS_SOURCE_DIR@/ld'
+      - args: ['automake']
+        workdir: '@THIS_SOURCE_DIR@/ld'
+      - args: ['autoreconf', '-iv']
+  
+  - name: gcc
+    subdir: 'sources'
+    git: 'https://gcc.gnu.org/git/gcc.git'
+    tag: 'releases/gcc-12.2.0'
+    version: '12.2.0'
+    tools_required: ['host-autoconf-2.69']
+    regenerate:
+      - args: ['autoreconf', '-iv']
+        workdir: '@THIS_SOURCE_DIR@/libstdc++-v3'
+
+  - name: mlibc
+    subdir: 'sources'
+    git: 'https://github.com/managarm/mlibc.git'
+    commit: 'd76fcdd92d7143eece6bb5972fe5cf4483ff8588'
+    branch: master
+    version: '0.0pl@ROLLING_ID@'
+    rolling_version: true
+
+tools:
+  - name: host-autoconf-2.69
+    architecture: noarch
+    source:
+      name: autoconf-2.69
+      subdir: sources
+      url: 'https://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.xz'
+      format: 'tar.xz'
+      checksum: 'blake2b:71d33d72a06e9a05fbed0eda73bc9d8a3805c7c90bf082959862f93f3c5f01192114176e84d84ecb58fa99512eafbc0ab21ad1407be18c8c63bb3dc1117c482d'
+      version: '2.69'
+      extract_path: 'autoconf-2.69'
+    configure:
+      - args: ['@THIS_SOURCE_DIR@/configure', '--prefix=@PREFIX@']
+    compile:
+      - args: ['make', '-j@PARALLELISM@']
+    install:
+      - args: ['make', 'install']
+ 
+  - name: cross-binutils
+    architecture: '@OPTION:arch@'
+    from_source: binutils
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--target=@OPTION:arch-triple@'
+        - '--prefix=@PREFIX@'
+        - '--with-sysroot=@SYSROOT_DIR@'
+        - '--disable-nls'
+        - '--enable-languages=c,c++'
+    compile:
+      - args: ['make', '-j@PARALLELISM@', 'all-binutils', 'all-gas', 'all-ld']
+    install:
+      - args: ['make', '-j@PARALLELISM@', 'install-binutils', 'install-gas', 'install-ld']
+  
+  - name: bootstrap-gcc
+    architecture: '@OPTION:arch@'
+    from_source: gcc
+    tools_required:
+      - tool: cross-binutils
+        recursive: true
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--target=@OPTION:arch-triple@'
+        - '--prefix=@PREFIX@'
+        - '--without-headers'
+        - '--with-sysroot=@SYSROOT_DIR@'
+        - '--disable-nls'
+        - '--enable-languages=c,c++'
+        - '--without-headers'
+        - '--without-newlib'
+        - '--enable-threads=posix'
+        - '--disable-shared'
+        - '--disable-hosted-libstdcxx'
+        - '--disable-wchar_t'
+        - '--disable-libssp'
+        - '--disable-libsanitizer'
+        - '--disable-libquadmath'
+    stages:
+      - name: compiler
+        pkgs_required:
+         - mlibc-headers
+        compile:
+          - args: ['mkdir', '-p', '@SYSROOT_DIR@/usr/include']
+          - args: ['make', '-j@PARALLELISM@', 'all-gcc', 'all-target-libgcc', 'all-target-libstdc++-v3']
+        install:
+          - args: ['make', 'install-gcc']
+          - args: ['mkdir', '-p', '@PREFIX@/@OPTION:arch-triple@/bin']
+          - args: ['ln', '-sf', '@BUILD_ROOT']
+      - name: libgcc
+        tools_required:
+          - tool: bootstrap-gcc
+            stage_dependencies: [compiler]
+        compile:
+          - args: ['mkdir', '-p', '@SYSROOT_DIR@/usr/include']
+          - args: ['make', '-j@PARALLELISM@', 'all-target-libgcc']
+        install:
+          - args: ['make', 'install-target-libgcc']
+
+      - name: libstdc++
+        tools_required:
+          - tool: bootstrap-gcc
+            stage_dependencies: [compiler, libgcc]
+        compile:
+          - args: ['make', '-j@PARALLELISM@', 'all-target-libstdc++-v3']
+        install:
+          - args: ['make', 'install-target-libstdc++-v3']
+
+
+
+  - name: system-gcc
+    architecture: '@OPTION:arch@'
+    from_source: gcc
+    tools_required:
+      - tool: cross-binutils
+        recursive: true
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--target=@OPTION:arch-triple@'
+        - '--prefix=@PREFIX@'
+        - '--with-sysroot=@SYSROOT_DIR@'
+        - '--disable-nls'
+        - '--enable-languages=c,c++'
+        - '--enable-threads=posix'
+    stages:
+      - name: compiler
+        pkgs_required:
+          - mlibc-headers
+        compile:
+          - args: ['mkdir', '-p', '@SYSROOT_DIR@/usr/include']
+          - args: ['make', '-j@PARALLELISM@', 'all-gcc', 'all-target-libgcc', 'all-target-libstdc++-v3']
+        install:
+          - args: ['make', 'install-gcc']
+      - name: libgcc
+        tools_required:
+          - tool: system-gcc
+            stage_dependencies: [compiler]
+        compile:
+          - args: ['mkdir', '-p', '@SYSROOT_DIR@/usr/include']
+          - args: ['make', '-j@PARALLELISM@', 'all-target-libgcc']
+        install:
+          - args: ['make', 'install-target-libgcc']
+
+      - name: libstdc++
+        tools_required:
+          - tool: system-gcc
+            stage_dependencies: [compiler, libgcc]
+        compile:
+          - args: ['make', '-j@PARALLELISM@', 'all-target-libstdc++-v3']
+        install:
+          - args: ['make', 'install-target-libstdc++-v3']
+
+  # - name: linux-headers
+  #   architecture: noarch
+  #   source:
+  #     name: linux-headers
+  #     subdir: 'sources'
+  #     url: 'https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.2.9.tar.xz'
+  #     checksum: 'blake2b:0e7ad5502767cb74fa0fea79884ce753be0421a56bbbe0a6cb66add5839b3329298671725595c0624886d9d2836c4e9d4bd152acefb2b3df1cf7a1013e0178ba'
+  #     extract_path: 'linux-6.2.9'
+  #     format: 'tar.xz'
+  #     version: '6.2.9'
+  #   install:
+  #      - args: |
+  #         LINUX_ARCH="@OPTION:arch@"
+  #         case "$LINUX_ARCH" in
+  #           "x86")
+  #             LINUX_ARCH="i386"
+  #         esac
+  #         make ARCH="$LINUX_ARCH" headers_install
+
+packages:
+  - name: mlibc-headers
+    architecture: '@OPTION:arch@'
+    from_source: mlibc
+    configure:
+      - args:
+        - 'meson'
+        - 'setup'
+        - '--prefix'
+        - '/usr'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/extra/meson_@OPTION:arch@.cross-file'
+        - '-Ddefault_library=static'
+        - '-Dheaders_only=true'
+        - '-Ddisable_linux_option=true' # TODO: shall we ship linux headers?
+        # - '-Dlinux_kernel_headers=@BUILD_ROOT@/tools/linux-headers/src/linux-headers'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+        quiet: false
+  - name: mlibc
+    architecture: '@OPTION:arch@'
+    from_source: mlibc
+    tools_required:
+      - bootstrap-gcc
+    configure:
+      - args:
+        - 'meson'
+        - 'setup'
+        - '--prefix'
+        - '/usr'
+        - '--cross-file'
+        - '@SOURCE_ROOT@/extra/meson_@OPTION:arch@.cross-file'
+        - '-Ddefault_library=static'
+        - '-Ddisable_linux_option=true' # TODO: shall we ship linux headers?
+        # - '-Dlinux_kernel_headers=@BUILD_ROOT@/tools/linux-headers/src/linux-headers'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: 'ninja'
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+        quiet: false

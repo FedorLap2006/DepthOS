@@ -67,10 +67,10 @@ ifeq ($(DEBUG), $(call on_check,$(DEBUG)))
 endif
 # APPS=init nyancat donut # test-gcc cat
 # APPS=init donut # test-gcc
-APPS=mdinit nyancat music-player
+# APPS=mdinit nyancat music-player
 # INITRD_APPS=mdinit
 
-APPS_BUILDDIR=build
-APPS_ROOTPATH=..
+# APPS_BUILDDIR=build
+# APPS_ROOTPATH=..
 # APPS_INSTALLDIR=$(INITRD_ROOT)
-APPS_INSTALLDIR=$(FS_ROOT)/bin
+# APPS_INSTALLDIR=$(FS_ROOT)/bin

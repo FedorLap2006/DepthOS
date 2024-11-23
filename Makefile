@@ -93,10 +93,10 @@ $(OUTBIN): $(addprefix $(BUILDDIR)/,$(OBJS)) | $(BUILDDIR)/
 $(KERNEL_MAP_FILE): $(OUTBIN)
 	nm --demangle=gnu-v3 -n $(OUTBIN) > $(KERNEL_MAP_FILE)
 
-.PHONY: apps
-apps:
-	@mkdir -p $(APPS_INSTALLDIR)
-	@$(MAKE) -C apps DESTDIR=$(APPS_ROOTPATH)/$(APPS_INSTALLDIR) BUILDDIR=$(APPS_BUILDDIR)
+# .PHONY: apps
+# apps:
+# 	@mkdir -p $(APPS_INSTALLDIR)
+# 	@$(MAKE) -C apps DESTDIR=$(APPS_ROOTPATH)/$(APPS_INSTALLDIR) BUILDDIR=$(APPS_BUILDDIR)
 
 
 # kernel-map: $(KERNEL_MAP_FILE)

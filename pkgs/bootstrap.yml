@@ -1,4 +1,5 @@
 imports:
+  - file: apps.yml
   - file: bootstrap.d/media-libs.yml
   - file: bootstrap.d/x11-base.yml
   - file: bootstrap.d/x11-libs.yml
