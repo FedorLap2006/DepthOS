@@ -1,0 +1,130 @@
+From 731c06ba3df30b346c6509b9729b83f40ff92d96 Mon Sep 17 00:00:00 2001
+From: Fedor Lapshin <fe.lap.prog@gmail.com>
+Date: Mon, 20 May 2024 09:38:00 +0300
+Subject: [PATCH 4/6] sysdeps/depthos: add mntent.cpp
+
+---
+ sysdeps/depthos/generic/mntent.cpp | 98 ++++++++++++++++++++++++++++++
+ sysdeps/depthos/meson.build        |  1 +
+ 2 files changed, 99 insertions(+)
+ create mode 100644 sysdeps/depthos/generic/mntent.cpp
+
+diff --git a/sysdeps/depthos/generic/mntent.cpp b/sysdeps/depthos/generic/mntent.cpp
+new file mode 100644
+index 00000000..e1909110
+--- /dev/null
++++ b/sysdeps/depthos/generic/mntent.cpp
+@@ -0,0 +1,98 @@
++#include <errno.h>
++#include <mntent.h>
++#include <stdio.h>
++#include <limits.h>
++#include <string.h>
++#include <bits/ensure.h>
++
++namespace {
++
++char *internal_buf;
++size_t internal_bufsize;
++
++}
++
++#define SENTINEL (char *)&internal_buf
++
++FILE *setmntent(const char *name, const char *mode) {
++	return fopen(name, mode);
++}
++
++struct mntent *getmntent(FILE *f) {
++	static struct mntent mnt;
++	return getmntent_r(f, &mnt, SENTINEL, 0);
++}
++
++int addmntent(FILE *f, const struct mntent *mnt) {
++	if(fseek(f, 0, SEEK_END)) {
++		return 1;
++	}
++	return fprintf(f, "%s\t%s\t%s\t%s\t%d\t%d\n",
++		mnt->mnt_fsname, mnt->mnt_dir, mnt->mnt_type, mnt->mnt_opts,
++		mnt->mnt_freq, mnt->mnt_passno) < 0;
++}
++
++int endmntent(FILE *f) {
++	if(f) {
++		fclose(f);
++	}
++	return 1;
++}
++
++char *hasmntopt(const struct mntent *mnt, const char *opt) {
++	return strstr(mnt->mnt_opts, opt);
++}
++
++/* Adapted from musl */
++struct mntent *getmntent_r(FILE *f, struct mntent *mnt, char *linebuf, int buflen) {
++	int n[8];
++	bool use_internal = (linebuf == SENTINEL);
++	int len;
++	size_t i;
++
++	mnt->mnt_freq = 0;
++	mnt->mnt_passno = 0;
++
++	do {
++		if(use_internal) {
++			getline(&internal_buf, &internal_bufsize, f);
++			linebuf = internal_buf;
++		} else {
++			fgets(linebuf, buflen, f);
++		}
++		if(feof(f) || ferror(f)) {
++			return 0;
++		}
++		if(!strchr(linebuf, '\n')) {
++			fscanf(f, "%*[^\n]%*[\n]");
++			errno = ERANGE;
++			return 0;
++		}
++
++		len = strlen(linebuf);
++		if(len > INT_MAX) {
++			continue;
++		}
++
++		for(i = 0; i < sizeof n / sizeof *n; i++) {
++			n[i] = len;
++		}
++
++		sscanf(linebuf, " %n%*s%n %n%*s%n %n%*s%n %n%*s%n %d %d",
++			n, n + 1, n + 2, n + 3, n + 4, n + 5, n + 6, n + 7,
++			&mnt->mnt_freq, &mnt->mnt_passno);
++	} while(linebuf[n[0]] == '#' || n[1] == len);
++
++	linebuf[n[1]] = 0;
++	linebuf[n[3]] = 0;
++	linebuf[n[5]] = 0;
++	linebuf[n[7]] = 0;
++
++	mnt->mnt_fsname = linebuf + n[0];
++	mnt->mnt_dir = linebuf + n[2];
++	mnt->mnt_type = linebuf + n[4];
++	mnt->mnt_opts = linebuf + n[6];
++
++	return mnt;
++}
++
+diff --git a/sysdeps/depthos/meson.build b/sysdeps/depthos/meson.build
+index 0f5560e0..2b936c72 100644
+--- a/sysdeps/depthos/meson.build
++++ b/sysdeps/depthos/meson.build
+@@ -1,6 +1,7 @@
+ libc_sources += files(
+   'generic/depthos.cpp',
+   'generic/entry.cpp',
++  'generic/mntent.cpp',
+ )
+ 
+ if host_machine.cpu_family() == 'x86'
+-- 
+2.34.1
+

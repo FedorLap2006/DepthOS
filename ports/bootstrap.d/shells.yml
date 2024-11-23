@@ -1,0 +1,72 @@
+packages:
+  - name: readline
+    architecture: '@OPTION:arch@'
+    source:
+      subdir: sources
+      git: 'https://git.savannah.gnu.org/git/readline.git'
+      tag: 'readline-8.1'
+      version: '8.1'
+    tools_required:
+      - cross-gcc
+    pkgs_required:
+      - mlibc
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=@OPTION:arch-triple@'
+        - '--prefix=/usr'
+        - '--disable-shared'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'DESTDIR=@THIS_COLLECT_DIR@', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: bash
+    architecture: '@OPTION:arch@'
+    source:
+      subdir: 'sources'
+      git: 'https://git.savannah.gnu.org/git/bash.git'
+      # Checkout bash 5.1 patch 16
+      branch: 'master'
+      commit: '9439ce094c9aa7557a9d53ac7b412a23aa66e36b'
+      version: '5.1.16'
+      tools_required:
+        - host-autoconf-2.69
+        - host-automake-1.15
+      regenerate:
+        # While we do not need to regenerate the configure script, we need to touch it
+        # after patching config.sub so that make does not try to regenerate it.
+        - args: ['autoconf']
+    tools_required:
+      - host-autoconf-2.69
+      - host-automake-1.15
+      - cross-gcc
+    pkgs_required:
+      - mlibc
+      # - readline
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=@OPTION:arch-triple@'
+        - '--prefix=/usr'
+        - '--without-bash-malloc'
+        - '--disable-nls'
+        # - '--with-installed-readline=$SYSROOT_DIR$/usr'
+        - '--enable-static-link'
+        environ:
+          # ac_cv_func_wcswidth: 'no'
+          bash_cv_getcwd_malloc: 'yes'
+          bash_cv_getenv_redef: 'no'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'DESTDIR=@THIS_COLLECT_DIR@', 'install']
+        quiet: true
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/root/']
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/home/depthos/']
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/etc/']
+      # - args: ['cp', '@SOURCE_ROOT@/extra/.bashrc', '@THIS_COLLECT_DIR@/root']
+      # - args: ['cp', '@SOURCE_ROOT@/extra/.bashrc', '@THIS_COLLECT_DIR@/home/*']
+      # - args: ['cp', '@SOURCE_ROOT@/extra/profile', '@THIS_COLLECT_DIR@/etc']
+      # - args: ['cp', '@SOURCE_ROOT@/extra/bash.bashrc', '@THIS_COLLECT_DIR@/etc']
+      - args: ['ln', '-sf', 'bash', '@THIS_COLLECT_DIR@/usr/bin/sh']

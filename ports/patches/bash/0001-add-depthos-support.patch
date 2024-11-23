@@ -1,0 +1,25 @@
+From 58bd1283ea4cdbeea2cf21669a09a1d0d1e51f7c Mon Sep 17 00:00:00 2001
+From: Fedor Lapshin <fe.lap.prog@gmail.com>
+Date: Fri, 24 May 2024 16:35:32 +0300
+Subject: [PATCH 1/2] add depthos support
+
+---
+ support/config.sub | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/support/config.sub b/support/config.sub
+index c874b7a..91bd5b4 100755
+--- a/support/config.sub
++++ b/support/config.sub
+@@ -1720,7 +1720,7 @@ case $os in
+ 	     | skyos* | haiku* | rdos* | toppers* | drops* | es* \
+ 	     | onefs* | tirtos* | phoenix* | fuchsia* | redox* | bme* \
+ 	     | midnightbsd* | amdhsa* | unleashed* | emscripten* | wasi* \
+-	     | nsk* | powerunix* | genode* | zvmoe* | qnx* | emx*)
++	     | nsk* | powerunix* | genode* | zvmoe* | qnx* | emx* | depthos*)
+ 		;;
+ 	# This one is extra strict with allowed versions
+ 	sco3.2v2 | sco3.2v[4-9]* | sco5v6*)
+-- 
+2.34.1
+

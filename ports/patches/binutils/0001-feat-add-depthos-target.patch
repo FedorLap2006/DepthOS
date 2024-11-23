@@ -1,0 +1,103 @@
+From 58098eb627985f481495424665a913c9e519583c Mon Sep 17 00:00:00 2001
+From: FedorLap2006 <fe.lap.prog@gmail.com>
+Date: Wed, 29 Jun 2022 18:15:57 +0300
+Subject: [PATCH] feat: add depthos target
+
+---
+ bfd/config.bfd                    | 5 +++++
+ config.sub                        | 2 +-
+ gas/configure.tgt                 | 1 +
+ ld/Makefile.am                    | 2 ++
+ ld/configure.tgt                  | 5 +++++
+ ld/emulparams/elf_i386_depthos.sh | 2 ++
+ 6 files changed, 16 insertions(+), 1 deletion(-)
+ create mode 100644 ld/emulparams/elf_i386_depthos.sh
+
+diff --git a/bfd/config.bfd b/bfd/config.bfd
+index a4c6c8e8..e1577c74 100644
+--- a/bfd/config.bfd
++++ b/bfd/config.bfd
+@@ -593,6 +593,11 @@ case "${targ}" in
+     targ_selvecs="x86_64_elf64_sol2_vec iamcu_elf32_vec i386_coff_vec i386_pei_vec x86_64_pe_vec x86_64_pei_vec"
+     want64=true
+     ;;
++  i[3-7]86-*-depthos*)
++    targ_defvec=i386_elf32_vec
++    targ_selvecs=
++    targ64_selvecs=x86_64_elf64_vec
++    ;;
+ #endif
+   i[3-7]86-*-nto*)
+     targ_defvec=i386_elf32_vec
+diff --git a/config.sub b/config.sub
+index dba16e84..ede150da 100755
+--- a/config.sub
++++ b/config.sub
+@@ -1725,7 +1725,7 @@ case $os in
+ 	# Each alternative MUST end in a * to match a version number.
+ 	gnu* | android* | bsd* | mach* | minix* | genix* | ultrix* | irix* \
+ 	     | *vms* | esix* | aix* | cnk* | sunos | sunos[34]* \
+-	     | hpux* | unos* | osf* | luna* | dgux* | auroraux* | solaris* \
++	     | hpux* | unos* | osf* | luna* | dgux* | auroraux* | solaris* | depthos* \
+ 	     | sym* |  plan9* | psp* | sim* | xray* | os68k* | v88r* \
+ 	     | hiux* | abug | nacl* | netware* | windows* \
+ 	     | os9* | macos* | osx* | ios* \
+diff --git a/gas/configure.tgt b/gas/configure.tgt
+index 62f806bd..3d971dc5 100644
+--- a/gas/configure.tgt
++++ b/gas/configure.tgt
+@@ -240,6 +240,7 @@ case ${generic_target} in
+   i386-*-lynxos*)			fmt=elf em=lynx ;;
+   i386-*-redox*)			fmt=elf ;;
+   i386-*-solaris*)			fmt=elf em=solaris ;;
++	i386-*-depthos*)    fmt=elf ;;
+   i386-*-freebsd* \
+   | i386-*-kfreebsd*-gnu)		fmt=elf em=freebsd ;;
+   i386-*-msdosdjgpp* \
+diff --git a/ld/Makefile.am b/ld/Makefile.am
+index d31021c1..34a3b33e 100644
+--- a/ld/Makefile.am
++++ b/ld/Makefile.am
+@@ -280,6 +280,7 @@ ALL_EMULATION_SOURCES = \
+ 	eelf_i386_haiku.c \
+ 	eelf_i386_ldso.c \
+ 	eelf_i386_sol2.c \
++	eelf_i386_depthos.c \
+ 	eelf_i386_vxworks.c \
+ 	eelf_iamcu.c \
+ 	eelf_s390.c \
+@@ -771,6 +772,7 @@ $(ALL_EMULATION_SOURCES) $(ALL_64_EMULATION_SOURCES): $(GEN_DEPENDS)
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_haiku.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_ldso.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_sol2.Pc@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_depthos.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_vxworks.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_iamcu.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_s390.Pc@am__quote@
+diff --git a/ld/configure.tgt b/ld/configure.tgt
+index 4f9e1b30..ac87ffe5 100644
+--- a/ld/configure.tgt
++++ b/ld/configure.tgt
+@@ -375,6 +375,11 @@ i[3-7]86-*-solaris2*)	targ_emul=elf_i386_sol2
+ 			targ_extra_emuls="elf_i386_ldso elf_i386 elf_iamcu elf_x86_64_sol2 elf_x86_64"
+ 			targ_extra_libpath=$targ_extra_emuls
+ 			;;
++i[3-7]86-*-depthos*)
++			targ_emul=elf_i386_depthos
++			targ_extra_emuls=elf_i386
++			# targ64_extra_emuls="elf_x86_64_depthos elf_x86_64"
++			;;
+ i[3-7]86-*-unixware)	targ_emul=elf_i386
+ 			targ_extra_emuls=elf_iamcu
+ 			;;
+diff --git a/ld/emulparams/elf_i386_depthos.sh b/ld/emulparams/elf_i386_depthos.sh
+new file mode 100644
+index 00000000..06482257
+--- /dev/null
++++ b/ld/emulparams/elf_i386_depthos.sh
+@@ -0,0 +1,2 @@
++source_sh ${srcdir}/emulparams/elf_i386.sh
++TEXT_START_ADDR=0x08000000
+-- 
+2.36.1
+

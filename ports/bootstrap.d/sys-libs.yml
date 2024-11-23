@@ -1,0 +1,55 @@
+
+packages:
+  - name : tzdata
+    labels: [aarch64]
+    architecture: noarch
+    default: true
+    source:
+      subdir: 'ports'
+      url: 'https://data.iana.org/time-zones/releases/tzdata2023c.tar.gz'
+      format: 'tar.gz'
+      checksum: blake2b:8a50aa5f338565d86b8fa5428c138b251bd8dcc3ea66c144b49625d02c5c7aa27f1ace66babd36f10f75cf5eb832ec327b9c2e8adb0384c450130d1ee8c45562
+      version: '2023c'
+    revision: 4
+    configure:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+    build:
+      # Create the required directories
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/etc']
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/posix']
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/right']
+      # Create the time zone files without leap seconds, convention puts these in both zoneinfo and zoneinfo/posix.
+      # After that. create time time zone files with leap seconds
+      - args: ['/usr/sbin/zic', '-L', '/dev/null', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo', '@THIS_BUILD_DIR@/etcetera']
+      - args: ['/usr/sbin/zic', '-L', '/dev/null', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/posix', '@THIS_BUILD_DIR@/etcetera']
+      - args: ['/usr/sbin/zic', '-L', '@THIS_SOURCE_DIR@/leapseconds', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/right', '@THIS_BUILD_DIR@/etcetera']
+      - args: ['/usr/sbin/zic', '-L', '/dev/null', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo', '@THIS_BUILD_DIR@/southamerica']
+      - args: ['/usr/sbin/zic', '-L', '/dev/null', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/posix', '@THIS_BUILD_DIR@/southamerica']
+      - args: ['/usr/sbin/zic', '-L', '@THIS_SOURCE_DIR@/leapseconds', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/right', '@THIS_BUILD_DIR@/southamerica']
+      - args: ['/usr/sbin/zic', '-L', '/dev/null', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo', '@THIS_BUILD_DIR@/northamerica']
+      - args: ['/usr/sbin/zic', '-L', '/dev/null', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/posix', '@THIS_BUILD_DIR@/northamerica']
+      - args: ['/usr/sbin/zic', '-L', '@THIS_SOURCE_DIR@/leapseconds', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/right', '@THIS_BUILD_DIR@/northamerica']
+      - args: ['/usr/sbin/zic', '-L', '/dev/null', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo', '@THIS_BUILD_DIR@/europe']
+      - args: ['/usr/sbin/zic', '-L', '/dev/null', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/posix', '@THIS_BUILD_DIR@/europe']
+      - args: ['/usr/sbin/zic', '-L', '@THIS_SOURCE_DIR@/leapseconds', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/right', '@THIS_BUILD_DIR@/europe']
+      - args: ['/usr/sbin/zic', '-L', '/dev/null', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo', '@THIS_BUILD_DIR@/africa']
+      - args: ['/usr/sbin/zic', '-L', '/dev/null', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/posix', '@THIS_BUILD_DIR@/africa']
+      - args: ['/usr/sbin/zic', '-L', '@THIS_SOURCE_DIR@/leapseconds', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/right', '@THIS_BUILD_DIR@/africa']
+      - args: ['/usr/sbin/zic', '-L', '/dev/null', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo', '@THIS_BUILD_DIR@/antarctica']
+      - args: ['/usr/sbin/zic', '-L', '/dev/null', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/posix', '@THIS_BUILD_DIR@/antarctica']
+      - args: ['/usr/sbin/zic', '-L', '@THIS_SOURCE_DIR@/leapseconds', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/right', '@THIS_BUILD_DIR@/antarctica']
+      - args: ['/usr/sbin/zic', '-L', '/dev/null', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo', '@THIS_BUILD_DIR@/asia']
+      - args: ['/usr/sbin/zic', '-L', '/dev/null', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/posix', '@THIS_BUILD_DIR@/asia']
+      - args: ['/usr/sbin/zic', '-L', '@THIS_SOURCE_DIR@/leapseconds', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/right', '@THIS_BUILD_DIR@/asia']
+      - args: ['/usr/sbin/zic', '-L', '/dev/null', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo', '@THIS_BUILD_DIR@/australasia']
+      - args: ['/usr/sbin/zic', '-L', '/dev/null', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/posix', '@THIS_BUILD_DIR@/australasia']
+      - args: ['/usr/sbin/zic', '-L', '@THIS_SOURCE_DIR@/leapseconds', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/right', '@THIS_BUILD_DIR@/australasia']
+      - args: ['/usr/sbin/zic', '-L', '/dev/null', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo', '@THIS_BUILD_DIR@/backward']
+      - args: ['/usr/sbin/zic', '-L', '/dev/null', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/posix', '@THIS_BUILD_DIR@/backward']
+      - args: ['/usr/sbin/zic', '-L', '@THIS_SOURCE_DIR@/leapseconds', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo/right', '@THIS_BUILD_DIR@/backward']
+      # Copy some needed files to their location
+      - args: ['cp', '@THIS_BUILD_DIR@/zone.tab', '@THIS_BUILD_DIR@/zone1970.tab', '@THIS_BUILD_DIR@/iso3166.tab', '@THIS_COLLECT_DIR@/usr/share/zoneinfo']
+      # Create the posixrules file, POSIX requires daylight saving rules to be in accordance with US rules, thus use New York
+      - args: ['/usr/sbin/zic', '-d', '@THIS_COLLECT_DIR@/usr/share/zoneinfo', '-p', 'America/New_York']
+      # Default to UTC for localtime, this should be fixed, but that is pending xbstrap support.
+      - args: ['cp', '/usr/share/zoneinfo/UTC', '@THIS_COLLECT_DIR@/etc/localtime']

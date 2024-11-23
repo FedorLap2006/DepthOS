@@ -1,0 +1,43 @@
+From 808bbf139f9df3b9f01da78030ecd4cb8a3c1cf4 Mon Sep 17 00:00:00 2001
+From: Fedor Lapshin <fe.lap.prog@gmail.com>
+Date: Thu, 9 May 2024 17:32:41 +0300
+Subject: [PATCH] add depthos
+
+---
+ config.guess | 6 ++++++
+ config.sub   | 2 +-
+ 2 files changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/config.guess b/config.guess
+index 69188da..4cf0ae4 100755
+--- a/config.guess
++++ b/config.guess
+@@ -1390,6 +1390,12 @@ EOF
+     *:Haiku:*:*)	# Haiku modern gcc (not bound by BeOS compat)
+ 	GUESS=$UNAME_MACHINE-unknown-haiku
+ 	;;
++    i*86:DepthOS:*:*)
++  GUESS=$UNAME_MACHINE-pc-depthos
++  ;;
++    *:DepthOS:*:*)
++  GUESS=$UNAME_MACHINE-unknown-depthos
++  ;;
+     SX-4:SUPER-UX:*:*)
+ 	GUESS=sx4-nec-superux$UNAME_RELEASE
+ 	;;
+diff --git a/config.sub b/config.sub
+index de4259e..a0c5211 100755
+--- a/config.sub
++++ b/config.sub
+@@ -1758,7 +1758,7 @@ case $os in
+ 	     | onefs* | tirtos* | phoenix* | fuchsia* | redox* | bme* \
+ 	     | midnightbsd* | amdhsa* | unleashed* | emscripten* | wasi* \
+ 	     | nsk* | powerunix* | genode* | zvmoe* | qnx* | emx* | zephyr* \
+-	     | fiwix* | mlibc* )
++	     | fiwix* | mlibc* | depthos* )
+ 		;;
+ 	# This one is extra strict with allowed versions
+ 	sco3.2v2 | sco3.2v[4-9]* | sco5v6*)
+-- 
+2.34.1
+

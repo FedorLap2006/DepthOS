@@ -1,0 +1,377 @@
+From 8002ec50ab735c1a8e0ecca6a11644b08ec32d51 Mon Sep 17 00:00:00 2001
+From: Fedor Lapshin <fe.lap.prog@gmail.com>
+Date: Wed, 8 May 2024 17:17:14 +0300
+Subject: [PATCH 2/6] sysdeps/depthos: add signals and more syscalls
+
+---
+ abis/depthos/errno.h                      |  42 +++++++
+ abis/depthos/signal.h                     | 144 ++++++++++++++++++++++
+ meson.build                               |   2 +-
+ sysdeps/depthos/generic/depthos.cpp       |  44 +++++--
+ sysdeps/depthos/include/abi-bits/signal.h |   2 +-
+ sysdeps/depthos/include/depthos/syscall.h |   4 +
+ sysdeps/depthos/meson.build               |   8 +-
+ sysdeps/depthos/x86/signals.S             |   8 ++
+ 8 files changed, 243 insertions(+), 11 deletions(-)
+ create mode 100644 abis/depthos/signal.h
+ create mode 100644 sysdeps/depthos/x86/signals.S
+
+diff --git a/abis/depthos/errno.h b/abis/depthos/errno.h
+index 7d4aafb0..b55d823d 100644
+--- a/abis/depthos/errno.h
++++ b/abis/depthos/errno.h
+@@ -112,4 +112,46 @@
+ #define ERANGE 1109
+ #define EILSEQ 1110
+ #define EDOM 1111
++
++
++#undef EINVAL
++#undef EOVERFLOW
++#undef E2BIG
++#undef ENIMPL
++#undef ENOSYS
++#undef EFAULT
++#undef EACCES
++#undef EPERM
++#undef ENOENT
++#undef EBADF
++#undef EAGAIN
++#undef ENOTDIR
++#undef ENOIOCTL
++#undef ENOTTY
++#undef EMFILE
++#undef ENOEXEC
++#undef EEXIST
++#undef ENOMEM
++
++#define EINVAL 1
++#define EOVERFLOW 2
++#define E2BIG 3
++#define ENIMPL 4
++#define ENOSYS ENIMPL
++#define EFAULT 5
++#define EACCES 6
++#define EPERM 7
++#define ENOENT 8
++#define EBADF 9
++#define EAGAIN 10
++#define ENOTDIR 11
++#define ENOIOCTL 12
++#define ENOTTY ENOIOCTL
++#define EMFILE 13
++#define ENOEXEC 14
++#define EEXIST 15
++#define ENOMEM 16
++
++
++
+ #endif
+diff --git a/abis/depthos/signal.h b/abis/depthos/signal.h
+new file mode 100644
+index 00000000..67d3f963
+--- /dev/null
++++ b/abis/depthos/signal.h
+@@ -0,0 +1,144 @@
++#ifndef _ABIBITS_SIGNAL_H
++#define _ABIBITS_SIGNAL_H
++
++#include <abi-bits/pid_t.h>
++#include <abi-bits/uid_t.h>
++#include <bits/types.h>
++#include <bits/size_t.h>
++
++#define SIGHUP 1
++#define SIGINT 2
++#define SIGQUIT 3
++#define SIGILL 4
++#define SIGTRAP 5
++#define SIGABRT 6
++#define SIGBUS 7
++#define SIGFPE 8
++#define SIGKILL 9
++#define SIGUSR1 10
++#define SIGSEGV 11
++#define SIGUSR2 12
++#define SIGPIPE 13
++#define SIGALRM 14
++#define SIGTERM 15
++#define SIGSTKFLT 16
++#define SIGCHLD 17
++#define SIGCONT 18
++#define SIGSTOP 19
++#define SIGTSTP 20
++#define SIGTTIN 21
++#define SIGTTOU 22
++#define SIGURG 23
++#define SIGXCPU 24
++#define SIGXFSZ 25
++#define SIGVTALRM 26
++#define SIGPROF 27
++#define SIGWINCH 28
++#define SIGIO 29
++#define SIGPOLL SIGIO
++#define SIGPWR 30
++#define SIGSYS 31
++#define SIGRTMIN 32
++#define SIGRTMAX 33
++#define SIGCANCEL 34
++
++#define NSIG 34
++#define _NSIG NSIG
++
++union sigval {
++	int sival_int;
++	void *sival_ptr;
++};
++
++#define SI_TKILL 0
++#define SI_USER 1
++#define SI_KERNEL 128
++
++
++typedef struct {
++  int si_signo;
++  int si_code;
++  int si_errno;
++
++  pid_t si_pid;
++  uid_t si_uid;
++  void *si_addr;
++  union sigval si_value;
++}siginfo_t;
++
++#define SIG_BLOCK 1
++#define SIG_UNBLOCK 2
++#define SIG_SETMASK 3
++
++typedef __mlibc_uint64 sigset_t;
++
++typedef void (*__sighandler) (int);
++
++// TODO: verify if these three are needed
++
++#define SIG_ERR ((__sighandler)(void*)(-2)) // Not used by kernel
++#define SIG_IGN ((__sighandler)(void*)(-1))
++#define SIG_DFL ((__sighandler)(void*)0)
++
++#define SA_NOCLDSTOP (1 << 0)
++#define SA_ONSTACK (1 << 1)
++#define SA_RESETHAND (1 << 2)
++#define SA_RESTART (1 << 3)
++#define SA_SIGINFO (1 << 4)
++#define SA_NOCLDWAIT (1 << 5)
++#define SA_NODEFER (1 << 6)
++
++struct sigaction {
++  union {
++    __sighandler sa_handler;
++    void (*sa_sigaction)(int, siginfo_t *, void *);
++  };
++  void (*sa_restorer)(void);
++  int sa_flags;
++  sigset_t sa_mask;
++};
++
++#define MINSIGSTKSZ 2048
++#define SIGSTKSZ 8192
++#define SS_DISABLE 1
++#define SS_ONSTACK 2
++
++typedef struct __stack {
++  void *ss_sp;
++  size_t ss_size;
++  int ss_flags;
++}stack_t;
++
++typedef struct {
++	sigset_t oldmask;
++  __mlibc_uint32 eax;
++  __mlibc_uint32 ecx;
++  __mlibc_uint32 ebx;
++  __mlibc_uint32 edx;
++  __mlibc_uint32 ebp;
++  __mlibc_uint32 esi;
++  __mlibc_uint32 edi;
++  __mlibc_uint32 eip;
++  __mlibc_uint32 esp;
++  __mlibc_uint32 eflags;
++  __mlibc_uint32 cs;
++  __mlibc_uint32 ds;
++  __mlibc_uint32 ss;
++  __mlibc_uint32 es;
++  __mlibc_uint32 fs;
++  __mlibc_uint32 gs;
++} mcontext_t;
++
++typedef struct __ucontext {
++	sigset_t uc_sigmask;
++	mcontext_t uc_mcontext;
++
++  // Unused
++
++	unsigned long uc_flags;
++	struct __ucontext *uc_link;
++	stack_t uc_stack;
++} ucontext_t;
++
++#endif /* _ABIBITS_SIGNAL_H */
++
+diff --git a/meson.build b/meson.build
+index b15dbc92..fed356a4 100644
+--- a/meson.build
++++ b/meson.build
+@@ -250,7 +250,7 @@ elif host_machine.system() == 'dripos'
+ 	subdir('sysdeps/dripos')
+ elif host_machine.system() == 'depthos'
+ 	disable_linux_option = true
+-	rtdl_include_dirs += include_directories('sysdeps/depthos/include')
++	rtld_include_dirs += include_directories('sysdeps/depthos/include')
+ 	libc_include_dirs += include_directories('sysdeps/depthos/include')
+ 	subdir('sysdeps/depthos')
+ else
+diff --git a/sysdeps/depthos/generic/depthos.cpp b/sysdeps/depthos/generic/depthos.cpp
+index dab80626..3398d2e0 100644
+--- a/sysdeps/depthos/generic/depthos.cpp
++++ b/sysdeps/depthos/generic/depthos.cpp
+@@ -63,7 +63,8 @@ int sys_pread(int fd, void *buf, size_t n, off_t off, ssize_t *bytes_read) {
+ 
+ 
+ int sys_open(const char *pathname, int flags, mode_t mode, int *fd) {
+-  auto ret = syscall(SYS_OPEN, pathname);
++  // mlibc::infoLogger() << "open: " << pathname << "(" << frg::hex_fmt{flags} << ")" << frg::endlog;
++  auto ret = syscall(SYS_OPEN, pathname, flags);
+   if (ret < 0)
+     return -ret;
+ 
+@@ -104,11 +105,13 @@ int sys_tcb_set(void *pointer) {
+ }
+ 
+ int sys_futex_wait(int *pointer, int expected, const struct timespec *time) {
+-  STUB
++  // STUB
++  return 0;
+ }
+ 
+ int sys_futex_wake(int *pointer) { 
+-STUB
++// STUB
++  return 0;
+ }
+ void sys_libc_log(const char *msg) { syscall(SYS_WRITE, 1, msg, strlen(msg)); }
+ 
+@@ -147,7 +150,7 @@ int sys_anon_allocate(size_t size, void **pointer) {
+ int sys_vm_unmap(void *pointer, size_t size) { STUB }
+ 
+ int sys_anon_free(void *pointer, size_t size) { STUB }
+-int sys_clock_get(int clock, time_t *secs, int64_t *nanos) {
++int sys_clock_get(int clock, time_t *secs, long *nanos) {
+   *secs = 0;
+   *nanos = 0;
+   STUB;
+@@ -204,10 +207,7 @@ int sys_sigprocmask(int how, const sigset_t *__restrict set,
+                     sigset_t *__restrict retrieve) {
+   return 0;
+ }
+-int sys_sigaction(int, const struct sigaction *__restrict,
+-                  struct sigaction *__restrict) {
+-  return 0;
+-}
++
+ int sys_gethostname(char *buffer, size_t bufsize) {
+   strncpy(buffer, "depthos", bufsize); // TODO: syscall
+   return 0;
+@@ -383,4 +383,32 @@ int sys_times(struct tms *tms, clock_t *out) {
+   return 0;
+ }
+ 
++static_assert(sizeof(sigset_t) == 8);
++
++extern "C" void __mlibc_signal_return(void);
++
++int sys_sigaction(int num, const struct sigaction *newact, struct sigaction *oldact) {
++  struct sigaction knew;
++  if (newact) {
++    knew = *newact;
++    if (!knew.sa_restorer) knew.sa_restorer = __mlibc_signal_return;
++  }
++  auto res = syscall(SYS_SIGACTION, num, newact ? &knew : NULL, oldact);
++  if (res < 0)
++    return -res;
++
++  return 0;
++}
++
++int sys_chdir(const char *path) {
++  auto res = syscall(SYS_CHDIR, path);
++  return res;
++}
++
++int sys_pipe(int *fds, int flags) {
++  mlibc::infoLogger() << "PIPE!" << frg::endlog;
++  auto res = syscall(SYS_PIPE, fds, flags);
++  return res;
++}
++
+ } // namespace mlibc
+diff --git a/sysdeps/depthos/include/abi-bits/signal.h b/sysdeps/depthos/include/abi-bits/signal.h
+index 4dcb0b7c..8057eefc 120000
+--- a/sysdeps/depthos/include/abi-bits/signal.h
++++ b/sysdeps/depthos/include/abi-bits/signal.h
+@@ -1 +1 @@
+-../../../../abis/linux/signal.h
+\ No newline at end of file
++../../../../abis/depthos/signal.h
+\ No newline at end of file
+diff --git a/sysdeps/depthos/include/depthos/syscall.h b/sysdeps/depthos/include/depthos/syscall.h
+index 1efab1d1..d9a7eb89 100644
+--- a/sysdeps/depthos/include/depthos/syscall.h
++++ b/sysdeps/depthos/include/depthos/syscall.h
+@@ -27,6 +27,10 @@
+ #define SYS_STATFD 21
+ #define SYS_STAT 22
+ #define SYS_TIMES 23
++#define SYS_SIGACTION 24
++#define SYS_SIGRESTORE 25
++#define SYS_CHDIR 27
++#define SYS_PIPE 28
+ 
+ using sc_data_t = long;
+ extern "C" {
+diff --git a/sysdeps/depthos/meson.build b/sysdeps/depthos/meson.build
+index 6ac57c43..aa0fed08 100644
+--- a/sysdeps/depthos/meson.build
++++ b/sysdeps/depthos/meson.build
+@@ -1,8 +1,14 @@
+-libc_sources = files(
++libc_sources += files(
+   'generic/depthos.cpp',
+   'generic/entry.cpp',
+ )
+ 
++if host_machine.cpu_family() == 'x86'
++  libc_sources += files(
++    'x86/signals.S'
++  )
++endif
++
+ 
+ if not no_headers
+ 	install_headers(
+diff --git a/sysdeps/depthos/x86/signals.S b/sysdeps/depthos/x86/signals.S
+new file mode 100644
+index 00000000..bc0997f3
+--- /dev/null
++++ b/sysdeps/depthos/x86/signals.S
+@@ -0,0 +1,8 @@
++.global __mlibc_signal_return
++.type __mlibc_signal_restore, @function
++__mlibc_signal_return:
++  addl $8, %esp # ucontext_t is pushed right before the arguments (int, siginfo_t*, void*)
++  
++  movl (%esp), %ebx # sigrestore requires as an argument ucontext_t
++  movl $25, %eax # sigrestore
++  int $0x64
+-- 
+2.34.1
+
