@@ -24,15 +24,18 @@ Stable, flexible and very simple in use Operating System, which doesn't restrict
 ## Dependencies
 DepthOS requires GNU Make, GCC and NASM to build. And QEMU to run.
 
+
 ## Build
 Kernel and userland requires a custom toolchain compiled for the platform.
 To use it, set `CC` and `LD` environment variables when running `make`.
+
+You can use one produced by "Working with ports" section (in particular, by `cross-toolchain` package).
 
 ### Kernel
 To just build the kernel, run `make build`.
 
 ### Applications
-All applications can be build using `make apps`.
+All applications can be build using `make -C apps`.
 
 However, each application has it's build system, and might require additional configuration. See application's README for more details
 
@@ -44,10 +47,21 @@ If `SYSROOT` environment variable is set, it will also copy all files from there
 
 The resulting image is located in the `_disk_image.raw` file.
 
+## Working with ports
+To build ports, you have to install xbstrap first.
+Afterwards you must create a build directory (`$BUILDDIR`).
+Then `cd` into it and run `xbstrap init ../ports`.
+
+Now that you have xbstrap environment setup, you can run `xbstrap compile-tool <tool>` (e.g. gcc) or `xbstrap build <package>` (e.g. libpng) to build the tools/packages.
+
+After you have built the package/tool, you can install it by calling `xbstrap install`/`xbstrap install-tool`.
+If it's a package, it will be installed into the `$BUILDDIR/system-root`. If it's a tool it's gonna be installed into `$BUILDDIR/tools/path/to/tool` (e.g. `$BUILDDIR/tools/cross-gcc/bin/i686-depthos-gcc`).
+
+To install the package into the image, you'd have to set the `SYSROOT` variable to `$BUILDDIR/system-root`.
+
 ### ISO
 Before running DepthOS, you will also need to build an ISO. You can do so by using `tools/iso.sh` script.
 
 ## Running
-
 To run DepthOS you can use `tools/qemu.sh` script, it provides all necessary kernel parameters.
 Although currently you will also need to pass `-audiodev pa,id=pa -device sb16,audiodev=pa` to it. This will be fixed soon.
