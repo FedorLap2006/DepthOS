@@ -35,9 +35,23 @@ You can use one produced by "Working with ports" section (in particular, by `cro
 To just build the kernel, run `make build`.
 
 ### Applications
-All applications can be build using `make -C apps`.
+All applications can be build using `make -C apps install`. By default they are installed into `disk-fs` folder.
 
 However, each application has it's build system, and might require additional configuration. See application's README for more details
+
+## Working with ports
+
+To build ports, you have to install [xbstrap](https://github.com/managarm/xbstrap) first.
+Afterwards you must create a build directory (`$BUILDDIR`) and `cd` into it.
+Then run `xbstrap init ../ports`.
+
+Now you can run `xbstrap compile-tool <tool>` (e.g. gcc) or `xbstrap build <package>` (e.g. libpng) to build tools/packages.
+
+After you have built the package/tool, you can install it by calling `xbstrap install`/`xbstrap install-tool`.
+If it's a package, it will be installed into the `$BUILDDIR/system-root`.
+If it's a tool it's gonna be installed into `$BUILDDIR/tools/path/to/tool` (e.g. `$BUILDDIR/tools/cross-gcc/bin/i686-depthos-gcc`).
+
+To install the package into the image, you'd have to set the `SYSROOT` variable to `$BUILDDIR/system-root` when running `tools/sync.sh` script.
 
 ## Generating the image
 
@@ -46,19 +60,6 @@ To generate it, you can use `tools/sync.sh` script. It will copy everything from
 If `SYSROOT` environment variable is set, it will also copy all files from there.
 
 The resulting image is located in the `_disk_image.raw` file.
-
-## Working with ports
-To build ports, you have to install xbstrap first.
-Afterwards you must create a build directory (`$BUILDDIR`).
-Then `cd` into it and run `xbstrap init ../ports`.
-
-Now that you have xbstrap environment setup, you can run `xbstrap compile-tool <tool>` (e.g. gcc) or `xbstrap build <package>` (e.g. libpng) to build the tools/packages.
-
-After you have built the package/tool, you can install it by calling `xbstrap install`/`xbstrap install-tool`.
-If it's a package, it will be installed into the `$BUILDDIR/system-root`. If it's a tool it's gonna be installed into `$BUILDDIR/tools/path/to/tool` (e.g. `$BUILDDIR/tools/cross-gcc/bin/i686-depthos-gcc`).
-
-To install the package into the image, you'd have to set the `SYSROOT` variable to `$BUILDDIR/system-root`.
-
 ### ISO
 Before running DepthOS, you will also need to build an ISO. You can do so by using `tools/iso.sh` script.
 
