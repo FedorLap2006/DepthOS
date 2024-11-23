@@ -30,6 +30,7 @@ Kernel and userland requires a custom toolchain compiled for the platform.
 To use it, set `CC` and `LD` environment variables when running `make`.
 
 You can use one produced by "Working with ports" section (in particular, by `cross-toolchain` package).
+Like this: `CC=$PORTS_BUILDDIR/tools/cross-gcc/bin/i686-depthos-gcc LD=$PORTS_BUILDDIR/tools/cross-binutils/bin/i686-depthos-ld`
 
 ### Kernel
 To just build the kernel, run `make build`.
@@ -42,16 +43,16 @@ However, each application has it's build system, and might require additional co
 ## Working with ports
 
 To build ports, you have to install [xbstrap](https://github.com/managarm/xbstrap) first.
-Afterwards you must create a build directory (`$BUILDDIR`) and `cd` into it.
+Afterwards you must create a build directory (`$PORTS_BUILDDIR`) and `cd` into it.
 Then run `xbstrap init ../ports`.
 
 Now you can run `xbstrap compile-tool <tool>` (e.g. gcc) or `xbstrap build <package>` (e.g. libpng) to build tools/packages.
 
 After you have built the package/tool, you can install it by calling `xbstrap install`/`xbstrap install-tool`.
-If it's a package, it will be installed into the `$BUILDDIR/system-root`.
-If it's a tool it's gonna be installed into `$BUILDDIR/tools/path/to/tool` (e.g. `$BUILDDIR/tools/cross-gcc/bin/i686-depthos-gcc`).
+If it's a package, it will be installed into the `$PORTS_BUILDDIR/system-root`.
+If it's a tool it's gonna be installed into `$PORTS_BUILDDIR/tools/path/to/tool` (e.g. `$BUILDDIR/tools/cross-gcc/bin/i686-depthos-gcc`).
 
-To install the package into the image, you'd have to set the `SYSROOT` variable to `$BUILDDIR/system-root` when running `tools/sync.sh` script.
+To install the package into the image, you'd have to set the `SYSROOT` variable to `$PORTS_BUILDDIR/system-root` when running `tools/sync.sh` script.
 
 ## Generating the image
 
