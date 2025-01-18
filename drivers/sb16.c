@@ -251,6 +251,7 @@ void sb16_init() {
 
   int reset = sb16_dsp_reset(IMPL(dev));
   klogf("sb16 reset: %d", reset);
+  if (reset == 0) return;
 
   sb16_dsp_write(card, SB16_DSP_CMD_GET_VERSION);
   card->dsp_major = sb16_dsp_read(card);
