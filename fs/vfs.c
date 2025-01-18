@@ -157,16 +157,16 @@ char* vfs_resolve(const char *path, const char *cwd) {
     return strdup(path);
   }
 
-  int pl = strlen(path);
-  klogf("path: %s %p %d", path, path, pl);
-  klogf("cwd: %p", cwd, cwd);
+  int pc = strlen(cwd);
+  // klogf("path: %s %p %d", path, path, pl);
+  klogf("cwd: %p %s", cwd, cwd);
  
-  char *res = (char*)kmalloc(pl + strlen(cwd) + 2);
+  char *res = (char*)kmalloc(pc + strlen(path) + 2);
   if (!res) return NULL;
 
   strcpy(res, cwd);
-  res[pl] = '/';
-  strcpy(res + pl + 1, path);
+  res[pc] = '/';
+  strcpy(res + pc + 1, path);
   
   return res;
 }
