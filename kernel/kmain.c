@@ -220,7 +220,7 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
 #else
   klogf("spawning init process");
   struct process *init_proc = process_spawn(
-      "/bin/mdinit", NULL, (char const *[]){"/bin/mdinit", NULL},
+      "/sbin/init", NULL, (char const *[]){"/sbin/init", NULL},
       (char const *[]){NULL});
   if (!init_proc)
     panicf("Could not spawn init process. Halting.");
