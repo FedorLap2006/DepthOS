@@ -287,7 +287,7 @@ int ata_pio_write(struct ata_port *port, uint16_t *buf, size_t lba,
       __asm volatile("nop; nop; nop");
     }
     outb(port->io_base + ATA_REG_CMD, ATA_CMD_FLUSH);
-    ata_poll(port, false, true, false);
+    ata_poll(port, false, false, false);
     ata_log("write status: 0x%x", ata_read_status(port, false));
   }
   return 0;
