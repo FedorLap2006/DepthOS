@@ -1,0 +1,38 @@
+#include "depthos/list.h"
+#include <depthos/errno.h>
+#include <depthos/heap.h>
+#include <depthos/socket.h>
+#include <depthos/string.h>
+#include <depthos/syscall.h>
+
+struct bound_socket {
+  const char *path;
+  struct socket *sock;
+};
+
+struct list *bound_sockets;
+
+struct socket *create_socket(int af, int type, int protocol) {
+  struct socket *sock = (struct socket *)kmalloc(sizeof(struct socket));
+  sock->af = af;
+  sock->type = type;
+  sock->proto = protocol;
+}
+
+void socket_bind(struct socket *sock, const char *path) {
+  list_foreach(bound_sockets, item) {
+    struct bound_socket *bsock = list_item(item, struct bound_socket *);
+    if (strcmp(bsock->path, path) == 0)
+      return EADDRINUSE;
+  }
+  struct bound_socket *bsock =
+      (struct bound_socket *)kmalloc(sizeof(struct bound_socket));
+  bsock->path = path;
+  bsock->sock = sock;
+
+  list_push(bound_sockets, (list_value_t)bsock);
+}
+
+
+
+void sockets_init() { bound_sockets = list_create(); }
