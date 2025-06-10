@@ -30,7 +30,7 @@ To just build the kernel, run `make build`.
 
 ## Packages
 
-To build packages, you have to install [xbstrap](https://github.com/managarm/xbstrap) first.
+To build [packages](https://github.com/FedorLap2006/DepthOS-packages), you have to install [xbstrap](https://github.com/managarm/xbstrap) first.
 
 Afterwards you must create a build directory (`$PKGS_BUILDDIR`) and `cd` into it.
 Then run `xbstrap init ../pkgs`.
