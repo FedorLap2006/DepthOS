@@ -73,6 +73,7 @@ read_more:;
 
   // klogf("debug");
   while (ringbuffer_empty(&tty_buffer)) { // TODO: open flag for non-blocking
+    // klogf("ringbuffer empty");
     // klogf("debug 5");
     sched_yield();
     // __asm__ volatile("int $0x30");
@@ -81,7 +82,10 @@ read_more:;
   return tty_read(dev, buffer, nbytes, offset);
 }
 
-long tty_ioctl(struct device *dev, unsigned long request, void *data) {}
+long tty_ioctl(struct device *dev, unsigned long request, void *data) {
+  klogf("tty ioctl %ld", request);
+  return -ENOSYS;
+}
 
 struct device tty_device = {
     .name = "tty",
@@ -107,6 +111,7 @@ static struct device *current_ps2_tty_dev;
 // TODO: refactor keyboard handling
 int tty_keyboard_handler(struct keyboard_event event) {
   char *str = NULL;
+  bool free_str = false;
   if (!event.pressed)
     return;
   switch (event.keycode) {
@@ -115,6 +120,7 @@ int tty_keyboard_handler(struct keyboard_event event) {
     break;
   default:
     str = strdup(keycode_to_string(event.keycode));
+      free_str = true;
     if (shift_keycode(event)) {
       str[0] -= 32;
     }
@@ -133,7 +139,7 @@ int tty_keyboard_handler(struct keyboard_event event) {
     tty_write(current_ps2_tty_dev, str, strlen(str), &off);
   while (*str)
     ringbuffer_push(&tty_buffer, str++);
-  if (shift_keycode(event))
+  if (free_str)
     kfree(str, strlen(str));
 }
 

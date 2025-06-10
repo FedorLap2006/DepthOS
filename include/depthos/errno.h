@@ -22,5 +22,8 @@
 #define EEXIST 15
 #define ENOMEM 16
 #define ERANGE 17
+#define EADDRINUSE 18
+#define ECONNREFUSED 19
+#define ENOTSOCK 20
 
 extern int errno;

@@ -1,14 +1,17 @@
-#include <depthos/paging.h>
-#include <depthos/ringbuffer.h>
 #include <depthos/dev.h>
 #include <depthos/errno.h>
+#include <depthos/fcntl.h>
 #include <depthos/file.h>
 #include <depthos/fs.h>
 #include <depthos/heap.h>
 #include <depthos/idt.h>
 #include <depthos/logging.h>
-#include <depthos/proc.h>
+#include <depthos/paging.h>
 #include <depthos/pipe.h>
+#include <depthos/poll.h>
+#include <depthos/proc.h>
+#include <depthos/ringbuffer.h>
+#include <depthos/socket.h>
 #include <depthos/string.h>
 #include <depthos/syscall.h>
 
@@ -48,14 +51,17 @@ static inline struct fs_node *lookup_file(int fd) {
 }
 
 DECL_SYSCALL3(write, int, fd, char *, buf, size_t, n) {
-  // klogf("writing");
+  // klogf("write (fd=%d)", fd);
   CHECK_BUF(buf);
   errno = 0;
   struct fs_node *file = lookup_file(fd);
   if (!file)
     return -errno;
 
+  // klogf("write (filename=%s)", file->name);
+
   if (file->pipe) {
+    klogf("pipe? %s", file->name);
     if (!file->rdonly)
       return pipe_file_write(file, buf, n, &file->pos);
     else {
@@ -63,9 +69,16 @@ DECL_SYSCALL3(write, int, fd, char *, buf, size_t, n) {
     }
   }
 
+  if (file->socket) {
+    return net_socket_send(file->socket, buf, n, 0);
+  }
+
   // klogf("fd=%d, buf=%p n=%d", fd, buf, n);
   // for(int i = 0; i < n; i++) klogf("%c", buf[i]);
-  return vfs_write(file, buf, n);
+  long ret = vfs_write(file, buf, n);
+
+  // klogf("write() = %ld", ret);
+  return ret;
 }
 
 DECL_SYSCALL3(read, int, fd, char *, buf, size_t, n) {
@@ -80,6 +93,10 @@ DECL_SYSCALL3(read, int, fd, char *, buf, size_t, n) {
       return pipe_file_read(file, buf, n, &file->pos);
     else
       return -ENOSYS;
+  }
+
+  if (file->socket) {
+    return net_socket_recv(file->socket, buf, n, 0);
   }
 
   // klogf("read: %ld bytes from %d (at %d)", n, fd, file->pos);
@@ -104,34 +121,39 @@ static int find_available_fd(void) {
 //   file->pipe = pipe;
 // }
 
-
 DECL_SYSCALL2(open, const char *, path, int, flags) {
   // klogf("open: %s", path);
   // if (path[0] != '/')
   //   klogf("path is relative");
   if (!current_task->filetable)
     return -ENIMPL;
-  if (flags & O_DIR) {
-  }
 
-  char *rpath = vfs_resolve(path, current_task->process ? current_task->process->cwd : "/");
+  // printk("LOL %d\n", flags & O_APPEND);
+
+  char *rpath = vfs_resolve(
+      path, current_task->process ? current_task->process->cwd : "/");
+  klogf("THE HELL %s %d", rpath, flags);
   struct fs_node *file = vfs_open(rpath);
-  if (!file) {
-    klogf("enoent");
+  if (flags & O_CREAT && !file) {
+    klogf("AAAA %s", rpath);
+    file = vfs_create(rpath, 0777, FS_FILE, 0);
+  } else if (!file) {
     return -ENOENT;
   }
   kfree(rpath, strlen(rpath) + 1);
 
+  klogf("AAAAA %s = %d", file->name, file->type);
   if (file->type == FS_PIPE) {
     klogf("opening pipe: %ld", file->inode_num);
     file->pipe = pipe_open(file->dev, file->inode_num);
     klogf("pipe: %p", file->pipe);
-    if (flags & FD_RDONLY) file->pipe->n_readers++;
-    else file->pipe->n_writers++;
+    if (flags & FD_RDONLY)
+      file->pipe->n_readers++;
+    else
+      file->pipe->n_writers++;
   }
 
   file->rdonly = (flags & FD_RDONLY) != 0;
-
 
   int fd = find_available_fd();
   if (fd < 0) {
@@ -154,36 +176,48 @@ DECL_SYSCALL3(seek, int, fd, soff_t, offset, int, whence) {
 }
 
 DECL_SYSCALL1(close, int, fd) {
+  klogf("close %d", fd);
   errno = 0;
   struct fs_node *file = lookup_file(fd);
   if (!file)
     return -errno;
 
-  if (file->pipe)
+  if (file->pipe && file->type == FS_PIPE)
     pipe_file_close(file);
 
   vfs_close(file);
+  current_task->filetable[fd] = NULL;
+
+  task_dump_filetable(current_task->filetable);
 
   return 0;
 }
 
 DECL_SYSCALL3(dup3, int, oldfd, int, newfd, int, flags) {
+  // klogf("dup3 %d %d %d", oldfd, newfd, flags);
+  // trace(1, -1);
   errno = 0;
   struct fs_node *file = lookup_file(oldfd);
   if (!file)
     return -errno;
 
+  task_dump_filetable(current_task->filetable);
+
   if (newfd == -1) {
     for (int i = 0; i < TASK_FILETABLE_MAX; i++) {
       if (current_task->filetable[i] == NULL) {
         current_task->filetable[i] = file;
+        klogf("dup3 picked %d", newfd);
         return i;
       }
     }
     return -EMFILE;
   } else if (newfd < 0 || newfd >= TASK_FILETABLE_MAX) {
+    klogf("newfd: %d", newfd);
     return -EBADF;
   }
+
+  klogf("dup3 ended %d", newfd);
 
   // sys_close(newfd); // TODO: huh?
   current_task->filetable[newfd] = file;
@@ -217,22 +251,28 @@ struct dentry_user {
 
 DECL_SYSCALL3(readentry, int, fd, struct dentry_user *, buf, size_t, size) {
   errno = 0;
+  klogf("test");
   struct fs_node *file = lookup_file(fd);
   if (!file) {
     return -errno;
   }
 
+  klogf("test 2 %s %s %d", file->path, file->name, file->type);
   if (file->type != FS_DIR) {
     // klogf("type: %d name: %s ptr: %p", file->type, file->name, &file->type);
     return -ENOTDIR;
   }
+  klogf("test 3");
 
   if (!file->ops->iter)
     return -ENOSYS;
 
+  klogf("test 4");
   if (size < sizeof(struct dentry_user)) {
     return -EINVAL;
   }
+
+  klogf("test 5");
 
   size_t max_name_len = size - sizeof(struct dentry_user);
   struct dentry *tmp = kmalloc(sizeof(struct dentry));
@@ -289,11 +329,14 @@ int do_stat(struct fs_node *file, struct stat *buf) {
 
   klogf("buf: %p", buf);
   *buf = (struct stat){
-      .gid = 0, .uid = 0, .size = file->size,
-      .mode = stat_make_mode(0777, file->type), // TODO: file type needs to
+      .gid = 0,
+      .uid = 0,
+      .size = file->size,
+      .mode = stat_make_mode(0777,
+                             file->type), // TODO: file type needs to be
+                                          // translated or updated in mlibc abi.
       .dev = file->dev,
       .inode = file->inode_num,
-      // be translated or updated in mlibc abi.
   };
   klogf("%s: %ld", file->path, buf->size);
 
@@ -311,7 +354,9 @@ DECL_SYSCALL2(statfd, int, fd, struct stat *, buf) {
 
 DECL_SYSCALL2(stat, const char *, path, struct stat *, buf) {
   klogf("stat: %s", path);
-  char *rpath = vfs_resolve(path, current_task->process ? current_task->process->cwd : "/");
+  klogf("current_task->process->cwd: %s", current_task->process->cwd);
+  char *rpath = vfs_resolve(
+      path, current_task->process ? current_task->process->cwd : "/");
   klogf("stat: %s (%s)", path, rpath);
   struct fs_node *file = vfs_open(rpath);
   if (!file)
@@ -322,15 +367,17 @@ DECL_SYSCALL2(stat, const char *, path, struct stat *, buf) {
   return do_stat(file, buf);
 }
 
-DECL_SYSCALL2(pipe, int*, fds, int, flags) {
+DECL_SYSCALL2(pipe, int *, fds, int, flags) {
   // TODO: verify fds
 
-  struct pipe* p = (struct pipe*)kmalloc(sizeof(*p));
+  klogf("pipe ([%d, %d])", fds[0], fds[1]);
+
+  struct pipe *p = (struct pipe *)kmalloc(sizeof(*p));
   p->buf = ringbuffer_create(PAGE_SIZE, 1);
 
   struct fs_node *rf = create_pipe_file(p, false);
   struct fs_node *wf = create_pipe_file(p, true);
- 
+
   int i;
 
   for (i = 0; i < TASK_FILETABLE_MAX; i++) {
@@ -359,4 +406,245 @@ DECL_SYSCALL2(pipe, int*, fds, int, flags) {
   klogf("fds: %d %d", fds[0], fds[1]);
 
   return 0;
+}
+
+DECL_SYSCALL1(fchdir, int, fd) {
+  if (!current_task->process)
+    return -EFAULT;
+
+  struct fs_node *file = lookup_file(fd);
+  if (!file)
+    return -errno;
+
+  char *cwd = vfs_resolve(file->path, current_task->process->cwd);
+  klogf("CWD: %s", cwd);
+  struct fs_node *f = vfs_open(cwd);
+  if (!f)
+    return -ENOENT;
+
+  if (f->type != FS_DIR)
+    return -ENOTDIR;
+
+  vfs_close(f);
+
+  current_task->process->cwd = cwd;
+  return 0;
+}
+
+// DECL_SYSCALL3(socket, int, af, int, type, int, protocol) {
+//   switch (af) {
+//   case AF_UNIX:
+//     break;
+//   default:
+//     return -ENOSYS;
+//   }
+
+//   struct socket *sock = create_socket(af, type, protocol);
+
+//   extern struct file_operations socket_ops;
+//   struct fs_node *sockfile = kmalloc(sizeof(struct fs_node));
+//   *sockfile = (struct fs_node){
+//       .type = FS_SOCKET,
+//       .size = 0,
+//       .ops = &socket_ops,
+//       .socket = sock,
+//   };
+
+//   int i;
+//   for (i = 0; i < TASK_FILETABLE_MAX; i++) {
+//     if (current_task->filetable[i] == NULL) {
+//       current_task->filetable[i] = sockfile;
+//       break;
+//     }
+//   }
+//   if (i == TASK_FILETABLE_MAX) {
+//     kfree(sock, sizeof(*sock));
+//     kfree(sockfile, sizeof(*sockfile));
+//     return -EMFILE;
+//   }
+// }
+
+DECL_SYSCALL3(socket, int, domain, int, type, int, protocol) {
+  if (domain != AF_LOCAL)
+    return -EINVAL;
+
+  if (type != SOCK_STREAM)
+    return -EINVAL;
+
+  struct socket *sock = create_local_socket(type);
+  int fd = find_available_fd();
+
+  struct fs_node *sockfile = kmalloc(sizeof(struct fs_node));
+  *sockfile = (struct fs_node){
+      .type = FS_SOCKET,
+      .size = 0,
+      .socket = sock,
+  };
+
+  current_task->filetable[fd] = sockfile;
+
+  return fd;
+}
+
+DECL_SYSCALL3(bind, int, fd, struct sockaddr *, addr, size_t, salen) {
+  if (addr->sa_family != AF_UNIX)
+    return -EINVAL;
+
+  struct fs_node *sockfile = lookup_file(fd);
+  if (!sockfile)
+    return -errno;
+
+  if (sockfile->type != FS_SOCKET || !sockfile->socket)
+    return -ENOTSOCK;
+
+  return sockfile->socket->ops->bind(sockfile->socket, addr, salen);
+
+  // struct socket *sock =
+}
+
+DECL_SYSCALL3(connect, int, fd, struct sockaddr *, addr, size_t, salen) {
+  if (addr->sa_family != AF_UNIX)
+    return -EINVAL;
+
+  struct fs_node *sockfile = lookup_file(fd);
+  if (!sockfile)
+    return -errno;
+
+  if (sockfile->type != FS_SOCKET || !sockfile->socket)
+    return -ENOTSOCK;
+
+  // printk("SOCKET AAAA: %p %p\n", sockfile->socket->ops,
+  // sockfile->socket->ops->connect);
+
+  return sockfile->socket->ops->connect(sockfile->socket, addr, salen);
+
+  // struct socket *sock =
+}
+
+DECL_SYSCALL2(listen, int, fd, int, backlog) {
+  struct fs_node *sockfile = lookup_file(fd);
+  if (!sockfile)
+    return -errno;
+
+  if (sockfile->type != FS_SOCKET || !sockfile->socket)
+    return -ENOTSOCK;
+
+  sockfile->socket->backlog = backlog;
+  return 0;
+}
+
+DECL_SYSCALL3(accept, int, fd, struct sockaddr *, addr, size_t, len) {
+  struct fs_node *sockfile = lookup_file(fd);
+  if (!sockfile)
+    return -errno;
+
+  if (sockfile->type != FS_SOCKET || !sockfile->socket)
+    return -ENOTSOCK;
+
+  struct list_entry *item;
+  struct socket *client_sock, *sock;
+
+  while (1) {
+    // TODO: nonblock flags
+    while (1) {
+      item = list_pop_front(sockfile->socket->conn_queue);
+      if (item)
+        break;
+      sched_yield();
+    }
+
+    client_sock = list_item(item, struct socket *);
+    sock = create_socket(client_sock->family,
+                         client_sock->type); // TODO: clone addr?
+    // printk("SOCKET: %p\n", sock);
+    client_sock->state = SOCK_STATE_CONNECTED;
+    sock->state = SOCK_STATE_LISTENING;
+    client_sock->peer = sock;
+    sock->peer = client_sock;
+
+    struct fs_node *sockfile = kmalloc(sizeof(struct fs_node));
+    *sockfile = (struct fs_node){
+        .type = FS_SOCKET,
+        .size = 0,
+        .socket = sock,
+    };
+
+    int fd = find_available_fd();
+    if (!fd)
+      return -EMFILE;
+
+    current_task->filetable[fd] = sockfile;
+    return fd;
+  }
+
+  // struct socket *sock =
+}
+
+DECL_SYSCALL4(send, int, sockfd, const void *, buf, size_t, size, int, flags) {
+  struct fs_node *sockfile = lookup_file(sockfd);
+  if (!sockfile)
+    return -errno;
+
+  if (sockfile->type != FS_SOCKET || !sockfile->socket)
+    return -ENOTSOCK;
+
+  if (!sockfile->socket->ops->send)
+    return -ENOSYS;
+
+  return sockfile->socket->ops->send(sockfile->socket, buf, size, flags);
+}
+
+DECL_SYSCALL4(recv, int, sockfd, const void *, buf, size_t, size, int, flags) {
+  struct fs_node *sockfile = lookup_file(sockfd);
+  if (!sockfile)
+    return -errno;
+
+  if (sockfile->type != FS_SOCKET || !sockfile->socket)
+    return -ENOTSOCK;
+
+  if (!sockfile->socket->ops->recv)
+    return -ENOSYS;
+
+  return sockfile->socket->ops->recv(sockfile->socket, buf, size, flags);
+}
+
+int do_poll(struct pollfd *fds, nfds_t count) {
+  int n = 0;
+  while (1) {
+    for (nfds_t i = 0; i < count; i++) {
+    // klogf("polling %ld", i);
+      if (fds[i].fd < 0)
+        return 0;
+      struct fs_node *f = lookup_file(fds[i].fd);
+      if (!f)
+        continue;
+
+      short revents = 0;
+      if (f->socket) {
+        revents = f->socket->ops->poll(f->socket);
+      } else if (f->pipe) {
+        // klogf("polling pipe (%p)", f->pipe);
+        revents = pipe_file_poll(f);
+      }
+
+      short filtered_events = (revents & fds[i].events);
+
+      // klogf("events: %d", filtered_events);
+      fds[i].revents = filtered_events;
+      if (fds[i].revents != 0) {
+        n++;
+      }
+      // klogf("n: %d", n);
+    }
+
+    if (n > 0)
+      return n;
+    sched_yield();
+  }
+}
+
+DECL_SYSCALL2(poll, struct pollfd *, fds, nfds_t, count) {
+  int n = do_poll(fds, count);
+
+  return n;
 }

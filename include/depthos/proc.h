@@ -14,7 +14,9 @@ typedef enum process_state {
   PROCESS_STARTING,
   PROCESS_RUNNING,
   PROCESS_SUSPENDED,
-  PROCESS_EXITING,
+  // PROCESS_EXITING,
+  PROCESS_EXITED,
+  PROCESS_DEAD,
 } process_state_t;
 
 typedef enum task_state {
@@ -22,7 +24,7 @@ typedef enum task_state {
   TASK_RUNNING,
   TASK_SUSPENDED,
   TASK_SLEEPING,
-  TASK_DYING
+  TASK_DYING,
 } task_state_t;
 
 struct process {
@@ -32,6 +34,8 @@ struct process {
   char const **argv;
   char const **envp;
   process_state_t state;
+  int exit_code;
+  int signal;
   struct process *parent;
   struct list_entry *parent_entry;
 
@@ -39,6 +43,7 @@ struct process {
   struct list *threads;
 #define TASK_FILETABLE_MAX 256
   struct fs_node **filetable;
+
 };
 
 struct exec_binary_info {
@@ -160,6 +165,9 @@ void kernel_task_init_kstack(struct task *task, uintptr_t esp);
  * @param ft Filetable to initialise.
  */
 void task_setup_filetable(struct fs_node **ft);
+
+void task_dump_filetable(struct fs_node **ft);
+
 /**
  * @brief Create a thread in the current process.
  *

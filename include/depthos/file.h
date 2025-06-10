@@ -1,5 +1,6 @@
 #pragma once
 
+#include <depthos/socket.h>
 #include <depthos/dev.h>
 #include <depthos/stddef.h>
 #include <depthos/stdtypes.h>
@@ -24,17 +25,19 @@ typedef uint32_t inode_t;
 #define FM_STICKY 01000
 typedef uint16_t fmode_t;
 
-struct file_operations;
-typedef struct fs_node {
-  char *name;
-  char *path;
-
 #define FS_FILE 0x0001
 #define FS_DIR 0x0002
 // #define FS_MOUNT 0x0004
 #define FS_PIPE 0x0004
 #define FS_DEV 0x0008
-  uint8_t type;
+#define FS_SOCKET 0x0010
+typedef uint8_t ftype_t;
+
+struct file_operations;
+typedef struct fs_node {
+  char *name;
+  char *path;
+  ftype_t type;
   fmode_t mode;
   off_t pos;
   bool eof;
@@ -46,6 +49,7 @@ typedef struct fs_node {
   struct file_operations *ops;
   void *impl;
   struct pipe *pipe;
+  struct socket *socket;
   struct filesystem *fs;
 } fs_node_t;
 

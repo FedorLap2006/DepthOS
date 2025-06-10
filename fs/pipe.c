@@ -1,3 +1,4 @@
+#include <depthos/poll.h>
 #include <depthos/dev.h>
 #include <depthos/list.h>
 #include <depthos/proc.h>
@@ -17,7 +18,7 @@ struct open_pipe {
   struct pipe pipe;
 };
 
-struct list open_pipes;
+struct list open_pipes = {.first = NULL, .last = NULL, .length = 0};
 
 struct pipe* pipe_open(devid_t device, inode_t inode) {
   list_foreach(&open_pipes, item) {
@@ -25,9 +26,10 @@ struct pipe* pipe_open(devid_t device, inode_t inode) {
     if (inode == op->inode)
       return &op->pipe;
   }
-
+  klogf("pipe open new %ld, %ld", device, inode);
   struct open_pipe* op = (struct open_pipe*)kmalloc(sizeof(*op));
   op->inode = inode;
+  op->device = device;
   op->pipe.buf = ringbuffer_create(PIPE_SIZE, 1);
   op->pipe.n_readers = 0;
   op->pipe.n_writers = 0;
@@ -44,23 +46,32 @@ int pipe_file_read(struct fs_node *file, char *buffer, size_t count, off_t *offs
   if (file->eof)
     return 0;
 
-  for (size_t i = 0; i < count; i++) {
+  while(pipe->buf->size == 0) // TODO: O_NONBLOCK 
+      sched_yield();
+    
+
+  size_t i;
+
+  for (i = 0; i < count; i++) {
     klogf("pipe size: %lu", pipe->buf->size);
     klogf("blocking");
-    while(pipe->buf->size == 0) // TODO: O_NONBLOCK
-      sched_yield();
+    if (pipe->buf->size == 0)
+      break;
+   
     klogf("unblocked");
     
     char *e = (char*)ringbuffer_pop(pipe->buf);
     memcpy(buffer + i, e, pipe->buf->elem_size);
   }
 
-  *offset += count;
-  return count;
+  *offset += i;
+  return i;
 }
 
 int pipe_file_write(struct fs_node *file, char *buffer, size_t count, off_t *offset) {
   struct pipe* pipe = file->pipe;
+  task_dump_filetable(current_task->filetable);
+  klogf("%s %s", file->name, file->path);
   klogf("writing %d", pipe->n_writers);
   klogf("blocking");
   while (pipe->buf->size + count > pipe->buf->max_size) // TODO: O_NONBLOCK
@@ -82,6 +93,7 @@ struct file_operations pipe_write_ops = {
 };
 
 void pipe_file_close(struct fs_node* file) {
+  klogf("file->pipe = %p",file->pipe);
   struct pipe* pipe = file->pipe;
 
   // TODO: properly use flags
@@ -91,6 +103,20 @@ void pipe_file_close(struct fs_node* file) {
   if (pipe->n_writers == 0) {
     file->eof = true;
   }
+}
+
+short pipe_file_poll(struct fs_node* file) {
+  struct pipe* pipe = file->pipe;
+  short revents = 0;
+ 
+  if (pipe->buf->size > 0)
+    revents |= POLLIN;
+
+  if (pipe->buf->size < pipe->buf->max_size)
+    revents |= POLLOUT;
+
+
+  return revents;
 }
 
 struct fs_node* create_pipe_file(struct pipe *p, bool write) {
@@ -105,4 +131,5 @@ struct fs_node* create_pipe_file(struct pipe *p, bool write) {
 
   return file;
 }
+
 

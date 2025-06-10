@@ -1,6 +1,7 @@
 #include <depthos/assert.h>
 #include <depthos/dev.h>
 #include <depthos/errno.h>
+#include <depthos/fcntl.h>
 #include <depthos/fs.h>
 #include <depthos/heap.h>
 #include <depthos/initrd.h>
@@ -120,20 +121,28 @@ out:
   return ret;
 }
 
+char *get_relative_mountpoint_path(struct mount *mountpoint, const char *path) {
+  const char *relpath = path;
+  if (strcmp(path, mountpoint->path) == 0)
+    relpath = "/";
+  else if (strcmp(mountpoint->path, "/"))
+    relpath = path + strlen(mountpoint->path);
+
+  return relpath;
+}
+
 // TODO: path cleanup
+// TODO: system-wide lookup table
 struct fs_node *vfs_open(const char *path) {
   struct mount *mountpoint = find_mount(path);
   if (!mountpoint)
     return NULL;
-  char *relpath = path;
-  if (strlen(path) == mountpoint->path)
-    relpath = "/";
-  else if (strcmp(mountpoint->path, "/"))
-    relpath = path + strlen(mountpoint->path);
+  char *relpath = get_relative_mountpoint_path(mountpoint, path);
   struct fs_node *node = mountpoint->fsi->ops->open(
       mountpoint->fsi, relpath); // TODO: maybe set default operation callbacks?
-  if (!node)
+  if (!node) {
     return NULL;
+  }
   node->path = strdup(path);
   int pl = strlen(node->path);
   if (pl > 1 && path[pl - 1] == '/')
@@ -146,11 +155,11 @@ struct fs_node *vfs_open(const char *path) {
 
   struct device *dev = mountpoint->fsi->dev;
   node->dev = dev ? make_devid(dev->class, dev->idx) : 0;
-  
+
   return node;
 }
 
-char* vfs_resolve(const char *path, const char *cwd) {
+char *vfs_resolve(const char *path, const char *cwd) {
   if (!path || !cwd)
     return NULL;
   if (path[0] == '/') {
@@ -160,14 +169,19 @@ char* vfs_resolve(const char *path, const char *cwd) {
   int pc = strlen(cwd);
   // klogf("path: %s %p %d", path, path, pl);
   klogf("cwd: %p %s", cwd, cwd);
- 
-  char *res = (char*)kmalloc(pc + strlen(path) + 2);
-  if (!res) return NULL;
+  klogf("path: %p %s", path, path);
+
+  char *res = (char *)kmalloc(pc + strlen(path) + 2);
+  if (!res)
+    return NULL;
 
   strcpy(res, cwd);
-  res[pc] = '/';
-  strcpy(res + pc + 1, path);
-  
+  if (cwd[pc - 1] != '/') {
+    res[pc] = '/';
+    strcpy(res + pc + 1, path);
+  } else
+    strcpy(res + pc, path);
+
   return res;
 }
 
@@ -185,7 +199,32 @@ soff_t vfs_setpos(struct fs_node *file, soff_t off, soff_t max) {
 void vfs_close(struct fs_node *file) {
   if (file->ops->close)
     file->ops->close(file);
-  kfree(file->path, strlen(file->path));
-  kfree(file->name, strlen(file->name));
-  kfree(file, sizeof(struct fs_node));
+
+  // XXX: what do we do here? Do we cleanup? If so, how do we handle the fd=1
+  // (tty0) situation? kfree(file->path, strlen(file->path)); kfree(file->name,
+  // strlen(file->name)); kfree(file, sizeof(struct fs_node));
+}
+
+struct fs_node *vfs_create(const char *path, fmode_t mode, ftype_t ft,
+                           devid_t dev) {
+
+  struct mount *mountpoint = find_mount(path);
+  if (!mountpoint)
+    return NULL;
+
+
+  struct fs_node *node = vfs_open(path);
+  if (node)
+    return NULL; // XXX: or existing node?
+
+  char *relpath = get_relative_mountpoint_path(mountpoint, path);
+
+  // klogf("relpath=%s", relpath);
+
+  if (!mountpoint->fsi->ops->create)
+    return NULL;
+
+  node = mountpoint->fsi->ops->create(mountpoint->fsi, relpath, mode, ft, dev);
+
+  return node;
 }

@@ -17,4 +17,5 @@ struct pipe* pipe_open(devid_t device, inode_t inode);
 
 int pipe_file_read(struct fs_node *file, char *buffer, size_t count, off_t *offset);
 int pipe_file_write(struct fs_node *file, char *buffer, size_t count, off_t *offset);
+short pipe_file_poll(struct fs_node *file);
 void pipe_file_close(struct fs_node *file);

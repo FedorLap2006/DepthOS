@@ -1,9 +1,11 @@
 #pragma once
 
+#include <depthos/dev.h>
 #include <depthos/errno.h>
+#include <depthos/file.h>
 #include <depthos/stdtypes.h>
 #include <depthos/tools.h>
-#include <depthos/file.h>
+
 
 struct vm_area;
 
@@ -18,13 +20,11 @@ struct filesystem {
 typedef struct fs_operations {
   char *name;
   struct fs_node *(*open)(struct filesystem *fs, const char *path);
-  struct fs_node *(*iopen)(struct filesystem *fs, inode_t inode);
+  // struct fs_node *(*iopen)(struct filesystem *fs, inode_t inode);
+  struct fs_node *(*create)(struct filesystem *fs, const char *path, fmode_t mode, ftype_t type, devid_t dev);
   struct filesystem *(*mount)(struct device *dev);
-
   // void (*unmount)(struct device *dev);
 } fs_ops_t;
-
-
 
 struct mount {
   char *path;
@@ -92,6 +92,8 @@ void vfs_close(struct fs_node *file);
 soff_t vfs_setpos(struct fs_node *file, soff_t pos, soff_t max);
 
 char *vfs_resolve(const char *path, const char *cwd);
+
+struct fs_node * vfs_create(const char *path, fmode_t mode, ftype_t ft, devid_t dev);
 
 // FIXME: EBADF?
 

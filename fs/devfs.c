@@ -75,6 +75,8 @@ struct fs_node *devfs_open(struct filesystem *fs, const char *path) {
           devfs_files[i].path);
     if (strcmp(devfs_files[i].name, path) == 0) {
       klogf("devfs file: %s %s", devfs_files[i].path, devfs_files[i].name);
+       // XXX: do we keep doing this or...? otherwise, we end up panicing, like with fd=1 (tty0) vfs_close.
+      // struct fs_node *f = (struct fs_node*)kmalloc(sizeof(struct fs_node));
       return &devfs_files[i];
     }
   }

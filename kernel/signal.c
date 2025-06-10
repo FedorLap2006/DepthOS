@@ -76,6 +76,8 @@ void kill_with_signal(struct task *task, int num) {
   if (task->process) {
     klogf("process %s was killed by %s", task->process->filepath,
           signal_names[num]);
+    task->process->state = PROCESS_DEAD;
+    task->process->signal = num;
     process_kill(task->process); // XXX: if only one thread received the signal,
                                  // should we actually kill the process
   } else {

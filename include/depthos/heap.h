@@ -22,5 +22,8 @@ typedef struct heap_slab {
 } heap_slab_t;
 
 void *kmalloc(int size);
+
+#define kmalloc_t(T) (T*)kmalloc(sizeof(T))
+
 void kfree(void *addr, size_t size);
 void kheap_init();

@@ -16,6 +16,8 @@ struct list {
   size_t length;
 };
 
+typedef struct list list_t;
+
 #define list_item(entry, type) ((type)entry->value)
 #define to_list_item(value) (list_value_t)(value)
 

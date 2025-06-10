@@ -19,6 +19,8 @@ static struct list *tasklist;
 static struct list_entry *current_entry;
 struct task *current_task = NULL;
 
+
+
 static bool sched_debug = false;
 // #define SCHED_PROF_COND(CT) strcmp(CT->name, "/bin/game3d") == 0
 static bool sched_preempt = false;
@@ -100,8 +102,8 @@ void sched_init() {
   idle_task->pgd = kernel_pgd;
   idle_task->process = NULL;
   idle_task->thid = 0;
-  printk("IDLE TASK:\n");
-  dump_task(idle_task);
+  // printk("IDLE TASK:\n");
+  // dump_task(idle_task);
   sched_add(idle_task);
 
   current_entry = tasklist->first;

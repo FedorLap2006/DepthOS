@@ -1,7 +1,7 @@
 include config.mk
 
 NASMSOURCES +=loader.asm
-SOURCEDIRS=kernel lib mm io fs drivers arch/$(ARCH) tests
+SOURCEDIRS=kernel lib mm io fs drivers arch/$(ARCH) tests net
 CSOURCES += $(filter-out $(wildcard apps/*.*),$(wildcard */*.c))
 ASMSOURCES +=$(filter-out $(wildcard apps/*.*),$(wildcard */*.S))
 NASMSOURCES +=$(wildcard */*.asm)

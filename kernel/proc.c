@@ -1,13 +1,14 @@
-#include <depthos/list.h>
-#include <depthos/signal.h>
+#include "depthos/wait.h"
 #include <depthos/bitmap.h>
 #include <depthos/elf.h>
 #include <depthos/errno.h>
 #include <depthos/fs.h>
 #include <depthos/heap.h>
+#include <depthos/list.h>
 #include <depthos/logging.h>
 #include <depthos/paging.h>
 #include <depthos/proc.h>
+#include <depthos/signal.h>
 #include <depthos/string.h>
 #include <depthos/syscall.h>
 #include <depthos/vmm.h>
@@ -36,7 +37,8 @@ static struct task *create_dummy_task() {
   task->signal_queue = list_create();
   task->signal_mask = 0;
   task->signal_mask_current = 0;
-  task->signal_handlers = (struct signal_handler*)kmalloc(sizeof(struct signal_handler) * NSIG);
+  task->signal_handlers =
+      (struct signal_handler *)kmalloc(sizeof(struct signal_handler) * NSIG);
   memset(task->signal_handlers, 0, sizeof(struct signal_handler) * NSIG);
   task->mmap_bump_idx = 0;
   alloc_kernel_stack(task);
@@ -169,15 +171,23 @@ void task_init_stack(
 void task_setup_filetable(struct fs_node **ft) {
   memset(ft, 0, sizeof(struct fs_node *) * TASK_FILETABLE_MAX);
   struct fs_node *tty_file = vfs_open("/dev/tty0");
+
   ft[0] = tty_file;
   ft[1] = tty_file;
   ft[2] = tty_file;
 }
 
 void task_clone_filetable(struct fs_node **dst, struct fs_node **src) {
-  for (int i = 0; src[i] != NULL; i++) {
-    dst[i] = src[i];
+  for (int i = 0; i < TASK_FILETABLE_MAX; i++) {
+    if (src[i])
+      dst[i] = src[i];
   }
+}
+
+void task_dump_filetable(struct fs_node **ft) {
+  for (int i = 0; i < TASK_FILETABLE_MAX; i++)
+    if (ft[i])
+      klogf("[%d] %s", i, ft[i]->name);
 }
 
 // TODO: refactor all usage to execute task_init_stack separately.
@@ -226,18 +236,21 @@ struct task *fork_task(struct task *parent) {
   task->signal_mask = parent->signal_mask;
   task->signal_queue = parent->signal_queue;
   task->signal_mask_current = parent->signal_mask_current;
-  memcpy(task->signal_handlers, parent->signal_handlers, sizeof(struct signal_handler) * NSIG);
+  memcpy(task->signal_handlers, parent->signal_handlers,
+         sizeof(struct signal_handler) * NSIG);
   klogf("debug 2");
 
   task->parent = parent;
+  task_dump_filetable(parent->filetable);
   task->filetable = kmalloc(sizeof(struct fs_node *) * TASK_FILETABLE_MAX);
+  task_setup_filetable(task->filetable);
   task_clone_filetable(task->filetable, parent->filetable);
   klogf("filetable: %p\n", task->filetable);
   // bitmap_dump_compact(&kheap_bitmap, 0, -1, 32);
   klogf("kernel_stack: %p\n", task->kernel_stack);
   klogf("kernel_stack: *%p\n", &task);
-  memcpy(task->filetable, parent->filetable,
-         sizeof(struct fs_node *) * TASK_FILETABLE_MAX);
+  // memcpy(task->filetable, parent->filetable,
+  //        sizeof(struct fs_node *) * TASK_FILETABLE_MAX);
   klogf("kernel_stack: %p\n", task->kernel_stack);
   // bitmap_dump_compact(&kheap_bitmap, 0, -1, 32);
   memcpy((void *)task->kernel_stack, (void *)parent->kernel_stack, KSTACK_SIZE);
@@ -346,7 +359,7 @@ process_spawn(const char *filepath, struct process *parent, char const *argv[],
   process->pid = generate_pid();
   process->filepath = strdup(filepath);
   process->cwd = strdup("/");
-  process->state = PROCESS_STARTING;
+  process->state = PROCESS_RUNNING;
   process->parent = parent;
 
   struct task *main_thread = create_dummy_task();
@@ -390,10 +403,11 @@ process_spawn(const char *filepath, struct process *parent, char const *argv[],
 }
 
 void process_kill(struct process *process) {
-  if (process->children)
-    list_foreach(process->children, entry) {
-      process_kill(list_item(entry, struct process *));
-    }
+  // XXX: reattach children to pid 1 (init) and throw a SIGCHLD.
+  // if (process->children)
+  //   list_foreach(process->children, entry) {
+  //     process_kill(list_item(entry, struct process *));
+  //   }
   list_foreach(process->threads, entry) {
     struct task *thread = list_item(entry, struct task *);
     if (current_task == thread)
@@ -403,13 +417,46 @@ void process_kill(struct process *process) {
   }
   if (!process->parent)
     panicf("Cannot kill init process");
-  
-  list_remove(process->parent->children, process->parent_entry);
-  kfree(process->filepath, strlen(process->filepath));
-  list_push(&free_pid, process->pid);
-  kfree(process, sizeof(struct process));
+
+  kfree(process->filepath,
+        strlen(process->filepath)); // TODO: free other resources
+
   if (current_task->process == process)
     reschedule();
+}
+
+void process_delete(struct process *process) {
+  list_remove(process->parent->children, process->parent_entry);
+  list_push(&free_pid, process->pid);
+  kfree(process, sizeof(struct process));
+}
+
+DECL_SYSCALL3(waitpid, pid_t, pid, int *, wstatus, int, flags) {
+  klogf("waitpid");
+  if (pid != -1)
+    return -ENOSYS;
+  klogf("waitpid enosys");
+  if (!wstatus)
+    return -EFAULT;
+
+  while (true) {
+    list_foreach(current_task->process->children, item) {
+      struct process *child = list_item(item, struct process *);
+
+      if (child->state == PROCESS_EXITED || child->state == PROCESS_DEAD) {
+        klogf("FOUND! %ld", child->pid);
+        if (child->state == PROCESS_EXITED) {
+          *wstatus = WAIT_EXIT(child->exit_code);
+        } else if (child->state == PROCESS_DEAD)
+          *wstatus = WAIT_SIG(child->signal);
+        pid_t pid = child->pid;
+        process_delete(child);
+        klogf("pid=%ld wstatus=0x%x", pid, *wstatus);
+        return pid;
+      }
+    }
+    sched_yield();
+  }
 }
 
 DECL_SYSCALL1(exit, int, status) {
@@ -419,6 +466,9 @@ DECL_SYSCALL1(exit, int, status) {
     reschedule();
   }
   klogf("current process exited with %d status", status);
+  current_task->process->state = PROCESS_EXITED;
+  current_task->process->exit_code = status;
+
   process_kill(current_task->process); // TODO: status and waiters
 }
 DECL_SYSCALL0(fork) {
@@ -427,7 +477,7 @@ DECL_SYSCALL0(fork) {
   struct process *process = kmalloc(sizeof(struct process));
   main_thread->process = process;
   process->pid = generate_pid();
-  process->state = PROCESS_STARTING;
+  process->state = PROCESS_RUNNING;
   process->filetable = main_thread->filetable;
   process->threads = list_create();
   list_push(process->threads, (list_value_t)main_thread);
@@ -587,12 +637,17 @@ DECL_SYSCALL3(execve, const char *, file, char const **, argv, char const **,
   // FIXME: nuke the old ones
   current_task->vm_areas = list_create();
   current_task->signal_queue = list_create();
-  memset(current_task->signal_handlers, 0, sizeof(struct signal_handler) * NSIG);
+  memset(current_task->signal_handlers, 0,
+         sizeof(struct signal_handler) * NSIG);
 
   klogf("argv: %x envp: %x", argv, envp);
   klogf("task: %p process: %p argv: %p", current_task,
         current_task ? current_task->process : 0xC0FFEE,
         current_task->process ? current_task->process->argv : 0xC0FFEE);
+
+  klogf("pwd is %s", current_task->process->cwd);
+
+  // current_task->process->cwd =
 
   task_init_stack(current_task, argv, envp);
 
@@ -633,12 +688,13 @@ DECL_SYSCALL0(getppid) {
   return current_task->process->parent->pid;
 }
 
-DECL_SYSCALL1(chdir, const char*, path) {
+DECL_SYSCALL1(chdir, const char *, path) {
   if (!current_task->process)
     return -EFAULT;
 
-  klogf("chdir: %s", path);
+  klogf("chdir: %s %s", path, current_task->process->cwd);
   char *cwd = vfs_resolve(path, current_task->process->cwd);
+  klogf("cwd: %s", cwd);
   struct fs_node *f = vfs_open(cwd);
   if (!f)
     return -ENOENT;

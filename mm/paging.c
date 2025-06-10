@@ -21,6 +21,7 @@ pde_t *current_pgd __align(4096);
 page_t kernel_pgt[1024] __align(4096); /* 768 */
 page_t heap_1_pgt[1024] __align(4096);
 page_t heap_2_pgt[1024] __align(4096);
+page_t heap_3_pgt[1024] __align(4096);
 
 pagetable_t get_pagetable(pagedir_t pgd, uintptr_t vaddr) {
   pde_t pde = pgd[pde_index(vaddr)];
@@ -370,6 +371,12 @@ void paging_init() {
     page_t pg = make_pte(i + ADDR_TO_PHYS(HEAP_BASE) + offset, true, false);
     heap_2_pgt[pte_index(HEAP_BASE + offset)] = pg;
   }
+  for (i = 0; i < PAGE_TABLE_SIZE; i++) {
+    uintptr_t offset = (PAGE_TABLE_SIZE * 2 + i) * PAGE_SIZE;
+    page_t pg = make_pte(i + ADDR_TO_PHYS(HEAP_BASE) + offset, true, false);
+    heap_3_pgt[pte_index(HEAP_BASE + offset)] = pg;
+  }
+
 
   kernel_pgt[pte_index(0)] = make_pte(0, false, false);
 
@@ -385,6 +392,8 @@ void paging_init() {
       make_pde(ADDR_TO_PHYS(heap_1_pgt), true, false);
   kernel_pgd[pde_index(VIRT_BASE + 2 * 1024 * 4096)] =
       make_pde(ADDR_TO_PHYS(heap_2_pgt), true, false);
+  kernel_pgd[pde_index(VIRT_BASE + 3 * 1024 * 4096)] =
+      make_pde(ADDR_TO_PHYS(heap_3_pgt), true, false);
 
   idt_register_interrupt(14, pagefault_handler);
   activate_pgd(kernel_pgd);

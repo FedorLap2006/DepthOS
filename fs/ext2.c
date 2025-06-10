@@ -45,6 +45,18 @@ int ext2_read_block(struct filesystem *fs, void *buf, off_t block) {
   return read_sectors == n_sectors;
 }
 
+// int ext2_write_block(struct filesystem *fs, void *buf, off_t block) {
+//   off_t sector = (block * IMPL(fs)->block_size) / fs->dev->block_size;
+//   uint32_t n_sectors = ceil_div(IMPL(fs)->block_size, fs->dev->block_size);
+//   // ext2_log("attempting to read %ld block (%ld, (%ld * %ld) / %ld)", block,
+//   //          sector, block, IMPL(fs)->block_size, fs->dev->block_size);
+//   int read_sectors = fs->dev->write(fs->dev, buf, n_sectors, &sector);
+//   // ext2_log("read %d sectors", read_sectors);
+//   // ext2_log("read (%d / %ld) blocks", read_sectors,
+//   //          ceil_div(IMPL(fs)->block_size, fs->dev->block_size));
+//   return read_sectors == n_sectors;
+// }
+
 struct ext2_inode *ext2_get_inode(struct filesystem *fs, uint32_t inode) {
   inode--;
   uint32_t group_idx = inode / IMPL(fs)->super->inodes_per_blk_group;
@@ -54,11 +66,16 @@ struct ext2_inode *ext2_get_inode(struct filesystem *fs, uint32_t inode) {
   // uint32_t block = (index % IMPL(fs)->super->inode_size) /
   // IMPL(fs)->block_size;
   ext2_log("found %lu inode in %ld group [%ld]", inode + 1, group_idx, index);
-  assert(IMPL(fs)->super->inode_size == 512); // Otherwise it doesn't work, for some reason.
-  uint32_t block = group.inode_table_addr +
-                ((index * IMPL(fs)->super->inode_size) / IMPL(fs)->block_size);
-  uint32_t offset = (index * IMPL(fs)->super->inode_size) % IMPL(fs)->block_size;
-  ext2_log("block: %ld (%ld + %ld) offset=%lx", block, group.inode_table_addr, (index * IMPL(fs)->super->inode_size) / IMPL(fs)->block_size,  offset);
+  assert(IMPL(fs)->super->inode_size ==
+         512); // Otherwise it doesn't work, for some reason.
+  uint32_t block =
+      group.inode_table_addr +
+      ((index * IMPL(fs)->super->inode_size) / IMPL(fs)->block_size);
+  uint32_t offset =
+      (index * IMPL(fs)->super->inode_size) % IMPL(fs)->block_size;
+  ext2_log("block: %ld (%ld + %ld) offset=%lx", block, group.inode_table_addr,
+           (index * IMPL(fs)->super->inode_size) / IMPL(fs)->block_size,
+           offset);
   uint32_t lba = (block * IMPL(fs)->block_size + offset) / fs->dev->block_size;
   // off_t lba =
   //     (((group.inode_table_addr +
@@ -111,20 +128,30 @@ size_t ext2_sync_direct_blocks(struct filesystem *fs, uint32_t *blocks,
            blocks, offset, nbytes, nblocks);
   for (off_t i = block_offset; i < nblocks && r <= nbytes; i++) {
     if (!blocks[i]) {
-      ext2_log("no blocks to read, %ld", i);
-      break;
+      ext2_log("no blocks to work with, %ld", i); // XXX: sparse files?
+      continue;
       // goto ret;
     }
 
+    size_t bytes_to_transfer =
+        MIN(nbytes - r, IMPL(fs)->block_size - byte_offset);
+
     if (write) {
+      // klogf("reading...");
+      // ext2_read_block(fs, blockbuf, blocks[i]);
+      // klogf("memcpy (+0x%lx, buf + 0x%lx, %ld)", byte_offset, r,
+      //       bytes_to_transfer);
+      // memcpy(blockbuf + byte_offset, buf + r, bytes_to_transfer);
+      // klogf("writing block");
+      // ext2_write_block(fs, blockbuf, blocks[i]);
+      // klogf("hello?");
+      // r += bytes_to_transfer;
     } else {
       ext2_read_block(fs, blockbuf, blocks[i]);
-      size_t bytes_to_read =
-          MIN(nbytes - r, IMPL(fs)->block_size - byte_offset);
       memcpy(buf + r, blockbuf + byte_offset,
-             bytes_to_read); // TODO: - bytes_offset?, we DO go out of bounds,
-                             // on block buf
-      r += bytes_to_read;
+             bytes_to_transfer); // TODO: - bytes_offset?, we DO go out of
+                                 // bounds, on block buf
+      r += bytes_to_transfer;
     }
     byte_offset = 0;
   }
@@ -257,7 +284,7 @@ size_t ext2_sync_inode_data(struct filesystem *fs, struct ext2_inode *inode,
   if (block_offset < EXT2_INODE_DBLOCKS_COUNT) {
     r = ext2_sync_direct_blocks(fs, inode->dblocks, EXT2_INODE_DBLOCKS_COUNT,
                                 offset, buf, nbytes, write);
-    ext2_log("read %ld bytes", r);
+    ext2_log("synced %ld bytes", r);
     if (r == nbytes) {
       return r;
     }
@@ -271,13 +298,13 @@ size_t ext2_sync_inode_data(struct filesystem *fs, struct ext2_inode *inode,
   if (block_offset < EXT2_INODE_DBLOCKS_COUNT +
                          EXT2_INODE_IDBLOCKS_COUNT(IMPL(fs)->block_size) &&
       inode->single_idblock_ptr) {
-    ext2_log("indirect blocks: offset=%ld nbytes=%ld bytes_read=%ld", offset,
+    ext2_log("indirect blocks: offset=%ld nbytes=%ld bytes_synced=%ld", offset,
              nbytes, r);
     // ext2_log("indirect blocks: buffer offset: %ld", r);
 
     dr = ext2_sync_indirect_blocks(fs, inode->single_idblock_ptr, offset, buf,
                                    nbytes, write);
-    ext2_log("indirect blocks: read %ld bytes", dr);
+    ext2_log("indirect blocks: synced %ld bytes", dr);
     r += dr;
 
     if (r == nbytes) {
@@ -296,12 +323,12 @@ size_t ext2_sync_inode_data(struct filesystem *fs, struct ext2_inode *inode,
                          EXT2_INODE_DIDBLOCKS_COUNT(IMPL(fs)->block_size) *
                              EXT2_INODE_IDBLOCKS_COUNT(IMPL(fs)->block_size) &&
       inode->double_idblock_ptr) {
-    ext2_log("doubly indirect blocks: offset=%ld nbytes=%ld bytes_read=%ld",
+    ext2_log("doubly indirect blocks: offset=%ld nbytes=%ld bytes_synced=%ld",
              offset, nbytes, r);
 
     dr = ext2_sync_doubly_indirect_blocks(fs, inode->double_idblock_ptr, offset,
                                           buf, nbytes, write);
-    ext2_log("indirect blocks: read %ld bytes", dr);
+    ext2_log("indirect blocks: synced %ld bytes", dr);
     r += dr;
     if (r == nbytes) {
       return r;
@@ -312,7 +339,7 @@ size_t ext2_sync_inode_data(struct filesystem *fs, struct ext2_inode *inode,
   }
 
   if (nbytes)
-    klogf("read finished: done=%ld remaining=%ld", r, nbytes);
+    klogf("sync finished: done=%ld remaining=%ld", r, nbytes);
   return r;
 }
 
@@ -341,7 +368,15 @@ int ext2_read(struct fs_node *file, char *buf, size_t n, off_t *offset) {
 }
 
 int ext2_write(struct fs_node *file, char *buf, size_t n, off_t *offset) {
-  return 0;
+  size_t r = ext2_sync_inode_data(file->fs, FILE_IMPL(file)->cached, *offset,
+                                  buf, n, true);
+  // if (*offset + n == ext2_inode_size(FILE_IMPL(file)->cached)) {
+  //   file->eof = true;
+  // }
+
+  *offset += r;
+  return r;
+  // return 0;
 }
 
 int ext2_iter(struct fs_node *file, struct dentry *dst, size_t max_name_len,
@@ -354,8 +389,10 @@ int ext2_iter(struct fs_node *file, struct dentry *dst, size_t max_name_len,
   ext2_log("reading into %p", raw_dentry);
   unsigned int r =
       ext2_read(file, (char *)raw_dentry, sizeof(*raw_dentry), &tmpoff);
+  if (r == 0)
+    return 0;
   if (r < sizeof(*raw_dentry)) {
-    ext2_log("WARNING: ext2 dentry read from disk is smaller than miminal size "
+    klogf("WARNING: ext2 dentry read from disk is smaller than miminal size "
              "(%d < %d)",
              r, sizeof(*raw_dentry));
     return 0;
@@ -394,6 +431,7 @@ soff_t ext2_seek(struct fs_node *file, soff_t pos, int whence) {
   return generic_file_seek_size(
       file, pos, ext2_inode_size(FILE_IMPL(file)->cached) - 1, whence);
 }
+
 
 struct file_operations ext2_file_ops = (struct file_operations){
     .read = ext2_read,
@@ -485,6 +523,7 @@ struct fs_node *ext2_open(struct filesystem *fs, const char *path) {
         goto outer;
       }
     }
+
     kfree(dentry_buffer, sizeof(struct dentry) * 1024);
     return NULL;
 
@@ -498,17 +537,20 @@ struct fs_node *ext2_open(struct filesystem *fs, const char *path) {
   ext2_log("type: %x size: %x", curr->type_permissions, curr->size_lo);
 
   struct fs_node *node = kmalloc(sizeof(struct fs_node));
-  memset(node, 0, sizeof(struct fs_node));
+  // memset(node, 0, sizeof(struct fs_node));
+  
 
-#define DEFINE_NODE_TYPE(N, E2N) \
-  if (curr->type_permissions & EXT2_INODE_T_##E2N) { \
-    node->type = FS_##N; \
+#define DEFINE_NODE_TYPE(N, E2N)                                               \
+  if (curr->type_permissions & EXT2_INODE_T_##E2N) {                           \
+    node->type = FS_##N;                                                       \
   }
+  DEFINE_NODE_TYPE(PIPE, FIFO);
+  DEFINE_NODE_TYPE(SOCKET, SOCKET); // NOTE: do not reorder. Overlaps with DIR and FILE.
   DEFINE_NODE_TYPE(DIR, DIR);
   DEFINE_NODE_TYPE(FILE, FILE);
-  DEFINE_NODE_TYPE(PIPE, FIFO);
 
 #undef DEFINE_NODE_TYPE
+
   // node->type = curr->type_permissions & EXT2_INODE_T_DIR
   //                  ? FS_DIR
   //                  : FS_FILE; // TODO: other fs types

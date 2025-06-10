@@ -54,7 +54,7 @@ __noinline void syscall_handler(regs_t *r) {
   if (CONFIG_SYS_DEBUG(r)) {
     printk("\nsyscall %d\n", r->eax);
 #ifdef CONFIG_SYS_TRACE
-   trace(0, -1);
+    trace(0, -1);
 #endif
   }
 #endif
@@ -69,6 +69,11 @@ __noinline void syscall_handler(regs_t *r) {
   errno = 0; // TODO: here or somewhere else?
 
   exec_syscall(r, syscall_entries[r->eax]);
+#ifdef CONFIG_SYS_DEBUG
+  if (CONFIG_SYS_DEBUG(r)) {
+    printk("return = %ld", r->eax);
+  }
+#endif
 }
 
 void exec_syscall(regs_t *r, uintptr_t function) {

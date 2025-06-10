@@ -1,3 +1,4 @@
+#include "depthos/tmpfs.h"
 #include <depthos/ata.h>
 #include <depthos/beeper.h>
 #include <depthos/console.h>
@@ -119,38 +120,41 @@ void device_init() {
   tty_init();
   klogf("after 4");
   beeper_init();
-  sb16_init();
+  klogf("after 5");
+  // sb16_init();
+  klogf("after 6");
 
   pci_enum();
+  klogf("after 7");
 }
 
-void mbr_test() {
-  // struct device *drive = vfs_open("/dev/ata0")->impl;
-  struct device *drive = get_device("ata0");
+// void mbr_test() {
+//   // struct device *drive = vfs_open("/dev/ata0")->impl;
+//   struct device *drive = get_device("ata0");
 
-  struct mbr *mbr = mbr_parse(drive);
+//   struct mbr *mbr = mbr_parse(drive);
 
-  klogf("mbr: bootsec=%x partition type=%x lba=%x sec=%d attr=%x",
-        mbr->valid_bootsector_signature, mbr->partitions[0].type,
-        mbr->partitions[0].lba, mbr->partitions[0].sectors,
-        mbr->partitions[0].attributes);
-  klogf("mbr: bootsec=%x partition type=%x lba=%x sec=%d attr=%x",
-        mbr->valid_bootsector_signature, mbr->partitions[1].type,
-        mbr->partitions[1].lba, mbr->partitions[1].sectors,
-        mbr->partitions[1].attributes);
+//   klogf("mbr: bootsec=%x partition type=%x lba=%x sec=%d attr=%x",
+//         mbr->valid_bootsector_signature, mbr->partitions[0].type,
+//         mbr->partitions[0].lba, mbr->partitions[0].sectors,
+//         mbr->partitions[0].attributes);
+//   klogf("mbr: bootsec=%x partition type=%x lba=%x sec=%d attr=%x",
+//         mbr->valid_bootsector_signature, mbr->partitions[1].type,
+//         mbr->partitions[1].lba, mbr->partitions[1].sectors,
+//         mbr->partitions[1].attributes);
 
-  struct generic_partition *part =
-      create_mbr_partition(drive, 0, mbr->partitions[0]);
-  struct device *pdev = create_partition_device("ata0-0", part);
-  // FIXME: why the data is empty
-  // pdev->pos = 20;
-  char *buf = kmalloc(512);
-  memset(buf, 0, 512);
-  pdev->pos = 64 - part->lba;
-  klogf("reading from partition 0: %d", pdev->read(pdev, buf, 1, &pdev->pos));
-  // for (int i = 0; i < 512; i++)
-  //   klogf("reading [%d]: %x", i, buf[i]);
-}
+//   struct generic_partition *part =
+//       create_mbr_partition(drive, 0, mbr->partitions[0]);
+//   struct device *pdev = create_partition_device("ata0-0", part);
+//   // FIXME: why the data is empty
+//   // pdev->pos = 20;
+//   char *buf = kmalloc(512);
+//   memset(buf, 0, 512);
+//   pdev->pos = 64 - part->lba;
+//   klogf("reading from partition 0: %d", pdev->read(pdev, buf, 1, &pdev->pos));
+//   // for (int i = 0; i < 512; i++)
+//   //   klogf("reading [%d]: %x", i, buf[i]);
+// }
 
 void kmain(int magic, struct multiboot_information *boot_ptr) {
   boot_ptr = (struct multiboot_information*)ADDR_TO_VIRT(boot_ptr);
@@ -177,6 +181,14 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
           vfs_mount("/initrd", vfs_get_filesystem("initrd"), NULL)
               ? LOG_STATUS_SUCCESS
               : LOG_STATUS_ERROR);
+
+  tmpfs_init();
+  bootlog("Mounting tmpfs",
+          vfs_mount("/tmp", vfs_get_filesystem("tmpfs"), NULL)
+              ? LOG_STATUS_SUCCESS
+              : LOG_STATUS_ERROR);
+
+
   klogf("memory(%x..%x) %lx", boot_ptr->mem_lower * 1024,
         boot_ptr->mem_upper * 1024, boot_ptr->mem_upper - boot_ptr->mem_lower);
 
@@ -186,8 +198,6 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
   idt_register_interrupt(0x64, syscall_handler);
   idt_register_interrupt(0x80, posix_syscall_handler);
 
-  klogf("mbr");
-  mbr_test();
   klogf("ext2");
   ext2_init();
 
@@ -218,7 +228,7 @@ void kmain(int magic, struct multiboot_information *boot_ptr) {
   tests_task->process = NULL;
   sched_add(tests_task);
 #else
-  klogf("spawning init process");
+  klogf("spawning init process!!!");
   struct process *init_proc = process_spawn(
       "/sbin/init", NULL, (char const *[]){"/sbin/init", NULL},
       (char const *[]){NULL});
