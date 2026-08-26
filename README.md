@@ -1,3 +1,5 @@
+
+
 # DepthOS
 [![Build Status](https://github.com/FedorLap2006/DepthOS/actions/workflows/kernel.yml/badge.svg)](https://github.com/FedorLap2006/DepthOS/actions/workflows/kernel.yml)
 [![Join the chat at https://gitter.im/depthos-dev/community](https://badges.gitter.im/depthos-dev/community.svg)](https://gitter.im/depthos-dev/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
@@ -39,7 +41,7 @@ Now you can run `xbstrap compile-tool <tool>` (e.g. gcc) or `xbstrap build <pack
 
 After you have built the package/tool, you can install it by calling `xbstrap install`/`xbstrap install-tool`.
 If it's a package, it will be installed into the `$PKGS_BUILDDIR/system-root`.
-If it's a tool it's going to be installed into `$PKGS_BUILDDIR/tools/path/to/tool` (e.g. `$BUILDDIR/tools/cross-gcc/bin/i686-depthos-gcc`).
+If it's a tool it's going to be installed into `$PKGS_BUILDDIR/tools/path/to/tool` (e.g. `$PKGS_BUILDDIR/tools/cross-gcc/bin/i686-depthos-gcc`).
 
 To install the package into the image, you'd have to set the `SYSROOT` variable to `$PKGS_BUILDDIR/system-root` when running `tools/sync.sh` script.
 
